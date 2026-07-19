@@ -3,12 +3,13 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "main": "main.js",
+  "main": "main.cjs",
   "scripts": {
     "dev:vite": "vite",
-    "dev:electron": "wait-on tcp:5173 && electron .",
+    "dev:electron": "electron .",
     "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
     "build": "vite build",
+    "postinstall": "electron-rebuild -w better-sqlite3",
     "build:win": "vite build && electron-builder --win --x64"
   },
   "dependencies": {
@@ -27,8 +28,9 @@
     "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.5.0",
     "concurrently": "^10.0.3",
-    "electron": "^42.4.1",
+    "electron": "^28.3.3",
     "electron-builder": "^24.13.3",
+    "electron-rebuild": "^3.2.9",
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
@@ -49,7 +51,7 @@
     },
     "files": [
       "dist/**/*",
-      "main.js",
+      "main.cjs",
       "database/**/*",
       "package.json"
     ],

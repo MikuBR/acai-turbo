@@ -1,15 +1,12 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { 
+const { app, BrowserWindow, ipcMain } = require('electron');
+const path = require('path');
+const { 
   saveFullOrder, getProducts, addProduct, deleteProduct, registerCashMovement, 
   getDailyReport, updateProduct, getConfig, updateConfig, 
-  getCategories, addCategory, deleteCategory, getOrdersHistory, deleteOrder
-} from './database/db.js';
-import { ThermalPrinter, PrinterTypes, CharacterSet } from 'node-thermal-printer';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+  getCategories, addCategory, deleteCategory, getOrdersHistory, deleteOrder,
+  getPromotions, addPromotion, updatePromotion, deletePromotion, getActivePromotions
+} = require('./database/db.cjs');
+const { ThermalPrinter, PrinterTypes, CharacterSet } = require('node-thermal-printer');
 
 app.disableHardwareAcceleration();
 process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true';
@@ -127,7 +124,7 @@ async function printTickets(orderData, items) {
 
   if (kitchenItems.length > 0) {
     try {
-      let printerKitchen = new ThermalPrinter({ type: PrinterTypes.EPSON, interface: 'tcp://192.168.1.100', timeout: 1000, characterSet: CharacterSet.PC852_LATIN2 });
+      const printerKitchen = new ThermalPrinter({ type: PrinterTypes.EPSON, interface: 'tcp://192.168.1.100', timeout: 1000, characterSet: CharacterSet.PC852_LATIN2 });
       if (await printerKitchen.isPrinterConnected()) {
         printerKitchen.alignCenter(); 
         printerKitchen.setTextDoubleHeight(); 
@@ -160,7 +157,7 @@ async function printTickets(orderData, items) {
 
   if (frontItems.length > 0) {
     try {
-      let printerFront = new ThermalPrinter({ type: PrinterTypes.EPSON, interface: 'printer:TANCA', timeout: 1000, characterSet: CharacterSet.PC852_LATIN2 });
+      const printerFront = new ThermalPrinter({ type: PrinterTypes.EPSON, interface: 'printer:TANCA', timeout: 1000, characterSet: CharacterSet.PC852_LATIN2 });
       if (await printerFront.isPrinterConnected()) {
         printerFront.alignLeft(); 
         printerFront.setTextDoubleHeight(); 
@@ -211,6 +208,12 @@ ipcMain.handle('get-daily-report', async () => { try { return { success: true, d
 
 ipcMain.handle('verify-password', async (e, password) => { try { const stored = getConfig('manager_password'); return { success: true, valid: stored.value === password }; } catch (e) { return { success: false, valid: false }; } });
 ipcMain.handle('update-password', async (e, { current, next }) => { try { const stored = getConfig('manager_password'); if (stored.value !== current) return { success: false, error: 'Senha atual incorreta' }; updateConfig('manager_password', next); return { success: true }; } catch (e) { return { success: false, error: e.message }; } });
+
+ipcMain.handle('get-promotions', async () => { try { return { success: true, data: getPromotions() }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('add-promotion', async (e, promo) => { try { return { success: true, id: addPromotion(promo) }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('update-promotion', async (e, { id, promo }) => { try { return { success: true, count: updatePromotion(id, promo) }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('delete-promotion', async (e, id) => { try { return { success: true, count: deletePromotion(id) }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('get-active-promotions', async () => { try { return { success: true, data: getActivePromotions() }; } catch (e) { return { success: false, error: e.message }; } });
 
 app.whenReady().then(() => {
   createWindow();
