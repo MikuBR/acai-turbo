@@ -589,6 +589,7 @@ function App() {
               <div className="flex gap-4">
                 <button onClick={() => setSettingsTab('products')} className={`text-xs font-bold uppercase tracking-widest transition-all ${settingsTab === 'products' ? 'text-emerald-500' : 'text-gray-600 hover:text-gray-900'}`}>Produtos</button>
                 <button onClick={() => setSettingsTab('promotions')} className={`text-xs font-bold uppercase tracking-widest transition-all ${settingsTab === 'promotions' ? 'text-emerald-500' : 'text-gray-600 hover:text-gray-900'}`}>Promoções</button>
+                <button onClick={() => setSettingsTab('security')} className={`text-xs font-bold uppercase tracking-widest transition-all ${settingsTab === 'security' ? 'text-emerald-500' : 'text-gray-600 hover:text-gray-900'}`}>Segurança</button>
               </div>
               <button onClick={() => setModals({...modals, settings: false})} className="p-1.5 hover:bg-red-500/20 rounded-md text-gray-600 hover:text-red-500 transition-all"><X size={20}/></button>
             </div>
@@ -680,31 +681,6 @@ function App() {
                   )}
                 </form>
 
-                {/* SESSÃO SEGURANÇA */}
-                <section className="mt-10 border-t border-gray-300 pt-6">
-                  <h3 className="text-[10px] font-bold text-emerald-500 uppercase mb-4 tracking-widest">Segurança</h3>
-                  <div className="space-y-3">
-                    <input type="password" placeholder="Senha Atual" value={pwdForm.current} onChange={e => setPwdForm({...pwdForm, current: e.target.value})} className={inputTheme} />
-                    <input type="password" placeholder="Nova Senha" value={pwdForm.next} onChange={e => setPwdForm({...pwdForm, next: e.target.value})} className={inputTheme} />
-                    <button 
-                      onClick={() => {
-                        if(!pwdForm.current || !pwdForm.next) return;
-                        window.require('electron').ipcRenderer.invoke('update-password', { current: pwdForm.current, next: pwdForm.next }).then(res => {
-                          if(res.success) {
-                            alert('Senha atualizada com sucesso!');
-                            setPwdForm({ current: '', next: '' });
-                          } else {
-                            alert('Erro: ' + res.error);
-                          }
-                        });
-                      }}
-                      className="w-full bg-gray-200 hover:bg-gray-300 py-3 rounded-lg font-bold text-xs uppercase tracking-widest text-gray-900 transition-all"
-                    >
-                      Alterar Senha
-                    </button>
-                  </div>
-                </section>
-
               </div>
               
               <div className="flex-1 p-6 flex flex-col overflow-hidden">
@@ -735,7 +711,7 @@ function App() {
                 </div>
               </div>
               </>
-              ) : (
+              ) : settingsTab === 'promotions' ? (
                 <>
                 <div className="w-80 p-6 border-r border-gray-300 bg-white overflow-y-auto custom-scrollbar">
                   <h3 className="text-[10px] font-bold text-emerald-500 uppercase mb-4 tracking-widest border-b border-gray-300 pb-2">
@@ -840,7 +816,53 @@ function App() {
                   </div>
                 </div>
                 </>
-              )}
+              ) : settingsTab === 'security' ? (
+                <>
+                <div className="w-80 p-6 border-r border-gray-300 bg-white overflow-y-auto custom-scrollbar">
+                  <h3 className="text-[10px] font-bold text-emerald-500 uppercase mb-4 tracking-widest border-b border-gray-300 pb-2">Alterar Senha</h3>
+                  <div className="space-y-3">
+                    <input type="password" placeholder="Senha Atual" value={pwdForm.current} onChange={e => setPwdForm({...pwdForm, current: e.target.value})} className={inputTheme} />
+                    <input type="password" placeholder="Nova Senha" value={pwdForm.next} onChange={e => setPwdForm({...pwdForm, next: e.target.value})} className={inputTheme} />
+                    <button
+                      onClick={() => {
+                        if(!pwdForm.current || !pwdForm.next) return;
+                        window.require('electron').ipcRenderer.invoke('update-password', { current: pwdForm.current, next: pwdForm.next }).then(res => {
+                          if(res.success) {
+                            alert('Senha atualizada com sucesso!');
+                            setPwdForm({ current: '', next: '' });
+                          } else {
+                            alert('Erro: ' + res.error);
+                          }
+                        });
+                      }}
+                      className="w-full bg-emerald-600 hover:bg-emerald-500 py-3 rounded-lg font-bold text-xs uppercase tracking-widest text-slate-950 transition-all"
+                    >
+                      Alterar Senha
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="flex-1 p-6 flex flex-col overflow-hidden">
+                  <h3 className="text-[10px] font-bold text-gray-600 uppercase mb-4 tracking-widest border-b border-gray-300 pb-2">Informações de Segurança</h3>
+                  <div className="flex-1 overflow-y-auto space-y-4 custom-scrollbar pr-2">
+                    <div className="bg-gray-100 border border-gray-300 p-4 rounded-lg">
+                      <div className="font-bold text-xs uppercase text-gray-800 mb-2">Senha de Gerente</div>
+                      <div className="text-[10px] text-gray-600">A senha de gerente é necessária para:</div>
+                      <ul className="text-[9px] text-gray-600 mt-2 space-y-1 list-disc list-inside">
+                        <li>Editar produtos</li>
+                        <li>Excluir produtos</li>
+                        <li>Editar promoções</li>
+                        <li>Cancelar pedidos (estorno)</li>
+                      </ul>
+                    </div>
+                    <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-lg">
+                      <div className="font-bold text-xs uppercase text-emerald-600 mb-2">Dica de Segurança</div>
+                      <div className="text-[10px] text-gray-600">Mantenha sua senha segura e altere-a regularmente. A senha padrão é "1234".</div>
+                    </div>
+                  </div>
+                </div>
+                </>
+              ) : null}
             </div>
           </div>
         </div>
