@@ -13,6 +13,7 @@
     "build:win": "vite build && electron-builder --win --x64"
   },
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "better-sqlite3": "^12.11.1",
     "lucide-react": "^1.21.0",
     "node-thermal-printer": "^4.6.0",
