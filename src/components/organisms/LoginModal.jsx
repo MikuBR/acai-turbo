@@ -5,7 +5,7 @@ export default function LoginModal({ isOpen, onClose, loginForm, setLoginForm, l
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-gray-900/98 z-[2000] flex items-center justify-center animate-in fade-in duration-200">
+    <div className="fixed inset-0 bg-surface z-[2000] flex items-center justify-center animate-in fade-in duration-200">
       <div className="bg-surface p-8 rounded-2xl border border-border w-96 shadow-2xl">
         <div className="text-center mb-6">
           <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-primary/30">

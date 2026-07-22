@@ -4,7 +4,7 @@ import { Plus, X } from 'lucide-react';
 export default function CategoryForm({ newCatName, setNewCatName, categories, onAdd, onDelete, inputTheme }) {
   return (
     <section className="mb-10">
-      <h3 className="text-[10px] font-bold text-emerald-500 uppercase mb-4 tracking-widest border-b border-gray-300 pb-2">Gerenciar Categorias</h3>
+      <h3 className="text-[10px] font-bold text-emerald-500 uppercase mb-4 tracking-widest border-b border-border pb-2">Gerenciar Categorias</h3>
       <div className="flex gap-2 mb-4">
         <input
           type="text"
@@ -22,8 +22,8 @@ export default function CategoryForm({ newCatName, setNewCatName, categories, on
       </div>
       <div className="space-y-1">
         {categories.map(cat => (
-          <div key={cat.id} className="flex justify-between items-center bg-gray-100/50 p-2 rounded border border-gray-300/50 group">
-            <span className="text-[10px] font-bold text-gray-600 uppercase">{cat.name}</span>
+          <div key={cat.id} className="flex justify-between items-center bg-surface-light/50 p-2 rounded border border-border/50 group">
+            <span className="text-[10px] font-bold text-muted uppercase">{cat.name}</span>
             <button
               onClick={() => onDelete(cat)}
               className="opacity-0 group-hover:opacity-100 p-1 text-red-500 hover:bg-red-500/10 rounded transition-all"

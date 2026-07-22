@@ -1,7 +1,7 @@
 import React from 'react';
 
 const variants = {
-  default: 'bg-gray-200 text-gray-600',
+  default: 'bg-surface-light text-muted',
   primary: 'bg-emerald-600/10 text-emerald-500 border border-emerald-500/30',
   danger: 'bg-red-500/10 text-red-500 border border-red-500/30',
   warning: 'bg-orange-500/10 text-orange-500 border border-orange-500/30',

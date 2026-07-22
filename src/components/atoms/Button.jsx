@@ -2,9 +2,9 @@ import React from 'react';
 
 const variants = {
   primary: 'bg-emerald-600 hover:bg-emerald-500 text-slate-950 shadow-lg active:scale-95',
-  secondary: 'bg-gray-200 hover:bg-gray-300 text-gray-900',
+  secondary: 'bg-surface-light hover:bg-surface-light text-primary',
   danger: 'bg-red-500 hover:bg-red-400 text-white',
-  ghost: 'bg-transparent hover:bg-gray-200/40 text-gray-600 hover:text-gray-900',
+  ghost: 'bg-transparent hover:bg-surface-light/40 text-muted hover:text-primary',
   gradient: 'bg-gradient-to-br from-indigo-600 to-emerald-600 text-white',
   'emerald-outline': 'bg-emerald-600/10 border border-emerald-500 text-emerald-500',
 };
@@ -37,7 +37,7 @@ export default function Button({
         font-bold uppercase tracking-widest rounded-lg transition-all
         ${variants[variant] || variants.primary}
         ${sizes[size] || sizes.md}
-        ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-300 hover:bg-gray-300 text-gray-500 shadow-none active:scale-100' : ''}
+        ${disabled ? 'opacity-50 cursor-not-allowed bg-surface-light hover:bg-surface-light text-muted shadow-none active:scale-100' : ''}
         ${className}
       `}
       {...props}

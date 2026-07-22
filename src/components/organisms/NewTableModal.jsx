@@ -5,21 +5,21 @@ export default function NewTableModal({ isOpen, onClose, tableType, setTableType
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-gray-900/95 z-[700] flex items-center justify-center p-6 animate-in zoom-in duration-200">
-      <div className="bg-white p-8 rounded-2xl w-full max-w-md border border-gray-300 shadow-2xl">
+    <div className="fixed inset-0 bg-surface z-[700] flex items-center justify-center p-6 animate-in zoom-in duration-200">
+      <div className="bg-card p-8 rounded-2xl w-full max-w-md border border-border shadow-2xl">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xs font-bold uppercase tracking-widest text-emerald-500">Nova Comanda</h2>
-          <button onClick={onClose} className="p-1.5 bg-gray-200 rounded-md hover:bg-red-500 text-gray-800 hover:text-white transition-all"><X size={16}/></button>
+          <button onClick={onClose} className="p-1.5 bg-surface-light rounded-md hover:bg-red-500 text-primary hover:text-white transition-all"><X size={16}/></button>
         </div>
 
         <div className="flex gap-2 mb-6">
           <button onClick={() => setTableType('SALAO')}
             className={`flex-1 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${
-              tableType === 'SALAO' ? 'bg-indigo-600 text-white' : 'bg-gray-100 border border-gray-300 text-gray-600'
+              tableType === 'SALAO' ? 'bg-indigo-600 text-white' : 'bg-surface-light border border-border text-muted'
             }`}>Mesa / Balcão</button>
           <button onClick={() => setTableType('DELIVERY')}
             className={`flex-1 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${
-              tableType === 'DELIVERY' ? 'bg-orange-600 text-white' : 'bg-gray-100 border border-gray-300 text-gray-600'
+              tableType === 'DELIVERY' ? 'bg-orange-600 text-white' : 'bg-surface-light border border-border text-muted'
             }`}>Delivery</button>
         </div>
 
@@ -34,10 +34,10 @@ export default function NewTableModal({ isOpen, onClose, tableType, setTableType
             <input type="text" placeholder="Nome do Cliente*" value={delivForm.name} onChange={e => setDelivForm({...delivForm, name: e.target.value})} className={inputTheme} autoFocus />
             <input type="text" placeholder="Telefone" value={delivForm.phone} onChange={e => setDelivForm({...delivForm, phone: e.target.value})} className={inputTheme} />
             <input type="text" placeholder="Endereço Completo" value={delivForm.address} onChange={e => setDelivForm({...delivForm, address: e.target.value})} className={inputTheme} />
-            <div className="bg-gray-100 border border-gray-300 p-3 rounded-xl flex items-center justify-between">
-              <span className="text-[9px] font-bold text-gray-600 uppercase">Taxa Entrega R$</span>
+            <div className="bg-surface-light border border-border p-3 rounded-xl flex items-center justify-between">
+              <span className="text-[9px] font-bold text-muted uppercase">Taxa Entrega R$</span>
               <input type="number" step="0.01" value={delivForm.fee} onChange={e => setDelivForm({...delivForm, fee: e.target.value})}
-                className="bg-transparent text-right text-lg font-mono text-gray-900 outline-none font-bold w-20" placeholder="0.00" />
+                className="bg-transparent text-right text-lg font-mono text-primary outline-none font-bold w-20" placeholder="0.00" />
             </div>
           </div>
         )}

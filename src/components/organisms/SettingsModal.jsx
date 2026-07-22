@@ -127,28 +127,28 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-900/95 z-[900] flex items-center justify-center p-6 animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-5xl h-[80vh] rounded-2xl border border-gray-300 flex flex-col overflow-hidden shadow-2xl">
-        <div className="p-4 bg-gray-100 border-b border-gray-300 flex justify-between items-center px-6">
+    <div className="fixed inset-0 bg-surface z-[900] flex items-center justify-center p-6 animate-in fade-in duration-200">
+      <div className="bg-card w-full max-w-5xl h-[80vh] rounded-2xl border border-border flex flex-col overflow-hidden shadow-2xl">
+        <div className="p-4 bg-surface-light border-b border-border flex justify-between items-center px-6">
           <SettingsTabs activeTab={settingsTab} onTabChange={setSettingsTab} />
-          <button onClick={onClose} className="p-1.5 hover:bg-red-500/20 rounded-md text-gray-600 hover:text-red-500 transition-all"><X size={20}/></button>
+          <button onClick={onClose} className="p-1.5 hover:bg-red-500/20 rounded-md text-muted hover:text-red-500 transition-all"><X size={20}/></button>
         </div>
         <div className="flex-1 flex overflow-hidden">
           {settingsTab === 'products' && (
             <>
-              <div className="w-80 p-6 border-r border-gray-300 bg-white overflow-y-auto custom-scrollbar">
+              <div className="w-80 p-6 border-r border-border bg-surface overflow-y-auto custom-scrollbar">
                 <CategoryForm newCatName={newCatName} setNewCatName={setNewCatName} categories={categories} onAdd={handleAddCategory} onDelete={handleDeleteCategory} inputTheme={inputTheme} />
-                <h3 className="text-[10px] font-bold text-gray-600 uppercase mb-6 tracking-widest border-b border-gray-300 pb-2">{newProd.id ? 'Editar Produto' : 'Novo Produto'}</h3>
+                <h3 className="text-[10px] font-bold text-muted uppercase mb-6 tracking-widest border-b border-border pb-2">{newProd.id ? 'Editar Produto' : 'Novo Produto'}</h3>
                 <ProductForm newProd={newProd} setNewProd={setNewProd} categories={categories} onSubmit={handleProductSubmit} onCancel={() => setNewProd({ id: null, name: '', price: '', category: '', ingredients: '' })} inputTheme={inputTheme} />
               </div>
               <div className="flex-1 p-6 flex flex-col overflow-hidden">
-                <h3 className="text-[10px] font-bold text-gray-600 uppercase mb-4 tracking-widest border-b border-gray-300 pb-2">Produtos Cadastrados</h3>
+                <h3 className="text-[10px] font-bold text-muted uppercase mb-4 tracking-widest border-b border-border pb-2">Produtos Cadastrados</h3>
                 <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
                   {safeCatalog.map(p => (
-                    <div key={p.id} className="flex items-center justify-between bg-gray-100 border border-gray-300 p-3 rounded-lg">
+                    <div key={p.id} className="flex items-center justify-between bg-surface-light border border-border p-3 rounded-lg">
                       <div>
-                        <div className="font-bold text-xs uppercase text-gray-800">{p.name}</div>
-                        <div className="text-[9px] text-gray-600 uppercase">{p.category} - R$ {(p.price || 0).toFixed(2)}</div>
+                        <div className="font-bold text-xs uppercase text-primary">{p.name}</div>
+                        <div className="text-[9px] text-muted uppercase">{p.category} - R$ {(p.price || 0).toFixed(2)}</div>
                       </div>
                       <div className="flex gap-2">
                         <button onClick={() => runWithAuth(() => setNewProd({ id: p.id, name: p.name, price: p.price.toString(), category: p.category, ingredients: p.ingredients || '' }), 'edit_products')} className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-lg transition-colors"><Pencil size={16} /></button>
@@ -162,19 +162,19 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
           )}
           {settingsTab === 'promotions' && (
             <>
-              <div className="w-80 p-6 border-r border-gray-300 bg-white overflow-y-auto custom-scrollbar">
-                <h3 className="text-[10px] font-bold text-emerald-500 uppercase mb-4 tracking-widest border-b border-gray-300 pb-2">{newPromo.id ? 'Editar Promoção' : 'Nova Promoção'}</h3>
+              <div className="w-80 p-6 border-r border-border bg-surface overflow-y-auto custom-scrollbar">
+                <h3 className="text-[10px] font-bold text-emerald-500 uppercase mb-4 tracking-widest border-b border-border pb-2">{newPromo.id ? 'Editar Promoção' : 'Nova Promoção'}</h3>
                 <PromotionForm newPromo={newPromo} setNewPromo={setNewPromo} categories={categories} onSubmit={handlePromoSubmit} onCancel={() => setNewPromo({ id: null, name: '', type: 'PERCENTAGE', value: '', applies_to: 'ALL', target_category: '', target_product_id: '', min_quantity: '1', start_date: '', end_date: '', is_active: true })} inputTheme={inputTheme} />
               </div>
               <div className="flex-1 p-6 flex flex-col overflow-hidden">
-                <h3 className="text-[10px] font-bold text-gray-600 uppercase mb-4 tracking-widest border-b border-gray-300 pb-2">Promoções Cadastradas</h3>
+                <h3 className="text-[10px] font-bold text-muted uppercase mb-4 tracking-widest border-b border-border pb-2">Promoções Cadastradas</h3>
                 <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
                   {promotions.map(p => (
-                    <div key={p.id} className={`flex items-center justify-between bg-gray-100 border p-3 rounded-lg ${!p.is_active ? 'border-gray-400 opacity-60' : 'border-gray-300'}`}>
+                    <div key={p.id} className={`flex items-center justify-between bg-surface-light border p-3 rounded-lg ${!p.is_active ? 'border-gray-400 opacity-60' : 'border-border'}`}>
                       <div>
-                        <div className="font-bold text-xs uppercase text-gray-800">{p.name}</div>
-                        <div className="text-[9px] text-gray-600 uppercase">{p.type} - {p.applies_to} {p.value}{p.type === 'PERCENTAGE' ? '%' : 'R$'}</div>
-                        <div className="text-[8px] text-gray-500">{new Date(p.start_date).toLocaleDateString()} até {new Date(p.end_date).toLocaleDateString()}</div>
+                        <div className="font-bold text-xs uppercase text-primary">{p.name}</div>
+                        <div className="text-[9px] text-muted uppercase">{p.type} - {p.applies_to} {p.value}{p.type === 'PERCENTAGE' ? '%' : 'R$'}</div>
+                        <div className="text-[8px] text-muted">{new Date(p.start_date).toLocaleDateString()} até {new Date(p.end_date).toLocaleDateString()}</div>
                       </div>
                       <div className="flex gap-2">
                         <button onClick={() => runWithAuth(() => setNewPromo({ id: p.id, name: p.name, type: p.type, value: p.value.toString(), applies_to: p.applies_to, target_category: p.target_category || '', target_product_id: p.target_product_id || '', min_quantity: p.min_quantity.toString(), start_date: p.start_date, end_date: p.end_date, is_active: p.is_active }), 'edit_promotions')} className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-lg transition-colors"><Pencil size={16} /></button>
@@ -188,8 +188,8 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
           )}
           {settingsTab === 'security' && (
             <>
-              <div className="w-80 p-6 border-r border-gray-300 bg-white overflow-y-auto custom-scrollbar">
-                <h3 className="text-[10px] font-bold text-emerald-500 uppercase mb-4 tracking-widest border-b border-gray-300 pb-2">Alterar Senha</h3>
+              <div className="w-80 p-6 border-r border-border bg-surface overflow-y-auto custom-scrollbar">
+                <h3 className="text-[10px] font-bold text-emerald-500 uppercase mb-4 tracking-widest border-b border-border pb-2">Alterar Senha</h3>
                 <div className="space-y-3">
                   <input type="password" placeholder="Senha Atual" value={pwdForm.current} onChange={e => setPwdForm({...pwdForm, current: e.target.value})} className={inputTheme} />
                   <input type="password" placeholder="Nova Senha" value={pwdForm.next} onChange={e => setPwdForm({...pwdForm, next: e.target.value})} className={inputTheme} />
@@ -197,12 +197,12 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                 </div>
               </div>
               <div className="flex-1 p-6 flex flex-col overflow-hidden">
-                <h3 className="text-[10px] font-bold text-gray-600 uppercase mb-4 tracking-widest border-b border-gray-300 pb-2">Informações de Segurança</h3>
+                <h3 className="text-[10px] font-bold text-muted uppercase mb-4 tracking-widest border-b border-border pb-2">Informações de Segurança</h3>
                 <div className="flex-1 overflow-y-auto space-y-4 custom-scrollbar pr-2">
-                  <div className="bg-gray-100 border border-gray-300 p-4 rounded-lg">
-                    <div className="font-bold text-xs uppercase text-gray-800 mb-2">Senha de Gerente</div>
-                    <div className="text-[10px] text-gray-600">A senha de gerente é necessária para:</div>
-                    <ul className="text-[9px] text-gray-600 mt-2 space-y-1 list-disc list-inside">
+                  <div className="bg-surface-light border border-border p-4 rounded-lg">
+                    <div className="font-bold text-xs uppercase text-primary mb-2">Senha de Gerente</div>
+                    <div className="text-[10px] text-muted">A senha de gerente é necessária para:</div>
+                    <ul className="text-[9px] text-muted mt-2 space-y-1 list-disc list-inside">
                       <li>Editar produtos</li>
                       <li>Excluir produtos</li>
                       <li>Editar promoções</li>
@@ -211,7 +211,7 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                   </div>
                   <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-lg">
                     <div className="font-bold text-xs uppercase text-emerald-600 mb-2">Dica de Segurança</div>
-                    <div className="text-[10px] text-gray-600">Mantenha sua senha segura e altere-a regularmente. A senha padrão é "1234".</div>
+                    <div className="text-[10px] text-muted">Mantenha sua senha segura e altere-a regularmente. A senha padrão é "1234".</div>
                   </div>
                 </div>
               </div>
@@ -219,19 +219,19 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
           )}
           {settingsTab === 'users' && (
             <>
-              <div className="w-80 p-6 border-r border-gray-300 bg-white overflow-y-auto custom-scrollbar">
-                <h3 className="text-[10px] font-bold text-emerald-500 uppercase mb-4 tracking-widest border-b border-gray-300 pb-2">{newUser.id ? 'Editar Usuário' : 'Novo Usuário'}</h3>
+              <div className="w-80 p-6 border-r border-border bg-surface overflow-y-auto custom-scrollbar">
+                <h3 className="text-[10px] font-bold text-emerald-500 uppercase mb-4 tracking-widest border-b border-border pb-2">{newUser.id ? 'Editar Usuário' : 'Novo Usuário'}</h3>
                 <UserForm newUser={newUser} setNewUser={setNewUser} onSubmit={handleUserSubmit} onCancel={() => setNewUser({ id: null, username: '', password: '', full_name: '', role: 'operator' })} inputTheme={inputTheme} />
               </div>
               <div className="flex-1 p-6 flex flex-col overflow-hidden">
-                <h3 className="text-[10px] font-bold text-gray-600 uppercase mb-4 tracking-widest border-b border-gray-300 pb-2">Usuários Cadastrados</h3>
+                <h3 className="text-[10px] font-bold text-muted uppercase mb-4 tracking-widest border-b border-border pb-2">Usuários Cadastrados</h3>
                 <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
                   {users.map(u => (
-                    <div key={u.id} className={`flex items-center justify-between bg-gray-100 border p-3 rounded-lg ${!u.is_active ? 'border-gray-400 opacity-60' : 'border-gray-300'}`}>
+                    <div key={u.id} className={`flex items-center justify-between bg-surface-light border p-3 rounded-lg ${!u.is_active ? 'border-gray-400 opacity-60' : 'border-border'}`}>
                       <div>
-                        <div className="font-bold text-xs uppercase text-gray-800">{u.full_name}</div>
-                        <div className="text-[9px] text-gray-600 uppercase">@{u.username} • {u.role}</div>
-                        <div className="text-[8px] text-gray-500">Criado em: {new Date(u.created_at).toLocaleDateString()}</div>
+                        <div className="font-bold text-xs uppercase text-primary">{u.full_name}</div>
+                        <div className="text-[9px] text-muted uppercase">@{u.username} • {u.role}</div>
+                        <div className="text-[8px] text-muted">Criado em: {new Date(u.created_at).toLocaleDateString()}</div>
                       </div>
                       <div className="flex gap-2">
                         <button onClick={() => setNewUser({ id: u.id, username: u.username, password: '', full_name: u.full_name, role: u.role })} className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-lg transition-colors"><Pencil size={16} /></button>
@@ -246,15 +246,15 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
           )}
           {settingsTab === 'inventory' && (
             <>
-              <div className="w-80 p-6 border-r border-gray-300 bg-white overflow-y-auto custom-scrollbar">
-                <h3 className="text-[10px] font-bold text-emerald-500 uppercase mb-4 tracking-widest border-b border-gray-300 pb-2">{selectedInventoryItem ? 'Editar Estoque' : 'Adicionar ao Estoque'}</h3>
+              <div className="w-80 p-6 border-r border-border bg-surface overflow-y-auto custom-scrollbar">
+                <h3 className="text-[10px] font-bold text-emerald-500 uppercase mb-4 tracking-widest border-b border-border pb-2">{selectedInventoryItem ? 'Editar Estoque' : 'Adicionar ao Estoque'}</h3>
                 <InventoryForm inventoryForm={inventoryForm} setInventoryForm={setInventoryForm} products={safeCatalog} onSubmit={handleInventorySubmit} inputTheme={inputTheme} />
                 {selectedInventoryItem && (
                   <div className="mt-6">
-                    <h4 className="text-[9px] font-bold text-gray-600 uppercase mb-2">Movimentações</h4>
+                    <h4 className="text-[9px] font-bold text-muted uppercase mb-2">Movimentações</h4>
                     <div className="space-y-1 max-h-40 overflow-y-auto">
                       {inventoryMovements.map((m, i) => (
-                        <div key={i} className="text-[8px] text-gray-600 bg-gray-50 p-2 rounded border border-gray-200">
+                        <div key={i} className="text-[8px] text-muted bg-surface-light p-2 rounded border border-border">
                           {m.type === 'in' ? '+' : '-'}{m.quantity} {m.unit} - {m.reason || 'Ajuste'}
                         </div>
                       ))}
@@ -263,13 +263,13 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                 )}
               </div>
               <div className="flex-1 p-6 flex flex-col overflow-hidden">
-                <h3 className="text-[10px] font-bold text-gray-600 uppercase mb-4 tracking-widest border-b border-gray-300 pb-2">Estoque Atual</h3>
+                <h3 className="text-[10px] font-bold text-muted uppercase mb-4 tracking-widest border-b border-border pb-2">Estoque Atual</h3>
                 <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
                   {inventory.map(inv => (
-                    <div key={inv.id} className={`flex items-center justify-between bg-gray-100 border p-3 rounded-lg ${inv.quantity <= inv.min_quantity ? 'border-orange-500 bg-orange-50' : 'border-gray-300'}`}>
+                    <div key={inv.id} className={`flex items-center justify-between bg-surface-light border p-3 rounded-lg ${inv.quantity <= inv.min_quantity ? 'border-orange-500 bg-orange-50' : 'border-border'}`}>
                       <div>
-                        <div className="font-bold text-xs uppercase text-gray-800">{inv.product_name}</div>
-                        <div className="text-[9px] text-gray-600 uppercase">{inv.category} • {inv.quantity} {inv.unit}</div>
+                        <div className="font-bold text-xs uppercase text-primary">{inv.product_name}</div>
+                        <div className="text-[9px] text-muted uppercase">{inv.category} • {inv.quantity} {inv.unit}</div>
                         {inv.quantity <= inv.min_quantity && <div className="text-[8px] text-orange-500 font-bold uppercase mt-1">⚠️ Estoque Baixo</div>}
                       </div>
                       <div className="flex gap-2">
@@ -284,35 +284,35 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
           )}
           {settingsTab === 'financial' && (
             <>
-              <div className="w-80 p-6 border-r border-gray-300 bg-white overflow-y-auto custom-scrollbar">
-                <h3 className="text-[10px] font-bold text-emerald-500 uppercase mb-4 tracking-widest border-b border-gray-300 pb-2">{financialForm.id ? 'Editar Conta' : 'Nova Conta'}</h3>
+              <div className="w-80 p-6 border-r border-border bg-surface overflow-y-auto custom-scrollbar">
+                <h3 className="text-[10px] font-bold text-emerald-500 uppercase mb-4 tracking-widest border-b border-border pb-2">{financialForm.id ? 'Editar Conta' : 'Nova Conta'}</h3>
                 <FinancialForm financialForm={financialForm} setFinancialForm={setFinancialForm} onSubmit={handleFinancialSubmit} onCancel={() => setFinancialForm({ id: null, type: 'payable', description: '', amount: '', due_date: '', status: 'pending', category: '' })} inputTheme={inputTheme} />
               </div>
               <div className="flex-1 p-6 flex flex-col overflow-hidden">
-                <div className="flex items-center gap-4 mb-4 border-b border-gray-300 pb-4">
-                  <h3 className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Contas Financeiras</h3>
+                <div className="flex items-center gap-4 mb-4 border-b border-border pb-4">
+                  <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest">Contas Financeiras</h3>
                   <div className="flex gap-2">
-                    <select value={financialFilter.type} onChange={e => setFinancialFilter({...financialFilter, type: e.target.value})} className="text-[9px] border border-gray-300 rounded px-2 py-1">
+                    <select value={financialFilter.type} onChange={e => setFinancialFilter({...financialFilter, type: e.target.value})} className="text-[9px] border border-border rounded px-2 py-1">
                       <option value="all">Todos Tipos</option>
                       <option value="payable">A Pagar</option>
                       <option value="receivable">A Receber</option>
                     </select>
-                    <select value={financialFilter.status} onChange={e => setFinancialFilter({...financialFilter, status: e.target.value})} className="text-[9px] border border-gray-300 rounded px-2 py-1">
+                    <select value={financialFilter.status} onChange={e => setFinancialFilter({...financialFilter, status: e.target.value})} className="text-[9px] border border-border rounded px-2 py-1">
                       <option value="all">Todos Status</option>
                       <option value="pending">Pendente</option>
                       <option value="paid">Pago</option>
                       <option value="cancelled">Cancelado</option>
                     </select>
-                    <button onClick={loadFinancialAccounts} className="text-[9px] bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded font-bold">Filtrar</button>
+                    <button onClick={loadFinancialAccounts} className="text-[9px] bg-surface-light hover:bg-border px-2 py-1 rounded font-bold">Filtrar</button>
                   </div>
                 </div>
                 <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
                   {financialAccounts.map(acc => (
-                    <div key={acc.id} className={`flex items-center justify-between bg-gray-100 border p-3 rounded-lg ${acc.status === 'paid' ? 'border-emerald-500 bg-emerald-50' : acc.status === 'cancelled' ? 'border-gray-400 opacity-60' : acc.due_date && new Date(acc.due_date) < new Date() ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}>
+                    <div key={acc.id} className={`flex items-center justify-between bg-surface-light border p-3 rounded-lg ${acc.status === 'paid' ? 'border-emerald-500 bg-emerald-50' : acc.status === 'cancelled' ? 'border-gray-400 opacity-60' : acc.due_date && new Date(acc.due_date) < new Date() ? 'border-red-500 bg-red-50' : 'border-border'}`}>
                       <div>
-                        <div className="font-bold text-xs uppercase text-gray-800">{acc.description}</div>
-                        <div className="text-[9px] text-gray-600 uppercase">{acc.type === 'payable' ? 'A Pagar' : 'A Receber'} • R$ {acc.amount.toFixed(2)}</div>
-                        <div className="text-[8px] text-gray-500">Vencimento: {acc.due_date ? new Date(acc.due_date).toLocaleDateString() : 'N/A'} • {acc.status}</div>
+                        <div className="font-bold text-xs uppercase text-primary">{acc.description}</div>
+                        <div className="text-[9px] text-muted uppercase">{acc.type === 'payable' ? 'A Pagar' : 'A Receber'} • R$ {acc.amount.toFixed(2)}</div>
+                        <div className="text-[8px] text-muted">Vencimento: {acc.due_date ? new Date(acc.due_date).toLocaleDateString() : 'N/A'} • {acc.status}</div>
                       </div>
                       <div className="flex gap-2">
                         <button onClick={() => setFinancialForm({ id: acc.id, type: acc.type, description: acc.description, amount: acc.amount.toString(), due_date: acc.due_date || '', status: acc.status, category: acc.category || '' })} className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-lg transition-colors"><Pencil size={16} /></button>
@@ -326,19 +326,19 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
           )}
           {settingsTab === 'clients' && (
             <>
-              <div className="w-80 p-6 border-r border-gray-300 bg-white overflow-y-auto custom-scrollbar">
-                <h3 className="text-[10px] font-bold text-emerald-500 uppercase mb-4 tracking-widest border-b border-gray-300 pb-2">{clientForm.id ? 'Editar Cliente' : 'Novo Cliente'}</h3>
+              <div className="w-80 p-6 border-r border-border bg-surface overflow-y-auto custom-scrollbar">
+                <h3 className="text-[10px] font-bold text-emerald-500 uppercase mb-4 tracking-widest border-b border-border pb-2">{clientForm.id ? 'Editar Cliente' : 'Novo Cliente'}</h3>
                 <ClientForm clientForm={clientForm} setClientForm={setClientForm} onSubmit={handleClientSubmit} onCancel={() => setClientForm({ id: null, name: '', phone: '', address: '', email: '', notes: '' })} inputTheme={inputTheme} />
               </div>
               <div className="flex-1 p-6 flex flex-col overflow-hidden">
-                <h3 className="text-[10px] font-bold text-gray-600 uppercase mb-4 tracking-widest border-b border-gray-300 pb-2">Clientes Cadastrados</h3>
+                <h3 className="text-[10px] font-bold text-muted uppercase mb-4 tracking-widest border-b border-border pb-2">Clientes Cadastrados</h3>
                 <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
                   {clients.map(client => (
-                    <div key={client.id} className="flex items-center justify-between bg-gray-100 border border-gray-300 p-3 rounded-lg">
+                    <div key={client.id} className="flex items-center justify-between bg-surface-light border border-border p-3 rounded-lg">
                       <div>
-                        <div className="font-bold text-xs uppercase text-gray-800">{client.name}</div>
-                        <div className="text-[9px] text-gray-600 uppercase">{client.phone || 'Sem telefone'} • {client.email || 'Sem email'}</div>
-                        <div className="text-[8px] text-gray-500">Cadastrado em: {new Date(client.created_at).toLocaleDateString()}</div>
+                        <div className="font-bold text-xs uppercase text-primary">{client.name}</div>
+                        <div className="text-[9px] text-muted uppercase">{client.phone || 'Sem telefone'} • {client.email || 'Sem email'}</div>
+                        <div className="text-[8px] text-muted">Cadastrado em: {new Date(client.created_at).toLocaleDateString()}</div>
                       </div>
                       <div className="flex gap-2">
                         <button onClick={() => { setClientForm({ id: client.id, name: client.name, phone: client.phone || '', address: client.address || '', email: client.email || '', notes: client.notes || '' }); loadClientOrders(client.id); }} className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-lg transition-colors"><Pencil size={16} /></button>
@@ -348,11 +348,11 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                   ))}
                 </div>
                 {selectedClientOrders.length > 0 && (
-                  <div className="mt-4 border-t border-gray-300 pt-4">
-                    <h4 className="text-[9px] font-bold text-gray-600 uppercase mb-2">Histórico de Pedidos</h4>
+                  <div className="mt-4 border-t border-border pt-4">
+                    <h4 className="text-[9px] font-bold text-muted uppercase mb-2">Histórico de Pedidos</h4>
                     <div className="max-h-40 overflow-y-auto space-y-1 custom-scrollbar">
                       {selectedClientOrders.map(order => (
-                        <div key={order.id} className="text-[8px] text-gray-600 bg-gray-50 p-2 rounded">
+                        <div key={order.id} className="text-[8px] text-muted bg-surface-light p-2 rounded">
                           {new Date(order.created_at).toLocaleDateString()} - R$ {order.total_amount.toFixed(2)}
                         </div>
                       ))}
