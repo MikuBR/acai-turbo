@@ -170,7 +170,7 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                 <h3 className="text-[10px] font-bold text-muted uppercase mb-4 tracking-widest border-b border-border pb-2">Promoções Cadastradas</h3>
                 <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
                   {promotions.map(p => (
-                    <div key={p.id} className={`flex items-center justify-between bg-surface-light border p-3 rounded-lg ${!p.is_active ? 'border-gray-400 opacity-60' : 'border-border'}`}>
+                    <div key={p.id} className={`flex items-center justify-between bg-surface-light border p-3 rounded-lg ${!p.is_active ? 'border-border opacity-60' : 'border-border'}`}>
                       <div>
                         <div className="font-bold text-xs uppercase text-primary">{p.name}</div>
                         <div className="text-[9px] text-muted uppercase">{p.type} - {p.applies_to} {p.value}{p.type === 'PERCENTAGE' ? '%' : 'R$'}</div>
@@ -227,7 +227,7 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                 <h3 className="text-[10px] font-bold text-muted uppercase mb-4 tracking-widest border-b border-border pb-2">Usuários Cadastrados</h3>
                 <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
                   {users.map(u => (
-                    <div key={u.id} className={`flex items-center justify-between bg-surface-light border p-3 rounded-lg ${!u.is_active ? 'border-gray-400 opacity-60' : 'border-border'}`}>
+                    <div key={u.id} className={`flex items-center justify-between bg-surface-light border p-3 rounded-lg ${!u.is_active ? 'border-border opacity-60' : 'border-border'}`}>
                       <div>
                         <div className="font-bold text-xs uppercase text-primary">{u.full_name}</div>
                         <div className="text-[9px] text-muted uppercase">@{u.username} • {u.role}</div>
@@ -308,7 +308,7 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                 </div>
                 <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
                   {financialAccounts.map(acc => (
-                    <div key={acc.id} className={`flex items-center justify-between bg-surface-light border p-3 rounded-lg ${acc.status === 'paid' ? 'border-emerald-500 bg-emerald-50' : acc.status === 'cancelled' ? 'border-gray-400 opacity-60' : acc.due_date && new Date(acc.due_date) < new Date() ? 'border-red-500 bg-red-50' : 'border-border'}`}>
+                    <div key={acc.id} className={`flex items-center justify-between bg-surface-light border p-3 rounded-lg ${acc.status === 'paid' ? 'border-emerald-500 bg-emerald-50' : acc.status === 'cancelled' ? 'border-border opacity-60' : acc.due_date && new Date(acc.due_date) < new Date() ? 'border-red-500 bg-red-50' : 'border-border'}`}>
                       <div>
                         <div className="font-bold text-xs uppercase text-primary">{acc.description}</div>
                         <div className="text-[9px] text-muted uppercase">{acc.type === 'payable' ? 'A Pagar' : 'A Receber'} • R$ {acc.amount.toFixed(2)}</div>

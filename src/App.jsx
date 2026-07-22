@@ -610,11 +610,8 @@ function App() {
       <LoginModal
         isOpen={modals.login}
         onClose={() => setModals({...modals, login: false})}
-        loginForm={loginForm}
-        setLoginForm={setLoginForm}
-        loginError={loginError}
-        handleLogin={handleLogin}
-        inputTheme={inputTheme}
+        onLogin={handleLogin}
+        error={loginError}
       />
 
       {/* MODAL: CHANGE PASSWORD */}

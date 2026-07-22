@@ -21,39 +21,39 @@ export function LoginModal({ isOpen, onLogin, error }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-900/98 z-[2000] flex items-center justify-center animate-in fade-in duration-200">
-      <div className="bg-white p-8 rounded-2xl border border-gray-300 w-96 shadow-2xl">
+    <div className="fixed inset-0 bg-surface z-[2000] flex items-center justify-center animate-in fade-in duration-200">
+      <div className="bg-card p-8 rounded-2xl border border-border w-96 shadow-2xl">
         <div className="text-center mb-6">
           <div className="w-20 h-20 bg-emerald-600/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/30">
             <Lock size={40} className="text-emerald-500" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-1">Acai Turbo PDV</h2>
-          <p className="text-gray-600 text-sm">Faça login para acessar o sistema</p>
+          <h2 className="text-2xl font-bold text-primary mb-1">Acai Turbo PDV</h2>
+          <p className="text-muted text-sm">Faça login para acessar o sistema</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-[10px] text-gray-600 font-bold uppercase ml-1 mb-1 block">
+            <label className="text-[10px] text-muted font-bold uppercase ml-1 mb-1 block">
               Usuário
             </label>
             <input
               type="text"
               value={form.username}
               onChange={(e) => setForm({ ...form, username: e.target.value })}
-              className="w-full bg-gray-100 border border-gray-300 p-3 rounded-lg text-gray-900 outline-none focus:border-emerald-500 transition-all"
+              className="w-full bg-surface-light border border-border p-3 rounded-lg text-primary outline-none focus:border-emerald-500 transition-all"
               placeholder="Digite seu usuário"
               autoFocus
             />
           </div>
           <div>
-            <label className="text-[10px] text-gray-600 font-bold uppercase ml-1 mb-1 block">
+            <label className="text-[10px] text-muted font-bold uppercase ml-1 mb-1 block">
               Senha
             </label>
             <input
               type="password"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
-              className="w-full bg-gray-100 border border-gray-300 p-3 rounded-lg text-gray-900 outline-none focus:border-emerald-500 transition-all"
+              className="w-full bg-surface-light border border-border p-3 rounded-lg text-primary outline-none focus:border-emerald-500 transition-all"
               placeholder="Digite sua senha"
             />
           </div>
@@ -73,10 +73,10 @@ export function LoginModal({ isOpen, onLogin, error }) {
         </form>
 
         <div className="mt-6 text-center">
-          <p className="text-[10px] text-gray-500">
-            Usuário padrão: <span className="font-bold text-gray-700">admin</span>
+          <p className="text-[10px] text-muted">
+            Usuário padrão: <span className="font-bold text-secondary">admin</span>
             <br />
-            Senha padrão: <span className="font-bold text-gray-700">admin123</span>
+            Senha padrão: <span className="font-bold text-secondary">admin123</span>
           </p>
         </div>
       </div>
