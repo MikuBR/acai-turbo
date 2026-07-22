@@ -20,7 +20,10 @@ const { ThermalPrinter, PrinterTypes, CharacterSet } = require('node-thermal-pri
 console.log('[main] Database module loaded successfully');
 
 app.disableHardwareAcceleration();
-process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true';
+// Segurança: desabilitar avisos apenas em desenvolvimento
+if (!app.isPackaged) {
+  process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true';
+}
 app.commandLine.appendSwitch('log-level', '3');
 
 let mainWindow = null;
@@ -110,7 +113,7 @@ function createWindow() {
     webPreferences: { 
       nodeIntegration: false, 
       contextIsolation: true, 
-      devTools: true,
+      devTools: !app.isPackaged,
       preload: path.join(__dirname, 'preload.js')
     },
   });
@@ -202,8 +205,11 @@ async function printTickets(orderData, items) {
   }
 }
 
-ipcMain.handle('get-categories', async () => { try { return { success: true, data: getCategories() }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('add-category', async (e, name) => {
+// ============================================================
+// CATÁLOGO - IPC Handlers
+// ============================================================
+ipcMain.handle('catalog:get-categories', async () => { try { return { success: true, data: getCategories() }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('catalog:add-category', async (e, name) => {
   try {
     if (!name || typeof name !== 'string' || name.trim() === '') {
       return { success: false, error: 'Invalid category name' };
@@ -214,10 +220,10 @@ ipcMain.handle('add-category', async (e, name) => {
     return { success: false, error: e.message };
   }
 });
-ipcMain.handle('delete-category', async (e, id) => { try { return { success: true, count: deleteCategory(id) }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('catalog:delete-category', async (e, id) => { try { return { success: true, count: deleteCategory(id) }; } catch (e) { return { success: false, error: e.message }; } });
 
-ipcMain.handle('get-products', async () => { try { return { success: true, data: getProducts() }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('add-product', async (e, p) => {
+ipcMain.handle('catalog:get-products', async () => { try { return { success: true, data: getProducts() }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('catalog:add-product', async (e, p) => {
   try {
     if (!p || !p.name || !p.price || !p.category) {
       return { success: false, error: 'Invalid product data' };
@@ -228,7 +234,7 @@ ipcMain.handle('add-product', async (e, p) => {
     return { success: false, error: e.message };
   }
 });
-ipcMain.handle('update-product', async (e, { id, product }) => {
+ipcMain.handle('catalog:update-product', async (e, { id, product }) => {
   try {
     if (!id || !product || !product.name || !product.price || !product.category) {
       return { success: false, error: 'Invalid product data' };
@@ -239,9 +245,12 @@ ipcMain.handle('update-product', async (e, { id, product }) => {
     return { success: false, error: e.message };
   }
 });
-ipcMain.handle('delete-product', async (e, id) => { try { return { success: true, count: deleteProduct(id) }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('catalog:delete-product', async (e, id) => { try { return { success: true, count: deleteProduct(id) }; } catch (e) { return { success: false, error: e.message }; } });
 
-ipcMain.handle('save-order', async (e, { orderData, items }) => {
+// ============================================================
+// PEDIDOS - IPC Handlers
+// ============================================================
+ipcMain.handle('orders:save', async (e, { orderData, items }) => {
   try {
     if (!orderData || !items || !Array.isArray(items)) {
       return { success: false, error: 'Invalid order data or items' };
@@ -255,10 +264,13 @@ ipcMain.handle('save-order', async (e, { orderData, items }) => {
   }
 });
 
-ipcMain.handle('get-orders', async () => { try { return { success: true, data: getOrdersHistory() }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('delete-order', async (e, id) => { try { return { success: true, count: deleteOrder(id) }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('orders:get-history', async () => { try { return { success: true, data: getOrdersHistory() }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('orders:delete', async (e, id) => { try { return { success: true, count: deleteOrder(id) }; } catch (e) { return { success: false, error: e.message }; } });
 
-ipcMain.handle('register-cash', async (e, data) => {
+// ============================================================
+// CAIXA / RELATÓRIOS - IPC Handlers
+// ============================================================
+ipcMain.handle('cash:register', async (e, data) => {
   try {
     if (!data || !data.type || !data.amount || !data.description) {
       return { success: false, error: 'Invalid cash movement data' };
@@ -269,10 +281,13 @@ ipcMain.handle('register-cash', async (e, data) => {
     return { success: false, error: e.message };
   }
 });
-ipcMain.handle('get-daily-report', async () => { try { return { success: true, data: getDailyReport() }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('get-report-by-period', async (e, { startDate, endDate }) => { try { return { success: true, data: getReportByPeriod(startDate, endDate) }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('reports:daily', async () => { try { return { success: true, data: getDailyReport() }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('reports:by-period', async (e, { startDate, endDate }) => { try { return { success: true, data: getReportByPeriod(startDate, endDate) }; } catch (e) { return { success: false, error: e.message }; } });
 
-ipcMain.handle('verify-password', async (e, password) => {
+// ============================================================
+// AUTENTICAÇÃO - IPC Handlers
+// ============================================================
+ipcMain.handle('auth:verify-password', async (e, password) => {
   try {
     const stored = getConfig('manager_password');
     const isValid = bcrypt.compareSync(password, stored.value);
@@ -282,7 +297,7 @@ ipcMain.handle('verify-password', async (e, password) => {
     return { success: false, valid: false };
   }
 });
-ipcMain.handle('update-password', async (e, { current, next }) => {
+ipcMain.handle('auth:update-password', async (e, { current, next }) => {
   try {
     const stored = getConfig('manager_password');
     const isValid = bcrypt.compareSync(current, stored.value);
@@ -298,10 +313,13 @@ ipcMain.handle('update-password', async (e, { current, next }) => {
   }
 });
 
-ipcMain.handle('get-promotions', async () => { try { return { success: true, data: getPromotions() }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('add-promotion', async (e, promo) => {
+// ============================================================
+// PROMOÇÕES - IPC Handlers
+// ============================================================
+ipcMain.handle('promotions:get', async () => { try { return { success: true, data: getPromotions() }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('promotions:add', async (e, promo) => {
   try {
-    if (!promo || !promo.name || !promo.type || !promo.value || !promo.applies_to || !promo.start_date || !promo.end_date) {
+    if (!promo || !promo.name || !promo.type || promo.value === undefined || promo.value === '' || !promo.applies_to || !promo.start_date || !promo.end_date) {
       return { success: false, error: 'Invalid promotion data' };
     }
     return { success: true, id: addPromotion(promo) };
@@ -310,9 +328,9 @@ ipcMain.handle('add-promotion', async (e, promo) => {
     return { success: false, error: e.message };
   }
 });
-ipcMain.handle('update-promotion', async (e, { id, promo }) => {
+ipcMain.handle('promotions:update', async (e, { id, promo }) => {
   try {
-    if (!id || !promo || !promo.name || !promo.type || !promo.value || !promo.applies_to || !promo.start_date || !promo.end_date) {
+    if (!id || !promo || !promo.name || !promo.type || promo.value === undefined || promo.value === '' || !promo.applies_to || !promo.start_date || !promo.end_date) {
       return { success: false, error: 'Invalid promotion data' };
     }
     return { success: true, count: updatePromotion(id, promo) };
@@ -321,11 +339,10 @@ ipcMain.handle('update-promotion', async (e, { id, promo }) => {
     return { success: false, error: e.message };
   }
 });
-ipcMain.handle('delete-promotion', async (e, id) => { try { return { success: true, count: deletePromotion(id) }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('get-active-promotions', async () => { try { return { success: true, data: getActivePromotions() }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('promotions:delete', async (e, id) => { try { return { success: true, count: deletePromotion(id) }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('promotions:get-active', async () => { try { return { success: true, data: getActivePromotions() }; } catch (e) { return { success: false, error: e.message }; } });
 
-// --- AUTHENTICATION IPC HANDLERS ---
-ipcMain.handle('login', async (e, { username, password }) => {
+ipcMain.handle('auth:login', async (e, { username, password }) => {
   try {
     const user = getUserByUsername(username);
     if (!user || !user.is_active) {
@@ -380,7 +397,7 @@ ipcMain.handle('login', async (e, { username, password }) => {
   }
 });
 
-ipcMain.handle('verify-session', async (e, token) => {
+ipcMain.handle('auth:verify-session', async (e, token) => {
   try {
     cleanupExpiredSessions();
     const sessionData = getSession(token);
@@ -393,7 +410,7 @@ ipcMain.handle('verify-session', async (e, token) => {
   }
 });
 
-ipcMain.handle('logout', async (e, { token, userId }) => {
+ipcMain.handle('auth:logout', async (e, { token, userId }) => {
   try {
     deleteSession(token);
     createAuditLog(userId, 'LOGOUT', null, null, 'User logged out');
@@ -403,9 +420,11 @@ ipcMain.handle('logout', async (e, { token, userId }) => {
   }
 });
 
-// --- USER MANAGEMENT IPC HANDLERS ---
-ipcMain.handle('get-users', async () => { try { return { success: true, data: getUsers() }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('add-user', async (e, user) => {
+// ============================================================
+// USUÁRIOS - IPC Handlers
+// ============================================================
+ipcMain.handle('users:get', async () => { try { return { success: true, data: getUsers() }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('users:add', async (e, user) => {
   try {
     if (!user || !user.username || !user.password || !user.full_name || !user.role) {
       return { success: false, error: 'Invalid user data' };
@@ -416,7 +435,7 @@ ipcMain.handle('add-user', async (e, user) => {
     return { success: false, error: e.message };
   }
 });
-ipcMain.handle('update-user', async (e, { id, user }) => {
+ipcMain.handle('users:update', async (e, { id, user }) => {
   try {
     if (!id || !user || !user.username || !user.full_name || !user.role) {
       return { success: false, error: 'Invalid user data' };
@@ -427,9 +446,9 @@ ipcMain.handle('update-user', async (e, { id, user }) => {
     return { success: false, error: e.message };
   }
 });
-ipcMain.handle('delete-user', async (e, id) => { try { return { success: true, count: deleteUser(id) }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('toggle-user-active', async (e, id) => { try { return { success: true, count: toggleUserActive(id) }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('change-user-password', async (e, { userId, current, new: newPassword }) => {
+ipcMain.handle('users:delete', async (e, id) => { try { return { success: true, count: deleteUser(id) }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('users:toggle-active', async (e, id) => { try { return { success: true, count: toggleUserActive(id) }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('auth:change-user-password', async (e, { userId, current, new: newPassword }) => {
   try {
     const user = getUserById(userId);
     if (!user) {
@@ -442,7 +461,6 @@ ipcMain.handle('change-user-password', async (e, { userId, current, new: newPass
     }
 
     const newPasswordHash = bcrypt.hashSync(newPassword, 10);
-    const db = require('./database/db.cjs');
     const stmt = db.prepare('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?');
     stmt.run(newPasswordHash, userId);
 
@@ -454,12 +472,16 @@ ipcMain.handle('change-user-password', async (e, { userId, current, new: newPass
   }
 });
 
-// --- AUDIT LOGS IPC HANDLERS ---
-ipcMain.handle('get-audit-logs', async (e, limit) => { try { return { success: true, data: getAuditLogs(limit) }; } catch (e) { return { success: false, error: e.message }; } });
+// ============================================================
+// AUDITORIA - IPC Handlers
+// ============================================================
+ipcMain.handle('audit:get-logs', async (e, limit) => { try { return { success: true, data: getAuditLogs(limit) }; } catch (e) { return { success: false, error: e.message }; } });
 
-// --- INVENTORY IPC HANDLERS ---
-ipcMain.handle('get-inventory', async () => { try { return { success: true, data: getInventory() }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('add-inventory', async (e, { productId, quantity, unit, minQuantity }) => {
+// ============================================================
+// ESTOQUE - IPC Handlers
+// ============================================================
+ipcMain.handle('inventory:get', async () => { try { return { success: true, data: getInventory() }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('inventory:add', async (e, { productId, quantity, unit, minQuantity }) => {
   try {
     if (!productId || !quantity || quantity < 0) {
       return { success: false, error: 'Invalid inventory data' };
@@ -470,7 +492,7 @@ ipcMain.handle('add-inventory', async (e, { productId, quantity, unit, minQuanti
     return { success: false, error: e.message };
   }
 });
-ipcMain.handle('update-inventory-quantity', async (e, { inventoryId, newQuantity }) => {
+ipcMain.handle('inventory:update-quantity', async (e, { inventoryId, newQuantity }) => {
   try {
     if (!inventoryId || newQuantity === undefined || newQuantity < 0) {
       return { success: false, error: 'Invalid inventory data' };
@@ -481,36 +503,40 @@ ipcMain.handle('update-inventory-quantity', async (e, { inventoryId, newQuantity
     return { success: false, error: e.message };
   }
 });
-ipcMain.handle('adjust-inventory', async (e, { inventoryId, delta, reason }) => {
+ipcMain.handle('inventory:adjust', async (e, { inventoryId, delta, reason }) => {
   try {
     if (!inventoryId || delta === undefined || isNaN(delta)) {
       return { success: false, error: 'Invalid inventory adjustment data' };
     }
-    return { success: true, success: adjustInventory(inventoryId, delta, reason) };
+    return { success: true, data: adjustInventory(inventoryId, delta, reason) };
   } catch (e) {
     console.error('Error adjusting inventory:', e);
     return { success: false, error: e.message };
   }
 });
-ipcMain.handle('get-inventory-movements', async (e, { inventoryId, limit }) => { try { return { success: true, data: getInventoryMovements(inventoryId, limit) }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('get-low-stock-items', async () => { try { return { success: true, data: getLowStockItems() }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('inventory:get-movements', async (e, { inventoryId, limit }) => { try { return { success: true, data: getInventoryMovements(inventoryId, limit) }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('inventory:get-low-stock', async () => { try { return { success: true, data: getLowStockItems() }; } catch (e) { return { success: false, error: e.message }; } });
 
-// --- FINANCIAL IPC HANDLERS ---
-ipcMain.handle('get-financial-accounts', async (e, { type, status }) => { try { return { success: true, data: getFinancialAccounts(type, status) }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('add-financial-account', async (e, account) => { try { return { success: true, id: addFinancialAccount(account) }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('update-financial-account', async (e, { id, account }) => { try { return { success: true, count: updateFinancialAccount(id, account) }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('delete-financial-account', async (e, id) => { try { return { success: true, count: deleteFinancialAccount(id) }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('add-financial-transaction', async (e, transaction) => { try { return { success: true, id: addFinancialTransaction(transaction) }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('get-financial-transactions', async (e, accountId) => { try { return { success: true, data: getFinancialTransactions(accountId) }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('get-financial-summary', async (e, { startDate, endDate }) => { try { return { success: true, data: getFinancialSummary(startDate, endDate) }; } catch (e) { return { success: false, error: e.message }; } });
+// ============================================================
+// FINANCEIRO - IPC Handlers
+// ============================================================
+ipcMain.handle('financial:get-accounts', async (e, { type, status }) => { try { return { success: true, data: getFinancialAccounts(type, status) }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('financial:add-account', async (e, account) => { try { return { success: true, id: addFinancialAccount(account) }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('financial:update-account', async (e, { id, account }) => { try { return { success: true, count: updateFinancialAccount(id, account) }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('financial:delete-account', async (e, id) => { try { return { success: true, count: deleteFinancialAccount(id) }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('financial:add-transaction', async (e, transaction) => { try { return { success: true, id: addFinancialTransaction(transaction) }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('financial:get-transactions', async (e, accountId) => { try { return { success: true, data: getFinancialTransactions(accountId) }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('financial:get-summary', async (e, { startDate, endDate }) => { try { return { success: true, data: getFinancialSummary(startDate, endDate) }; } catch (e) { return { success: false, error: e.message }; } });
 
-// --- CLIENTS IPC HANDLERS ---
-ipcMain.handle('get-clients', async () => { try { return { success: true, data: getClients() }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('add-client', async (e, client) => { try { return { success: true, id: addClient(client) }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('update-client', async (e, { id, client }) => { try { return { success: true, count: updateClient(id, client) }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('delete-client', async (e, id) => { try { return { success: true, count: deleteClient(id) }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('get-client-orders', async (e, clientId) => { try { return { success: true, data: getClientOrders(clientId) }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('add-client-order', async (e, { clientId, orderId, totalAmount }) => { try { return { success: true, id: addClientOrder(clientId, orderId, totalAmount) }; } catch (e) { return { success: false, error: e.message }; } });
+// ============================================================
+// CLIENTES - IPC Handlers
+// ============================================================
+ipcMain.handle('clients:get', async () => { try { return { success: true, data: getClients() }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('clients:add', async (e, client) => { try { return { success: true, id: addClient(client) }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('clients:update', async (e, { id, client }) => { try { return { success: true, count: updateClient(id, client) }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('clients:delete', async (e, id) => { try { return { success: true, count: deleteClient(id) }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('clients:get-orders', async (e, clientId) => { try { return { success: true, data: getClientOrders(clientId) }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('clients:add-order', async (e, { clientId, orderId, totalAmount }) => { try { return { success: true, id: addClientOrder(clientId, orderId, totalAmount) }; } catch (e) { return { success: false, error: e.message }; } });
 
 app.whenReady().then(() => {
   createWindow();
