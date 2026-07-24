@@ -1,10 +1,19 @@
-import { createContext, useContext } from 'react'
+import { createContext, useContext, useEffect } from 'react'
 
 const ThemeContext = createContext()
 
 export function ThemeProvider({ children }) {
+  useEffect(() => {
+    const root = document.documentElement
+    root.removeAttribute('data-theme')
+    localStorage.removeItem('acai-theme')
+  }, [])
+
+  const toggleTheme = () => {}
+  const setTheme = () => {}
+
   return (
-    <ThemeContext.Provider value={{ theme: 'light' }}>
+    <ThemeContext.Provider value={{ theme: 'light', toggleTheme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   )

@@ -48,7 +48,7 @@ export function OrderSidebar({
           </button>
           <button
             onClick={onLogout}
-            className="p-1.5 hover:bg-red-500/20 rounded-md text-muted hover:text-red-500 transition-colors"
+            className="p-1.5 hover:bg-danger/20 rounded-md text-muted hover:text-danger transition-colors"
             title="Sair"
           >
             <X size={18} />

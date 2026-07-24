@@ -10,7 +10,7 @@ import ClientForm from '../forms/ClientForm';
 import CategoryForm from '../forms/CategoryForm';
 import ModalHeader from '../molecules/ModalHeader';
 
-export default function SettingsModal({ isOpen, onClose, settingsTab, setSettingsTab, safeCatalog, categories, newCatName, setNewCatName, newProd, setNewProd, newPromo, setNewPromo, users, newUser, setNewUser, inventory, inventoryForm, setInventoryForm, selectedInventoryItem, setSelectedInventoryItem, inventoryMovements, loadInventoryMovements, financialAccounts, financialForm, setFinancialForm, financialFilter, setFinancialFilter, clients, clientForm, setClientForm, selectedClientOrders, promotions, pwdForm, setPwdForm, syncDB, loadUsers, loadInventory, loadFinancialAccounts, loadClients, loadClientOrders, runWithAuth, getIPC, inputTheme }) {
+export default function SettingsModal({ isOpen, onClose, settingsTab, setSettingsTab, safeCatalog, categories, newCatName, setNewCatName, newProd, setNewProd, newPromo, setNewPromo, users, newUser, setNewUser, inventory, inventoryForm, setInventoryForm, selectedInventoryItem, setSelectedInventoryItem, inventoryMovements, loadInventoryMovements, financialAccounts, financialForm, setFinancialForm, financialFilter, setFinancialFilter, clients, clientForm, setClientForm, selectedClientOrders, promotions, pwdForm, setPwdForm, syncDB, loadUsers, loadInventory, loadFinancialAccounts, loadClients, loadClientOrders, runWithAuth, getIPC }) {
   if (!isOpen) return null;
 
   const handleAddCategory = () => {
@@ -131,15 +131,15 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
       <div className="bg-card w-full max-w-5xl h-[80vh] rounded-2xl border border-border flex flex-col overflow-hidden shadow-2xl">
         <div className="p-4 bg-surface-light border-b border-border flex justify-between items-center px-6">
           <SettingsTabs activeTab={settingsTab} onTabChange={setSettingsTab} />
-          <button onClick={onClose} className="p-1.5 hover:bg-red-500/20 rounded-md text-muted hover:text-red-500 transition-all"><X size={20}/></button>
+          <button onClick={onClose} className="p-1.5 hover:bg-danger/20 rounded-md text-muted hover:text-danger transition-all"><X size={20}/></button>
         </div>
         <div className="flex-1 flex overflow-hidden">
           {settingsTab === 'products' && (
             <>
               <div className="w-80 p-6 border-r border-border bg-surface overflow-y-auto custom-scrollbar">
-                <CategoryForm newCatName={newCatName} setNewCatName={setNewCatName} categories={categories} onAdd={handleAddCategory} onDelete={handleDeleteCategory} inputTheme={inputTheme} />
+                <CategoryForm newCatName={newCatName} setNewCatName={setNewCatName} categories={categories} onAdd={handleAddCategory} onDelete={handleDeleteCategory} />
                 <h3 className="text-[10px] font-bold text-muted uppercase mb-6 tracking-widest border-b border-border pb-2">{newProd.id ? 'Editar Produto' : 'Novo Produto'}</h3>
-                <ProductForm newProd={newProd} setNewProd={setNewProd} categories={categories} onSubmit={handleProductSubmit} onCancel={() => setNewProd({ id: null, name: '', price: '', category: '', ingredients: '' })} inputTheme={inputTheme} />
+                <ProductForm newProd={newProd} setNewProd={setNewProd} categories={categories} onSubmit={handleProductSubmit} onCancel={() => setNewProd({ id: null, name: '', price: '', category: '', ingredients: '' })} />
               </div>
               <div className="flex-1 p-6 flex flex-col overflow-hidden">
                 <h3 className="text-[10px] font-bold text-muted uppercase mb-4 tracking-widest border-b border-border pb-2">Produtos Cadastrados</h3>
@@ -151,8 +151,8 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                         <div className="text-[9px] text-muted uppercase">{p.category} - R$ {(p.price || 0).toFixed(2)}</div>
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => runWithAuth(() => setNewProd({ id: p.id, name: p.name, price: p.price.toString(), category: p.category, ingredients: p.ingredients || '' }), 'edit_products')} className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-lg transition-colors"><Pencil size={16} /></button>
-                        <button onClick={() => runWithAuth(() => { const ipc = getIPC(); if(window.confirm(`Excluir ${p.name}?`) && ipc) { ipc.invoke('catalog:delete-product', p.id).then(() => syncDB()); } }, 'delete_products')} className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                        <button onClick={() => runWithAuth(() => setNewProd({ id: p.id, name: p.name, price: p.price.toString(), category: p.category, ingredients: p.ingredients || '' }), 'edit_products')} className="p-2 bg-info/10 hover:bg-info/20 text-info rounded-lg transition-colors"><Pencil size={16} /></button>
+                        <button onClick={() => runWithAuth(() => { const ipc = getIPC(); if(window.confirm(`Excluir ${p.name}?`) && ipc) { ipc.invoke('catalog:delete-product', p.id).then(() => syncDB()); } }, 'delete_products')} className="p-2 bg-danger/10 hover:bg-danger/20 text-danger rounded-lg transition-colors"><Trash2 size={16} /></button>
                       </div>
                     </div>
                   ))}
@@ -163,8 +163,8 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
           {settingsTab === 'promotions' && (
             <>
               <div className="w-80 p-6 border-r border-border bg-surface overflow-y-auto custom-scrollbar">
-                <h3 className="text-[10px] font-bold text-emerald-500 uppercase mb-4 tracking-widest border-b border-border pb-2">{newPromo.id ? 'Editar Promoção' : 'Nova Promoção'}</h3>
-                <PromotionForm newPromo={newPromo} setNewPromo={setNewPromo} categories={categories} onSubmit={handlePromoSubmit} onCancel={() => setNewPromo({ id: null, name: '', type: 'PERCENTAGE', value: '', applies_to: 'ALL', target_category: '', target_product_id: '', min_quantity: '1', start_date: '', end_date: '', is_active: true })} inputTheme={inputTheme} />
+                <h3 className="text-[10px] font-bold text-success uppercase mb-4 tracking-widest border-b border-border pb-2">{newPromo.id ? 'Editar Promoção' : 'Nova Promoção'}</h3>
+                <PromotionForm newPromo={newPromo} setNewPromo={setNewPromo} categories={categories} onSubmit={handlePromoSubmit} onCancel={() => setNewPromo({ id: null, name: '', type: 'PERCENTAGE', value: '', applies_to: 'ALL', target_category: '', target_product_id: '', min_quantity: '1', start_date: '', end_date: '', is_active: true })} />
               </div>
               <div className="flex-1 p-6 flex flex-col overflow-hidden">
                 <h3 className="text-[10px] font-bold text-muted uppercase mb-4 tracking-widest border-b border-border pb-2">Promoções Cadastradas</h3>
@@ -177,8 +177,8 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                         <div className="text-[8px] text-muted">{new Date(p.start_date).toLocaleDateString()} até {new Date(p.end_date).toLocaleDateString()}</div>
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => runWithAuth(() => setNewPromo({ id: p.id, name: p.name, type: p.type, value: p.value.toString(), applies_to: p.applies_to, target_category: p.target_category || '', target_product_id: p.target_product_id || '', min_quantity: p.min_quantity.toString(), start_date: p.start_date, end_date: p.end_date, is_active: p.is_active }), 'edit_promotions')} className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-lg transition-colors"><Pencil size={16} /></button>
-                        <button onClick={() => runWithAuth(() => { const ipc = getIPC(); if(window.confirm(`Excluir promoção ${p.name}?`) && ipc) { ipc.invoke('promotions:delete', p.id).then(() => syncDB()); } }, 'delete_promotions')} className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                        <button onClick={() => runWithAuth(() => setNewPromo({ id: p.id, name: p.name, type: p.type, value: p.value.toString(), applies_to: p.applies_to, target_category: p.target_category || '', target_product_id: p.target_product_id || '', min_quantity: p.min_quantity.toString(), start_date: p.start_date, end_date: p.end_date, is_active: p.is_active }), 'edit_promotions')} className="p-2 bg-info/10 hover:bg-info/20 text-info rounded-lg transition-colors"><Pencil size={16} /></button>
+                        <button onClick={() => runWithAuth(() => { const ipc = getIPC(); if(window.confirm(`Excluir promoção ${p.name}?`) && ipc) { ipc.invoke('promotions:delete', p.id).then(() => syncDB()); } }, 'delete_promotions')} className="p-2 bg-danger/10 hover:bg-danger/20 text-danger rounded-lg transition-colors"><Trash2 size={16} /></button>
                       </div>
                     </div>
                   ))}
@@ -189,11 +189,11 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
           {settingsTab === 'security' && (
             <>
               <div className="w-80 p-6 border-r border-border bg-surface overflow-y-auto custom-scrollbar">
-                <h3 className="text-[10px] font-bold text-emerald-500 uppercase mb-4 tracking-widest border-b border-border pb-2">Alterar Senha</h3>
+                <h3 className="text-[10px] font-bold text-success uppercase mb-4 tracking-widest border-b border-border pb-2">Alterar Senha</h3>
                 <div className="space-y-3">
-                  <input type="password" placeholder="Senha Atual" value={pwdForm.current} onChange={e => setPwdForm({...pwdForm, current: e.target.value})} className={inputTheme} />
-                  <input type="password" placeholder="Nova Senha" value={pwdForm.next} onChange={e => setPwdForm({...pwdForm, next: e.target.value})} className={inputTheme} />
-                  <button onClick={handlePasswordChange} className="w-full bg-emerald-600 hover:bg-emerald-500 py-3 rounded-lg font-bold text-xs uppercase tracking-widest text-slate-950 transition-all">Alterar Senha</button>
+                  <input type="password" placeholder="Senha Atual" value={pwdForm.current} onChange={e => setPwdForm({...pwdForm, current: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
+                  <input type="password" placeholder="Nova Senha" value={pwdForm.next} onChange={e => setPwdForm({...pwdForm, next: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
+                  <button onClick={handlePasswordChange} className="w-full bg-success hover:bg-success py-3 rounded-lg font-bold text-xs uppercase tracking-widest text-white transition-all">Alterar Senha</button>
                 </div>
               </div>
               <div className="flex-1 p-6 flex flex-col overflow-hidden">
@@ -209,8 +209,8 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                       <li>Cancelar pedidos (estorno)</li>
                     </ul>
                   </div>
-                  <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-lg">
-                    <div className="font-bold text-xs uppercase text-emerald-600 mb-2">Dica de Segurança</div>
+                  <div className="bg-success/10 border border-success/30 p-4 rounded-lg">
+                    <div className="font-bold text-xs uppercase text-success mb-2">Dica de Segurança</div>
                     <div className="text-[10px] text-muted">Mantenha sua senha segura e altere-a regularmente. A senha padrão é "1234".</div>
                   </div>
                 </div>
@@ -220,8 +220,8 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
           {settingsTab === 'users' && (
             <>
               <div className="w-80 p-6 border-r border-border bg-surface overflow-y-auto custom-scrollbar">
-                <h3 className="text-[10px] font-bold text-emerald-500 uppercase mb-4 tracking-widest border-b border-border pb-2">{newUser.id ? 'Editar Usuário' : 'Novo Usuário'}</h3>
-                <UserForm newUser={newUser} setNewUser={setNewUser} onSubmit={handleUserSubmit} onCancel={() => setNewUser({ id: null, username: '', password: '', full_name: '', role: 'operator' })} inputTheme={inputTheme} />
+                <h3 className="text-[10px] font-bold text-success uppercase mb-4 tracking-widest border-b border-border pb-2">{newUser.id ? 'Editar Usuário' : 'Novo Usuário'}</h3>
+                <UserForm newUser={newUser} setNewUser={setNewUser} onSubmit={handleUserSubmit} onCancel={() => setNewUser({ id: null, username: '', password: '', full_name: '', role: 'operator' })} />
               </div>
               <div className="flex-1 p-6 flex flex-col overflow-hidden">
                 <h3 className="text-[10px] font-bold text-muted uppercase mb-4 tracking-widest border-b border-border pb-2">Usuários Cadastrados</h3>
@@ -234,9 +234,9 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                         <div className="text-[8px] text-muted">Criado em: {new Date(u.created_at).toLocaleDateString()}</div>
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => setNewUser({ id: u.id, username: u.username, password: '', full_name: u.full_name, role: u.role })} className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-lg transition-colors"><Pencil size={16} /></button>
-                        <button onClick={() => { const ipc = getIPC(); if(window.confirm(`${u.is_active ? 'Desativar' : 'Ativar'} usuário ${u.full_name}?`) && ipc) { ipc.invoke('users:toggle-active', u.id).then(() => loadUsers()); } }} className={`p-2 rounded-lg transition-colors ${u.is_active ? 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-500' : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500'}`}>{u.is_active ? <X size={16} /> : <Check size={16} />}</button>
-                        <button onClick={() => { const ipc = getIPC(); if(window.confirm(`Excluir usuário ${u.full_name}?`) && ipc) { ipc.invoke('users:delete', u.id).then(() => loadUsers()); } }} className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                        <button onClick={() => setNewUser({ id: u.id, username: u.username, password: '', full_name: u.full_name, role: u.role })} className="p-2 bg-info/10 hover:bg-info/20 text-info rounded-lg transition-colors"><Pencil size={16} /></button>
+                        <button onClick={() => { const ipc = getIPC(); if(window.confirm(`${u.is_active ? 'Desativar' : 'Ativar'} usuário ${u.full_name}?`) && ipc) { ipc.invoke('users:toggle-active', u.id).then(() => loadUsers()); } }} className={`p-2 rounded-lg transition-colors ${u.is_active ? 'bg-warning/10 hover:bg-warning/20 text-warning' : 'bg-success/10 hover:bg-success/20 text-success'}`}>{u.is_active ? <X size={16} /> : <Check size={16} />}</button>
+                        <button onClick={() => { const ipc = getIPC(); if(window.confirm(`Excluir usuário ${u.full_name}?`) && ipc) { ipc.invoke('users:delete', u.id).then(() => loadUsers()); } }} className="p-2 bg-danger/10 hover:bg-danger/20 text-danger rounded-lg transition-colors"><Trash2 size={16} /></button>
                       </div>
                     </div>
                   ))}
@@ -247,8 +247,8 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
           {settingsTab === 'inventory' && (
             <>
               <div className="w-80 p-6 border-r border-border bg-surface overflow-y-auto custom-scrollbar">
-                <h3 className="text-[10px] font-bold text-emerald-500 uppercase mb-4 tracking-widest border-b border-border pb-2">{selectedInventoryItem ? 'Editar Estoque' : 'Adicionar ao Estoque'}</h3>
-                <InventoryForm inventoryForm={inventoryForm} setInventoryForm={setInventoryForm} products={safeCatalog} onSubmit={handleInventorySubmit} inputTheme={inputTheme} />
+                <h3 className="text-[10px] font-bold text-success uppercase mb-4 tracking-widest border-b border-border pb-2">{selectedInventoryItem ? 'Editar Estoque' : 'Adicionar ao Estoque'}</h3>
+                <InventoryForm inventoryForm={inventoryForm} setInventoryForm={setInventoryForm} products={safeCatalog} onSubmit={handleInventorySubmit} />
                 {selectedInventoryItem && (
                   <div className="mt-6">
                     <h4 className="text-[9px] font-bold text-muted uppercase mb-2">Movimentações</h4>
@@ -266,15 +266,15 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                 <h3 className="text-[10px] font-bold text-muted uppercase mb-4 tracking-widest border-b border-border pb-2">Estoque Atual</h3>
                 <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
                   {inventory.map(inv => (
-                    <div key={inv.id} className={`flex items-center justify-between bg-surface-light border p-3 rounded-lg ${inv.quantity <= inv.min_quantity ? 'border-orange-500 bg-orange-50' : 'border-border'}`}>
+                    <div key={inv.id} className={`flex items-center justify-between bg-surface-light border p-3 rounded-lg ${inv.quantity <= inv.min_quantity ? 'border-warning bg-warning/10' : 'border-border'}`}>
                       <div>
                         <div className="font-bold text-xs uppercase text-primary">{inv.product_name}</div>
                         <div className="text-[9px] text-muted uppercase">{inv.category} • {inv.quantity} {inv.unit}</div>
-                        {inv.quantity <= inv.min_quantity && <div className="text-[8px] text-orange-500 font-bold uppercase mt-1">⚠️ Estoque Baixo</div>}
+                        {inv.quantity <= inv.min_quantity && <div className="text-[8px] text-warning font-bold uppercase mt-1">⚠️ Estoque Baixo</div>}
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => { setSelectedInventoryItem(inv); loadInventoryMovements(inv.id); }} className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-lg transition-colors" title="Ver Histórico"><FileText size={16} /></button>
-                        <button onClick={() => { const ipc = getIPC(); if(window.confirm(`Ajustar estoque de ${inv.product_name}?`) && ipc) { const delta = prompt('Quantidade a adicionar (positivo) ou remover (negativo):', '0'); if (delta) { ipc.invoke('inventory:adjust', { inventoryId: inv.id, delta: parseFloat(delta), reason: 'Ajuste manual' }).then(() => loadInventory()); } } }} className="p-2 bg-orange-500/10 hover:bg-orange-500/20 text-orange-500 rounded-lg transition-colors" title="Ajustar Estoque"><ArrowUpCircle size={16} /></button>
+                        <button onClick={() => { setSelectedInventoryItem(inv); loadInventoryMovements(inv.id); }} className="p-2 bg-info/10 hover:bg-info/20 text-info rounded-lg transition-colors" title="Ver Histórico"><FileText size={16} /></button>
+                        <button onClick={() => { const ipc = getIPC(); if(window.confirm(`Ajustar estoque de ${inv.product_name}?`) && ipc) { const delta = prompt('Quantidade a adicionar (positivo) ou remover (negativo):', '0'); if (delta) { ipc.invoke('inventory:adjust', { inventoryId: inv.id, delta: parseFloat(delta), reason: 'Ajuste manual' }).then(() => loadInventory()); } } }} className="p-2 bg-warning/10 hover:bg-warning/20 text-warning rounded-lg transition-colors" title="Ajustar Estoque"><ArrowUpCircle size={16} /></button>
                       </div>
                     </div>
                   ))}
@@ -285,8 +285,8 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
           {settingsTab === 'financial' && (
             <>
               <div className="w-80 p-6 border-r border-border bg-surface overflow-y-auto custom-scrollbar">
-                <h3 className="text-[10px] font-bold text-emerald-500 uppercase mb-4 tracking-widest border-b border-border pb-2">{financialForm.id ? 'Editar Conta' : 'Nova Conta'}</h3>
-                <FinancialForm financialForm={financialForm} setFinancialForm={setFinancialForm} onSubmit={handleFinancialSubmit} onCancel={() => setFinancialForm({ id: null, type: 'payable', description: '', amount: '', due_date: '', status: 'pending', category: '' })} inputTheme={inputTheme} />
+                <h3 className="text-[10px] font-bold text-success uppercase mb-4 tracking-widest border-b border-border pb-2">{financialForm.id ? 'Editar Conta' : 'Nova Conta'}</h3>
+                <FinancialForm financialForm={financialForm} setFinancialForm={setFinancialForm} onSubmit={handleFinancialSubmit} onCancel={() => setFinancialForm({ id: null, type: 'payable', description: '', amount: '', due_date: '', status: 'pending', category: '' })} />
               </div>
               <div className="flex-1 p-6 flex flex-col overflow-hidden">
                 <div className="flex items-center gap-4 mb-4 border-b border-border pb-4">
@@ -308,15 +308,15 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                 </div>
                 <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
                   {financialAccounts.map(acc => (
-                    <div key={acc.id} className={`flex items-center justify-between bg-surface-light border p-3 rounded-lg ${acc.status === 'paid' ? 'border-emerald-500 bg-emerald-50' : acc.status === 'cancelled' ? 'border-border opacity-60' : acc.due_date && new Date(acc.due_date) < new Date() ? 'border-red-500 bg-red-50' : 'border-border'}`}>
+                    <div key={acc.id} className={`flex items-center justify-between bg-surface-light border p-3 rounded-lg ${acc.status === 'paid' ? 'border-success bg-success/10' : acc.status === 'cancelled' ? 'border-border opacity-60' : acc.due_date && new Date(acc.due_date) < new Date() ? 'border-danger bg-danger/10' : 'border-border'}`}>
                       <div>
                         <div className="font-bold text-xs uppercase text-primary">{acc.description}</div>
                         <div className="text-[9px] text-muted uppercase">{acc.type === 'payable' ? 'A Pagar' : 'A Receber'} • R$ {acc.amount.toFixed(2)}</div>
                         <div className="text-[8px] text-muted">Vencimento: {acc.due_date ? new Date(acc.due_date).toLocaleDateString() : 'N/A'} • {acc.status}</div>
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => setFinancialForm({ id: acc.id, type: acc.type, description: acc.description, amount: acc.amount.toString(), due_date: acc.due_date || '', status: acc.status, category: acc.category || '' })} className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-lg transition-colors"><Pencil size={16} /></button>
-                        <button onClick={() => { const ipc = getIPC(); if(window.confirm(`Excluir conta ${acc.description}?`) && ipc) { ipc.invoke('financial:delete-account', acc.id).then(() => loadFinancialAccounts()); } }} className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                        <button onClick={() => setFinancialForm({ id: acc.id, type: acc.type, description: acc.description, amount: acc.amount.toString(), due_date: acc.due_date || '', status: acc.status, category: acc.category || '' })} className="p-2 bg-info/10 hover:bg-info/20 text-info rounded-lg transition-colors"><Pencil size={16} /></button>
+                        <button onClick={() => { const ipc = getIPC(); if(window.confirm(`Excluir conta ${acc.description}?`) && ipc) { ipc.invoke('financial:delete-account', acc.id).then(() => loadFinancialAccounts()); } }} className="p-2 bg-danger/10 hover:bg-danger/20 text-danger rounded-lg transition-colors"><Trash2 size={16} /></button>
                       </div>
                     </div>
                   ))}
@@ -327,8 +327,8 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
           {settingsTab === 'clients' && (
             <>
               <div className="w-80 p-6 border-r border-border bg-surface overflow-y-auto custom-scrollbar">
-                <h3 className="text-[10px] font-bold text-emerald-500 uppercase mb-4 tracking-widest border-b border-border pb-2">{clientForm.id ? 'Editar Cliente' : 'Novo Cliente'}</h3>
-                <ClientForm clientForm={clientForm} setClientForm={setClientForm} onSubmit={handleClientSubmit} onCancel={() => setClientForm({ id: null, name: '', phone: '', address: '', email: '', notes: '' })} inputTheme={inputTheme} />
+                <h3 className="text-[10px] font-bold text-success uppercase mb-4 tracking-widest border-b border-border pb-2">{clientForm.id ? 'Editar Cliente' : 'Novo Cliente'}</h3>
+                <ClientForm clientForm={clientForm} setClientForm={setClientForm} onSubmit={handleClientSubmit} onCancel={() => setClientForm({ id: null, name: '', phone: '', address: '', email: '', notes: '' })} />
               </div>
               <div className="flex-1 p-6 flex flex-col overflow-hidden">
                 <h3 className="text-[10px] font-bold text-muted uppercase mb-4 tracking-widest border-b border-border pb-2">Clientes Cadastrados</h3>
@@ -341,8 +341,8 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                         <div className="text-[8px] text-muted">Cadastrado em: {new Date(client.created_at).toLocaleDateString()}</div>
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => { setClientForm({ id: client.id, name: client.name, phone: client.phone || '', address: client.address || '', email: client.email || '', notes: client.notes || '' }); loadClientOrders(client.id); }} className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-lg transition-colors"><Pencil size={16} /></button>
-                        <button onClick={() => { const ipc = getIPC(); if(window.confirm(`Excluir cliente ${client.name}?`) && ipc) { ipc.invoke('clients:delete', client.id).then(() => loadClients()); } }} className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                        <button onClick={() => { setClientForm({ id: client.id, name: client.name, phone: client.phone || '', address: client.address || '', email: client.email || '', notes: client.notes || '' }); loadClientOrders(client.id); }} className="p-2 bg-info/10 hover:bg-info/20 text-info rounded-lg transition-colors"><Pencil size={16} /></button>
+                        <button onClick={() => { const ipc = getIPC(); if(window.confirm(`Excluir cliente ${client.name}?`) && ipc) { ipc.invoke('clients:delete', client.id).then(() => loadClients()); } }} className="p-2 bg-danger/10 hover:bg-danger/20 text-danger rounded-lg transition-colors"><Trash2 size={16} /></button>
                       </div>
                     </div>
                   ))}

@@ -421,7 +421,6 @@ function App() {
     }
   };
 
-  const inputTheme = "w-full bg-surface border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium select-text shadow-sm";
 
   return (
     <div className="flex h-screen bg-surface text-primary font-sans overflow-hidden select-none">
@@ -498,7 +497,7 @@ function App() {
         delivForm={delivForm}
         setDelivForm={setDelivForm}
         handleAddTable={handleAddTable}
-        inputTheme={inputTheme}
+       
       />
 
       {/* MODAL: RELATÓRIOS E CAIXA */}
@@ -516,7 +515,7 @@ function App() {
         loadReports={loadReports}
         loadAdvancedReport={loadAdvancedReport}
         runWithAuth={runWithAuth}
-        inputTheme={inputTheme}
+       
         getIPC={getIPC}
       />
 
@@ -530,7 +529,7 @@ function App() {
         toggleRemoval={toggleRemoval}
         updateExtraInBuilder={updateExtraInBuilder}
         confirmFullBuild={confirmFullBuild}
-        inputTheme={inputTheme}
+       
       />
 
       {/* MODAL: MINI CONSTRUTOR RÁPIDO */}
@@ -539,7 +538,7 @@ function App() {
         onClose={() => setSimpleBuilder(null)}
         setBuilder={setSimpleBuilder}
         confirmSimpleBuild={confirmSimpleBuild}
-        inputTheme={inputTheme}
+       
       />
 
       {/* MODAL: CONFIGURAÇÕES / GESTÃO */}
@@ -586,7 +585,7 @@ function App() {
         loadClientOrders={loadClientOrders}
         runWithAuth={runWithAuth}
         getIPC={getIPC}
-        inputTheme={inputTheme}
+       
       />
 
       {/* MODAL: CHECKOUT */}
@@ -603,15 +602,17 @@ function App() {
         amountReceived={amountReceived}
         setAmountReceived={setAmountReceived}
         handleFinalize={handleFinalize}
-        inputTheme={inputTheme}
+       
       />
 
       {/* MODAL: LOGIN */}
       <LoginModal
         isOpen={modals.login}
         onClose={() => setModals({...modals, login: false})}
-        onLogin={handleLogin}
-        error={loginError}
+        loginForm={loginForm}
+        setLoginForm={setLoginForm}
+        loginError={loginError}
+        handleLogin={handleLogin}
       />
 
       {/* MODAL: CHANGE PASSWORD */}

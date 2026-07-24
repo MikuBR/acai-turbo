@@ -24,8 +24,8 @@ export function LoginModal({ isOpen, onLogin, error }) {
     <div className="fixed inset-0 bg-surface z-[2000] flex items-center justify-center animate-in fade-in duration-200">
       <div className="bg-card p-8 rounded-2xl border border-border w-96 shadow-2xl">
         <div className="text-center mb-6">
-          <div className="w-20 h-20 bg-emerald-600/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/30">
-            <Lock size={40} className="text-emerald-500" />
+          <div className="w-20 h-20 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-success/30">
+            <Lock size={40} className="text-success" />
           </div>
           <h2 className="text-2xl font-bold text-primary mb-1">Acai Turbo PDV</h2>
           <p className="text-muted text-sm">Faça login para acessar o sistema</p>
@@ -40,7 +40,7 @@ export function LoginModal({ isOpen, onLogin, error }) {
               type="text"
               value={form.username}
               onChange={(e) => setForm({ ...form, username: e.target.value })}
-              className="w-full bg-surface-light border border-border p-3 rounded-lg text-primary outline-none focus:border-emerald-500 transition-all"
+              className="w-full bg-surface-light border border-border p-3 rounded-lg text-primary outline-none focus:border-primary transition-all"
               placeholder="Digite seu usuário"
               autoFocus
             />
@@ -53,20 +53,20 @@ export function LoginModal({ isOpen, onLogin, error }) {
               type="password"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
-              className="w-full bg-surface-light border border-border p-3 rounded-lg text-primary outline-none focus:border-emerald-500 transition-all"
+              className="w-full bg-surface-light border border-border p-3 rounded-lg text-primary outline-none focus:border-primary transition-all"
               placeholder="Digite sua senha"
             />
           </div>
 
           {error && (
-            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-600 text-xs font-bold text-center">
+            <div className="p-3 bg-danger/10 border border-danger/30 rounded-lg text-danger text-xs font-bold text-center">
               {error}
             </div>
           )}
 
           <button
             type="submit"
-            className="w-full bg-emerald-600 hover:bg-emerald-500 py-3 rounded-lg font-bold text-sm uppercase tracking-widest text-slate-950 transition-all active:scale-95"
+            className="w-full bg-success hover:bg-success py-3 rounded-lg font-bold text-sm uppercase tracking-widest text-white transition-all active:scale-95"
           >
             Entrar
           </button>

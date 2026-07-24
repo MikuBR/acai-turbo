@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, Trash2, FileText, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 
-export default function ReportsModal({ isOpen, onClose, advancedReportData, setAdvancedReportData, reportData, reportPeriod, setReportPeriod, ordersHistory, cashMove, setCashMove, loadReports, loadAdvancedReport, runWithAuth, inputTheme, getIPC }) {
+export default function ReportsModal({ isOpen, onClose, advancedReportData, setAdvancedReportData, reportData, reportPeriod, setReportPeriod, ordersHistory, cashMove, setCashMove, loadReports, loadAdvancedReport, runWithAuth, getIPC }) {
   if (!isOpen) return null;
 
   return (
@@ -9,15 +9,15 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
       <div className="bg-card w-full max-w-6xl h-[85vh] rounded-2xl border border-border flex flex-col overflow-hidden shadow-2xl">
         <div className="p-4 bg-surface-light border-b border-border flex justify-between items-center px-6">
           <div className="flex items-center gap-4">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-emerald-500">Relatórios</h2>
+            <h2 className="text-xs font-bold uppercase tracking-widest text-success">Relatórios</h2>
             <div className="flex gap-2">
               <button onClick={() => { setAdvancedReportData(null); loadReports(); }}
-                className={`text-[10px] font-bold uppercase px-3 py-1 rounded transition-all ${!advancedReportData ? 'bg-emerald-600 text-white' : 'bg-surface-light text-muted hover:text-primary'}`}>Hoje</button>
+                className={`text-[10px] font-bold uppercase px-3 py-1 rounded transition-all ${!advancedReportData ? 'bg-success text-white' : 'bg-surface-light text-muted hover:text-primary'}`}>Hoje</button>
               <button onClick={() => { setAdvancedReportData(null); }}
-                className={`text-[10px] font-bold uppercase px-3 py-1 rounded transition-all ${advancedReportData ? 'bg-emerald-600 text-white' : 'bg-surface-light text-muted hover:text-primary'}`}>Período</button>
+                className={`text-[10px] font-bold uppercase px-3 py-1 rounded transition-all ${advancedReportData ? 'bg-success text-white' : 'bg-surface-light text-muted hover:text-primary'}`}>Período</button>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-red-500/20 rounded-md text-muted hover:text-red-500 transition-all"><X size={20}/></button>
+          <button onClick={onClose} className="p-1.5 hover:bg-danger/20 rounded-md text-muted hover:text-danger transition-all"><X size={20}/></button>
         </div>
         
         <div className="flex-1 flex overflow-hidden">
@@ -29,29 +29,29 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                   <div className="space-y-3">
                     <div>
                       <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Data Início</label>
-                      <input type="date" value={reportPeriod.startDate} onChange={e => setReportPeriod({...reportPeriod, startDate: e.target.value})} className={inputTheme} />
+                      <input type="date" value={reportPeriod.startDate} onChange={e => setReportPeriod({...reportPeriod, startDate: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
                     </div>
                     <div>
                       <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Data Fim</label>
-                      <input type="date" value={reportPeriod.endDate} onChange={e => setReportPeriod({...reportPeriod, endDate: e.target.value})} className={inputTheme} />
+                      <input type="date" value={reportPeriod.endDate} onChange={e => setReportPeriod({...reportPeriod, endDate: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
                     </div>
-                    <button onClick={loadAdvancedReport} className="w-full bg-emerald-600 hover:bg-emerald-500 py-2 rounded-lg font-bold text-xs uppercase tracking-widest text-white transition-all">Gerar Relatório</button>
+                    <button onClick={loadAdvancedReport} className="w-full bg-success hover:bg-success py-2 rounded-lg font-bold text-xs uppercase tracking-widest text-white transition-all">Gerar Relatório</button>
                   </div>
                 </div>
 
                 <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-4 border-b border-border pb-2">Métricas Avançadas</h3>
                 <div className="space-y-3 mb-6">
-                  <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-lg">
+                  <div className="bg-success/10 border border-success/30 p-4 rounded-lg">
                     <span className="text-[9px] text-muted font-bold uppercase block">Ticket Médio</span>
-                    <span className="text-2xl font-bold text-emerald-500 font-mono">R$ {advancedReportData.ticketAverage.toFixed(2)}</span>
+                    <span className="text-2xl font-bold text-success font-mono">R$ {advancedReportData.ticketAverage.toFixed(2)}</span>
                   </div>
-                  <div className="bg-blue-500/10 border border-blue-500/30 p-4 rounded-lg">
+                  <div className="bg-info/10 border border-info/30 p-4 rounded-lg">
                     <span className="text-[9px] text-muted font-bold uppercase block">Horários de Pico</span>
                     <div className="mt-2 space-y-1">
                       {advancedReportData.peakHours.slice(0, 3).map((h, i) => (
                         <div key={i} className="flex justify-between text-xs">
                           <span className="text-primary">{h.hour}:00</span>
-                          <span className="font-bold text-blue-500">{h.order_count} pedidos</span>
+                          <span className="font-bold text-info">{h.order_count} pedidos</span>
                         </div>
                       ))}
                     </div>
@@ -65,12 +65,12 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                   {reportData.sales.map((s, i) => (
                     <div key={i} className="flex justify-between items-center bg-surface-light p-3 rounded-lg border border-border">
                       <span className="text-xs font-bold text-primary">{s.payment_method}</span>
-                      <span className="font-mono text-emerald-500 font-bold">R$ {s.total_amount.toFixed(2)}</span>
+                      <span className="font-mono text-success font-bold">R$ {s.total_amount.toFixed(2)}</span>
                     </div>
                   ))}
                   <div className="flex justify-between items-center bg-surface-light p-3 rounded-lg border border-border mt-2">
                     <span className="text-xs font-bold text-primary uppercase tracking-widest">Total Bruto</span>
-                    <span className="font-mono text-emerald-400 font-bold text-lg">R$ {reportData.sales.reduce((acc, curr) => acc + curr.total_amount, 0).toFixed(2)}</span>
+                    <span className="font-mono text-success font-bold text-lg">R$ {reportData.sales.reduce((acc, curr) => acc + curr.total_amount, 0).toFixed(2)}</span>
                   </div>
                 </div>
               </>
@@ -80,14 +80,14 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
             <div className="bg-surface-light p-4 rounded-xl border border-border space-y-4">
               <div className="grid grid-cols-2 gap-2">
                 <button onClick={() => setCashMove({...cashMove, type: 'ENTRADA'})}
-                  className={`py-2 rounded font-bold text-[10px] flex items-center justify-center gap-1 transition-all ${cashMove.type === 'ENTRADA' ? 'bg-emerald-600/20 text-emerald-500 border border-emerald-500/50' : 'bg-surface-light text-muted border border-border'}`}>
+                  className={`py-2 rounded font-bold text-[10px] flex items-center justify-center gap-1 transition-all ${cashMove.type === 'ENTRADA' ? 'bg-success/20 text-success border border-success/50' : 'bg-surface-light text-muted border border-border'}`}>
                   <ArrowUpCircle size={14}/> ENTRADA</button>
                 <button onClick={() => setCashMove({...cashMove, type: 'SAIDA'})}
-                  className={`py-2 rounded font-bold text-[10px] flex items-center justify-center gap-1 transition-all ${cashMove.type === 'SAIDA' ? 'bg-red-600/20 text-red-500 border border-red-500/50' : 'bg-surface-light text-muted border border-border'}`}>
+                  className={`py-2 rounded font-bold text-[10px] flex items-center justify-center gap-1 transition-all ${cashMove.type === 'SAIDA' ? 'bg-danger/20 text-danger border border-danger/50' : 'bg-surface-light text-muted border border-border'}`}>
                   <ArrowDownCircle size={14}/> SANGRIA</button>
               </div>
-              <input type="number" step="0.01" placeholder="Valor R$" value={cashMove.amount} onChange={e => setCashMove({...cashMove, amount: e.target.value})} className={inputTheme} />
-              <input type="text" placeholder="Motivo (Ex: Troco, Gelo...)" value={cashMove.description} onChange={e => setCashMove({...cashMove, description: e.target.value})} className={inputTheme} />
+              <input type="number" step="0.01" placeholder="Valor R$" value={cashMove.amount} onChange={e => setCashMove({...cashMove, amount: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
+              <input type="text" placeholder="Motivo (Ex: Troco, Gelo...)" value={cashMove.description} onChange={e => setCashMove({...cashMove, description: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
               <button onClick={() => {
                 const ipc = getIPC();
                 if(cashMove.amount && cashMove.description && ipc) {
@@ -104,7 +104,7 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
             {reportData.movements?.length > 0 && (
               <div className="mt-4 space-y-2">
                 {reportData.movements.map((m, i) => (
-                  <div key={i} className={`flex justify-between text-[10px] p-2 rounded ${m.type === 'ENTRADA' ? 'text-emerald-400 bg-emerald-500/10' : 'text-red-400 bg-red-500/10'}`}>
+                  <div key={i} className={`flex justify-between text-[10px] p-2 rounded ${m.type === 'ENTRADA' ? 'text-success bg-success/10' : 'text-danger bg-danger/10'}`}>
                     <span>Total {m.type}</span><span>R$ {m.total_amount.toFixed(2)}</span>
                   </div>
                 ))}
@@ -125,7 +125,7 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                       <div className="text-[10px] text-muted">{p.qty} vendidos</div>
                     </div>
                     <div className="text-right">
-                      <div className="font-mono font-bold text-emerald-500">R$ {p.total_revenue.toFixed(2)}</div>
+                      <div className="font-mono font-bold text-success">R$ {p.total_revenue.toFixed(2)}</div>
                     </div>
                   </div>
                 ))
@@ -138,7 +138,7 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                         <span className="text-[10px] bg-surface-light px-2 py-1 rounded text-muted uppercase">{o.payment_method}</span>
                       </div>
                       <div className="flex items-center gap-4">
-                        <span className="font-mono font-bold text-lg text-emerald-500">R$ {o.total.toFixed(2)}</span>
+                        <span className="font-mono font-bold text-lg text-success">R$ {o.total.toFixed(2)}</span>
                         <button
                           onClick={() => runWithAuth(() => {
                             const ipc = getIPC();
@@ -146,7 +146,7 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                               ipc.invoke('orders:delete', o.id).then(() => loadReports());
                             }
                           }, 'cancel_orders')}
-                          className="p-2 bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 rounded-lg transition-colors flex items-center gap-2"
+                          className="p-2 bg-danger/10 hover:bg-danger hover:text-white text-danger rounded-lg transition-colors flex items-center gap-2"
                           title="Cancelar Pedido"
                         >
                           <Trash2 size={16} /> <span className="text-[10px] font-bold uppercase hidden xl:block">Estornar</span>

@@ -1,29 +1,29 @@
 import React from 'react';
 
-export default function ClientForm({ clientForm, setClientForm, onSubmit, onCancel, inputTheme }) {
+export default function ClientForm({ clientForm, setClientForm, onSubmit, onCancel, }) {
   return (
     <form onSubmit={onSubmit} className="space-y-3 select-text">
       <div>
         <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Nome</label>
-        <input type="text" value={clientForm.name} onChange={e => setClientForm({...clientForm, name: e.target.value})} className={inputTheme} required />
+        <input type="text" value={clientForm.name} onChange={e => setClientForm({...clientForm, name: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" required />
       </div>
       <div>
         <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Telefone</label>
-        <input type="text" value={clientForm.phone} onChange={e => setClientForm({...clientForm, phone: e.target.value})} className={inputTheme} />
+        <input type="text" value={clientForm.phone} onChange={e => setClientForm({...clientForm, phone: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
       </div>
       <div>
         <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Endereço</label>
-        <input type="text" value={clientForm.address} onChange={e => setClientForm({...clientForm, address: e.target.value})} className={inputTheme} />
+        <input type="text" value={clientForm.address} onChange={e => setClientForm({...clientForm, address: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
       </div>
       <div>
         <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Email</label>
-        <input type="email" value={clientForm.email} onChange={e => setClientForm({...clientForm, email: e.target.value})} className={inputTheme} />
+        <input type="email" value={clientForm.email} onChange={e => setClientForm({...clientForm, email: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
       </div>
       <div>
         <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Observações</label>
-        <textarea value={clientForm.notes} onChange={e => setClientForm({...clientForm, notes: e.target.value})} className={inputTheme} rows="2" />
+        <textarea value={clientForm.notes} onChange={e => setClientForm({...clientForm, notes: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" rows="2" />
       </div>
-      <button type="submit" className={`w-full ${clientForm.id ? 'bg-blue-600 hover:bg-blue-500' : 'bg-emerald-600 hover:bg-emerald-500'} py-3 rounded-lg font-bold text-xs uppercase tracking-widest text-white transition-all mt-4 active:scale-95`}>
+      <button type="submit" className={`w-full ${clientForm.id ? 'bg-info hover:bg-info' : 'bg-success hover:bg-success'} py-3 rounded-lg font-bold text-xs uppercase tracking-widest text-white transition-all mt-4 active:scale-95`}>
         {clientForm.id ? 'Atualizar Cliente' : 'Criar Cliente'}
       </button>
         {clientForm.id && (

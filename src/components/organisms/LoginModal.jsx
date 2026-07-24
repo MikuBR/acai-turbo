@@ -1,28 +1,41 @@
 import React from 'react';
 import { Lock } from 'lucide-react';
 
-export default function LoginModal({ isOpen, onClose, loginForm, setLoginForm, loginError, handleLogin, inputTheme }) {
+export default function LoginModal({
+  isOpen,
+  onClose,
+  loginForm = { username: '', password: '' },
+  setLoginForm = () => {},
+  loginError,
+  error,
+  handleLogin,
+  onLogin,
+}) {
   if (!isOpen) return null;
 
+  const activeForm = loginForm || { username: '', password: '' };
+  const activeError = loginError || error;
+  const activeSubmit = handleLogin || onLogin || ((e) => e.preventDefault());
+
   return (
-    <div className="fixed inset-0 bg-surface z-[2000] flex items-center justify-center animate-in fade-in duration-200">
-      <div className="bg-surface p-8 rounded-2xl border border-border w-96 shadow-2xl">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div className="bg-card p-8 rounded-2xl border border-border w-96 shadow-2xl">
         <div className="text-center mb-6">
           <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-primary/30">
             <Lock size={40} className="text-primary"/>
           </div>
-          <h2 className="text-2xl font-bold text-primary mb-1">Acai Turbo PDV</h2>
+          <h2 className="text-2xl font-bold text-primary mb-1">Açaí Turbo PDV</h2>
           <p className="text-muted text-sm">Faça login para acessar o sistema</p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={activeSubmit} className="space-y-4">
           <div>
             <label className="text-[10px] text-muted font-bold uppercase ml-1 mb-1 block">Usuário</label>
             <input
               type="text"
-              value={loginForm.username}
-              onChange={e => setLoginForm({...loginForm, username: e.target.value})}
-              className={inputTheme}
+              value={activeForm.username || ''}
+              onChange={e => setLoginForm({...activeForm, username: e.target.value})}
+              className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm"
               placeholder="Digite seu usuário"
               autoFocus
             />
@@ -31,22 +44,22 @@ export default function LoginModal({ isOpen, onClose, loginForm, setLoginForm, l
             <label className="text-[10px] text-muted font-bold uppercase ml-1 mb-1 block">Senha</label>
             <input
               type="password"
-              value={loginForm.password}
-              onChange={e => setLoginForm({...loginForm, password: e.target.value})}
-              className={inputTheme}
+              value={activeForm.password || ''}
+              onChange={e => setLoginForm({...activeForm, password: e.target.value})}
+              className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm"
               placeholder="Digite sua senha"
             />
           </div>
 
-          {loginError && (
-            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-600 text-xs font-bold text-center">
-              {loginError}
+          {activeError && (
+            <div className="p-3 bg-danger/10 border border-danger/30 rounded-lg text-danger text-xs font-bold text-center">
+              {activeError}
             </div>
           )}
 
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary py-3 rounded-lg font-bold text-sm uppercase tracking-widest text-surface transition-all active:scale-95 shadow-lg shadow-primary/40"
+            className="w-full bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary py-3 rounded-lg font-bold text-sm uppercase tracking-widest text-white transition-all active:scale-95 shadow-lg shadow-primary/40"
           >
             Entrar
           </button>

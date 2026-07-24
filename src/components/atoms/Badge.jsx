@@ -2,10 +2,10 @@ import React from 'react';
 
 const variants = {
   default: 'bg-surface-light text-muted',
-  primary: 'bg-emerald-600/10 text-emerald-500 border border-emerald-500/30',
-  danger: 'bg-red-500/10 text-red-500 border border-red-500/30',
-  warning: 'bg-orange-500/10 text-orange-500 border border-orange-500/30',
-  info: 'bg-blue-500/10 text-blue-500 border border-blue-500/30',
+  primary: 'bg-success/10 text-success border border-success/30',
+  danger: 'bg-danger/10 text-danger border border-danger/30',
+  warning: 'bg-warning/10 text-warning border border-warning/30',
+  info: 'bg-info/10 text-info border border-info/30',
   purple: 'bg-purple-600/10 text-purple-500 border border-purple-500/30',
   yellow: 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/30',
 };

@@ -8,17 +8,17 @@ export default function Sidebar({ safeTables, activeTableId, setActiveTable, onR
     <div className="w-64 shrink-0 bg-surface border-r border-border flex flex-col shadow-xl z-10">
       <div className="p-5 border-b border-border flex justify-between items-center">
         <div className="flex items-center gap-2">
-          <div className="w-1.5 h-5 bg-emerald-500 rounded-full"></div>
+          <div className="w-1.5 h-5 bg-success rounded-full"></div>
           <span className="font-bold text-sm tracking-widest text-primary uppercase">TURBO PDV</span>
         </div>
         <div className="flex gap-1">
-          <button onClick={onReportsClick} className="p-1.5 hover:bg-surface-light rounded-md text-muted hover:text-emerald-500 transition-colors" title="Caixa e Relatórios">
+          <button onClick={onReportsClick} className="p-1.5 hover:bg-surface-light rounded-md text-muted hover:text-success transition-colors" title="Caixa e Relatórios">
             <FileText size={18}/>
           </button>
           <button onClick={onSettingsClick} className="p-1.5 hover:bg-surface-light rounded-md text-muted hover:text-primary transition-colors" title="Configurações">
             <Settings size={18}/>
           </button>
-          <button onClick={handleLogout} className="p-1.5 hover:bg-red-500/20 rounded-md text-muted hover:text-red-500 transition-colors" title="Sair">
+          <button onClick={handleLogout} className="p-1.5 hover:bg-danger/20 rounded-md text-muted hover:text-danger transition-colors" title="Sair">
             <X size={18}/>
           </button>
         </div>
@@ -27,16 +27,16 @@ export default function Sidebar({ safeTables, activeTableId, setActiveTable, onR
         {safeTables.map(t => (
           <button key={t.id} onClick={() => setActiveTable(t.id)}
             className={`w-full text-left p-3 rounded-xl border transition-all duration-200 ${
-              activeTableId === t.id ? 'bg-emerald-600/10 border-emerald-500 shadow-sm' : 'bg-transparent border-transparent hover:bg-surface-light/40'
+              activeTableId === t.id ? 'bg-success/10 border-success shadow-sm' : 'bg-transparent border-transparent hover:bg-surface-light/40'
             }`}>
             <div className="flex justify-between items-center">
               <span className={`font-bold text-xs uppercase tracking-tight truncate pr-2 ${
-                activeTableId === t.id ? 'text-emerald-400' : 'text-muted'
+                activeTableId === t.id ? 'text-success' : 'text-muted'
               }`}>
                 {t.isDelivery && <span className="mr-1">🛵</span>}
                 {t.name}
               </span>
-              <span className="font-mono text-xs font-bold text-emerald-500">R${(t.total || 0).toFixed(2)}</span>
+              <span className="font-mono text-xs font-bold text-success">R${(t.total || 0).toFixed(2)}</span>
             </div>
           </button>
         ))}

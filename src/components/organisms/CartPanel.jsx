@@ -64,7 +64,7 @@ export function CartPanel({ activeTable, onRemoveItem, onCheckout }) {
             )}
             <button
               onClick={() => onRemoveItem(idx)}
-              className="mt-2 text-[9px] text-red-400 hover:text-red-500 font-bold uppercase tracking-wider transition-colors"
+              className="mt-2 text-[9px] text-danger/80 hover:text-danger font-bold uppercase tracking-wider transition-colors"
             >
               Remover
             </button>
