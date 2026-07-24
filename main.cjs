@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const {
   saveFullOrder, getProducts, addProduct, deleteProduct, registerCashMovement,
-  getDailyReport, getReportByPeriod, updateProduct, getConfig, updateConfig,
+  getDailyReport, getReportByPeriod, updateProduct, getConfig, updateConfig, getAllConfigs,
   getCategories, addCategory, deleteCategory, getOrdersHistory, deleteOrder,
   getPromotions, addPromotion, updatePromotion, deletePromotion, getActivePromotions,
   getUsers, getUserById, getUserByUsername, addUser, updateUser, deleteUser, toggleUserActive,
@@ -16,8 +16,75 @@ const {
   db
 } = require('./database/db.cjs');
 const { ThermalPrinter, PrinterTypes, CharacterSet } = require('node-thermal-printer');
+const { validateIPC } = require('./database/validate.cjs');
 
 console.log('[main] Database module loaded successfully');
+
+// ============================================================
+// SEGURANÇA: Sessão ativa e controle de acesso
+// ============================================================
+let currentSession = null;
+
+function setSession(user, token) {
+  currentSession = { user, token };
+}
+
+function clearSession() {
+  currentSession = null;
+}
+
+function requireRole(minRole) {
+  if (!currentSession) throw new Error('Não autenticado');
+  if (minRole === 'admin' && currentSession.user.role !== 'admin') throw new Error('Acesso negado');
+  if (minRole === 'manager' && !['admin', 'manager'].includes(currentSession.user.role)) throw new Error('Acesso negado');
+}
+
+// ============================================================
+// SEGURANÇA: Rate limiter para verify-password
+// ============================================================
+const verifyPasswordAttempts = { count: 0, lockUntil: 0 };
+
+function checkVerifyPasswordRateLimit() {
+  if (Date.now() < verifyPasswordAttempts.lockUntil) {
+    const secondsLeft = Math.ceil((verifyPasswordAttempts.lockUntil - Date.now()) / 1000);
+    throw new Error(`Muitas tentativas. Tente novamente em ${secondsLeft} segundos.`);
+  }
+}
+
+function recordVerifyPasswordAttempt() {
+  verifyPasswordAttempts.count++;
+  if (verifyPasswordAttempts.count >= 5) {
+    verifyPasswordAttempts.lockUntil = Date.now() + 15 * 60 * 1000;
+    verifyPasswordAttempts.count = 0;
+  }
+}
+
+function resetVerifyPasswordRateLimit() {
+  verifyPasswordAttempts.count = 0;
+  verifyPasswordAttempts.lockUntil = 0;
+}
+
+// ============================================================
+// UTILITÁRIO: Handler padronizado com validação + erro mascarado
+// ============================================================
+function createHandler(channel, handler, options = {}) {
+  return ipcMain.handle(channel, async (event, data) => {
+    try {
+      const valid = validateIPC(channel, data);
+      if (!valid.success) {
+        return { success: false, error: valid.error };
+      }
+      if (options.minRole) {
+        requireRole(options.minRole);
+      }
+      return await handler(valid.data);
+    } catch (e) {
+      console.error(`[${channel}] Error:`, e.message);
+      const message = e.message || 'Erro interno. Tente novamente.';
+      return { success: false, error: message };
+    }
+  });
+}
 
 app.disableHardwareAcceleration();
 // Segurança: desabilitar avisos apenas em desenvolvimento
@@ -135,15 +202,25 @@ function createWindow() {
   });
 }
 
+function getPrinterConfig() {
+  const kitchenIp = getConfig('printer_kitchen_ip');
+  const frontName = getConfig('printer_front_name');
+  return {
+    kitchenIp: kitchenIp ? kitchenIp.value : '192.168.1.100',
+    frontName: frontName ? frontName.value : 'TANCA',
+  };
+}
+
 async function printTickets(orderData, items) {
   const kitchenItems = items.filter(i => !i.category.toUpperCase().includes('BEBIDA') && !i.category.toUpperCase().includes('REFRIGERANTE') && !i.category.toUpperCase().includes('CHOPP'));
   const frontItems = items.filter(i => i.category.toUpperCase().includes('BEBIDA') || i.category.toUpperCase().includes('REFRIGERANTE') || i.category.toUpperCase().includes('CHOPP'));
   const now = new Date();
   const dateStr = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth()+1).toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+  const { kitchenIp, frontName } = getPrinterConfig();
 
   if (kitchenItems.length > 0) {
     try {
-      const printerKitchen = new ThermalPrinter({ type: PrinterTypes.EPSON, interface: 'tcp://192.168.1.100', timeout: 1000, characterSet: CharacterSet.PC852_LATIN2 });
+      const printerKitchen = new ThermalPrinter({ type: PrinterTypes.EPSON, interface: `tcp://${kitchenIp}`, timeout: 1000, characterSet: CharacterSet.PC852_LATIN2 });
       if (await printerKitchen.isPrinterConnected()) {
         printerKitchen.alignCenter(); 
         printerKitchen.setTextDoubleHeight(); 
@@ -171,12 +248,12 @@ async function printTickets(orderData, items) {
         });
         printerKitchen.cut(); await printerKitchen.execute();
       }
-    } catch (e) { console.log("Cozinha Offline"); }
+    } catch (e) { console.log("[print] Cozinha Offline"); }
   }
 
   if (frontItems.length > 0) {
     try {
-      const printerFront = new ThermalPrinter({ type: PrinterTypes.EPSON, interface: 'printer:TANCA', timeout: 1000, characterSet: CharacterSet.PC852_LATIN2 });
+      const printerFront = new ThermalPrinter({ type: PrinterTypes.EPSON, interface: `printer:${frontName}`, timeout: 1000, characterSet: CharacterSet.PC852_LATIN2 });
       if (await printerFront.isPrinterConnected()) {
         printerFront.alignLeft(); 
         printerFront.setTextDoubleHeight(); 
@@ -201,102 +278,63 @@ async function printTickets(orderData, items) {
         });
         printerFront.openCashDrawer(); printerFront.cut(); await printerFront.execute();
       }
-    } catch (e) { console.log("Balcão Offline"); }
+    } catch (e) { console.log("[print] Balcão Offline"); }
   }
 }
 
 // ============================================================
 // CATÁLOGO - IPC Handlers
 // ============================================================
-ipcMain.handle('catalog:get-categories', async () => { try { return { success: true, data: getCategories() }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('catalog:add-category', async (e, name) => {
-  try {
-    if (!name || typeof name !== 'string' || name.trim() === '') {
-      return { success: false, error: 'Invalid category name' };
-    }
-    return { success: true, id: addCategory(name.trim()) };
-  } catch (e) {
-    console.error('Error adding category:', e);
-    return { success: false, error: e.message };
-  }
-});
-ipcMain.handle('catalog:delete-category', async (e, id) => { try { return { success: true, count: deleteCategory(id) }; } catch (e) { return { success: false, error: e.message }; } });
+createHandler('catalog:get-categories', async () => ({ data: getCategories() }));
+createHandler('catalog:add-category', async (name) => ({ id: addCategory(name) }));
+createHandler('catalog:delete-category', async (id) => ({ count: deleteCategory(id) }));
 
-ipcMain.handle('catalog:get-products', async () => { try { return { success: true, data: getProducts() }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('catalog:add-product', async (e, p) => {
-  try {
-    if (!p || !p.name || !p.price || !p.category) {
-      return { success: false, error: 'Invalid product data' };
-    }
-    return { success: true, id: addProduct(p) };
-  } catch (e) {
-    console.error('Error adding product:', e);
-    return { success: false, error: e.message };
-  }
-});
-ipcMain.handle('catalog:update-product', async (e, { id, product }) => {
-  try {
-    if (!id || !product || !product.name || !product.price || !product.category) {
-      return { success: false, error: 'Invalid product data' };
-    }
-    return { success: true, count: updateProduct(id, product) };
-  } catch (e) {
-    console.error('Error updating product:', e);
-    return { success: false, error: e.message };
-  }
-});
-ipcMain.handle('catalog:delete-product', async (e, id) => { try { return { success: true, count: deleteProduct(id) }; } catch (e) { return { success: false, error: e.message }; } });
+createHandler('catalog:get-products', async () => ({ data: getProducts() }));
+createHandler('catalog:add-product', async (p) => ({ id: addProduct(p) }));
+createHandler('catalog:update-product', async (data) => ({ count: updateProduct(data.id, data.product) }));
+createHandler('catalog:delete-product', async (id) => ({ count: deleteProduct(id) }));
 
 // ============================================================
 // PEDIDOS - IPC Handlers
 // ============================================================
-ipcMain.handle('orders:save', async (e, { orderData, items }) => {
-  try {
-    if (!orderData || !items || !Array.isArray(items)) {
-      return { success: false, error: 'Invalid order data or items' };
-    }
-    const id = saveFullOrder(orderData, items);
-    printTickets(orderData, items);
-    return { success: true, id };
-  } catch (e) {
-    console.error('Error saving order:', e);
-    return { success: false, error: e.message };
-  }
+createHandler('orders:save', async (data) => {
+  const id = saveFullOrder(data.orderData, data.items);
+  printTickets(data.orderData, data.items);
+  return { id };
 });
 
-ipcMain.handle('orders:get-history', async () => { try { return { success: true, data: getOrdersHistory() }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('orders:delete', async (e, id) => { try { return { success: true, count: deleteOrder(id) }; } catch (e) { return { success: false, error: e.message }; } });
+createHandler('orders:get-history', async () => ({ data: getOrdersHistory() }));
+createHandler('orders:delete', async (id) => ({ count: deleteOrder(id) }));
 
 // ============================================================
 // CAIXA / RELATÓRIOS - IPC Handlers
 // ============================================================
-ipcMain.handle('cash:register', async (e, data) => {
-  try {
-    if (!data || !data.type || !data.amount || !data.description) {
-      return { success: false, error: 'Invalid cash movement data' };
-    }
-    return { success: true, id: registerCashMovement(data) };
-  } catch (e) {
-    console.error('Error registering cash movement:', e);
-    return { success: false, error: e.message };
-  }
-});
-ipcMain.handle('reports:daily', async () => { try { return { success: true, data: getDailyReport() }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('reports:by-period', async (e, { startDate, endDate }) => { try { return { success: true, data: getReportByPeriod(startDate, endDate) }; } catch (e) { return { success: false, error: e.message }; } });
+createHandler('cash:register', async (data) => ({ id: registerCashMovement(data) }));
+createHandler('reports:daily', async () => ({ data: getDailyReport() }));
+createHandler('reports:by-period', async ({ startDate, endDate }) => ({ data: getReportByPeriod(startDate, endDate) }));
 
 // ============================================================
 // AUTENTICAÇÃO - IPC Handlers
 // ============================================================
 ipcMain.handle('auth:verify-password', async (e, password) => {
   try {
+    checkVerifyPasswordRateLimit();
+    if (!password || typeof password !== 'string') {
+      return { success: false, valid: false, error: 'Senha inválida' };
+    }
     const stored = getConfig('manager_password');
-    const isValid = bcrypt.compareSync(password, stored.value);
-    return { success: true, valid: isValid };
+    const isValid = stored && bcrypt.compareSync(password, stored.value);
+    if (isValid) {
+      resetVerifyPasswordRateLimit();
+      return { success: true, valid: true };
+    }
+    recordVerifyPasswordAttempt();
+    return { success: true, valid: false };
   } catch (e) {
-    console.error('Error verifying password:', e);
-    return { success: false, valid: false };
+    return { success: false, valid: false, error: e.message };
   }
 });
+
 ipcMain.handle('auth:update-password', async (e, { current, next }) => {
   try {
     const stored = getConfig('manager_password');
@@ -306,50 +344,34 @@ ipcMain.handle('auth:update-password', async (e, { current, next }) => {
     }
     const newPasswordHash = bcrypt.hashSync(next, 10);
     updateConfig('manager_password', newPasswordHash);
+    createAuditLog(currentSession?.user?.id, 'MANAGER_PASSWORD_CHANGE', null, null, 'Manager password changed');
     return { success: true };
   } catch (e) {
-    console.error('Error updating password:', e);
-    return { success: false, error: e.message };
+    console.error('[auth:update-password] Error:', e.message);
+    return { success: false, error: 'Erro ao atualizar senha. Tente novamente.' };
   }
 });
 
 // ============================================================
 // PROMOÇÕES - IPC Handlers
 // ============================================================
-ipcMain.handle('promotions:get', async () => { try { return { success: true, data: getPromotions() }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('promotions:add', async (e, promo) => {
-  try {
-    if (!promo || !promo.name || !promo.type || promo.value === undefined || promo.value === '' || !promo.applies_to || !promo.start_date || !promo.end_date) {
-      return { success: false, error: 'Invalid promotion data' };
-    }
-    return { success: true, id: addPromotion(promo) };
-  } catch (e) {
-    console.error('Error adding promotion:', e);
-    return { success: false, error: e.message };
-  }
-});
-ipcMain.handle('promotions:update', async (e, { id, promo }) => {
-  try {
-    if (!id || !promo || !promo.name || !promo.type || promo.value === undefined || promo.value === '' || !promo.applies_to || !promo.start_date || !promo.end_date) {
-      return { success: false, error: 'Invalid promotion data' };
-    }
-    return { success: true, count: updatePromotion(id, promo) };
-  } catch (e) {
-    console.error('Error updating promotion:', e);
-    return { success: false, error: e.message };
-  }
-});
-ipcMain.handle('promotions:delete', async (e, id) => { try { return { success: true, count: deletePromotion(id) }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('promotions:get-active', async () => { try { return { success: true, data: getActivePromotions() }; } catch (e) { return { success: false, error: e.message }; } });
+createHandler('promotions:get', async () => ({ data: getPromotions() }));
+createHandler('promotions:add', async (promo) => ({ id: addPromotion(promo) }));
+createHandler('promotions:update', async (data) => ({ count: updatePromotion(data.id, data.promo) }));
+createHandler('promotions:delete', async (id) => ({ count: deletePromotion(id) }));
+createHandler('promotions:get-active', async () => ({ data: getActivePromotions() }));
 
-ipcMain.handle('auth:login', async (e, { username, password }) => {
+ipcMain.handle('auth:login', async (e, data) => {
   try {
+    const valid = validateIPC('auth:login', data);
+    if (!valid.success) return { success: false, error: valid.error };
+
+    const { username, password } = valid.data;
     const user = getUserByUsername(username);
     if (!user || !user.is_active) {
       return { success: false, error: 'Usuário não encontrado ou inativo' };
     }
 
-    // Check if account is locked
     if (user.locked_until && new Date(user.locked_until) > new Date()) {
       const lockTime = new Date(user.locked_until);
       const minutesLeft = Math.ceil((lockTime - new Date()) / 60000);
@@ -358,16 +380,12 @@ ipcMain.handle('auth:login', async (e, { username, password }) => {
 
     const isValid = bcrypt.compareSync(password, user.password_hash);
     if (!isValid) {
-      // Increment failed login attempts
       const attempts = (user.failed_login_attempts || 0) + 1;
-      const updateStmt = db.prepare('UPDATE users SET failed_login_attempts = ? WHERE id = ?');
-      updateStmt.run(attempts, user.id);
+      db.prepare('UPDATE users SET failed_login_attempts = ? WHERE id = ?').run(attempts, user.id);
 
-      // Lock account after 5 failed attempts
       if (attempts >= 5) {
-        const lockUntil = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 minutes
-        const lockStmt = db.prepare('UPDATE users SET locked_until = ? WHERE id = ?');
-        lockStmt.run(lockUntil, user.id);
+        const lockUntil = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+        db.prepare('UPDATE users SET locked_until = ? WHERE id = ?').run(lockUntil, user.id);
         return { success: false, error: 'Conta bloqueada por muitas tentativas. Tente novamente em 15 minutos.' };
       }
 
@@ -375,17 +393,17 @@ ipcMain.handle('auth:login', async (e, { username, password }) => {
       return { success: false, error: `Senha incorreta. ${remaining} tentativas restantes antes do bloqueio.` };
     }
 
-    // Reset failed attempts on successful login
-    const resetStmt = db.prepare('UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = ?');
-    resetStmt.run(user.id);
+    db.prepare('UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = ?').run(user.id);
 
-    // Create session
     const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(); // 8 hours
+    const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString();
     createSession(user.id, token, expiresAt);
-
-    // Log the login
     createAuditLog(user.id, 'LOGIN', null, null, 'User logged in');
+
+    setSession(
+      { id: user.id, username: user.username, full_name: user.full_name, role: user.role, must_change_password: user.must_change_password },
+      token
+    );
 
     return {
       success: true,
@@ -393,7 +411,8 @@ ipcMain.handle('auth:login', async (e, { username, password }) => {
       token
     };
   } catch (e) {
-    return { success: false, error: e.message };
+    console.error('[auth:login] Error:', e.message);
+    return { success: false, error: 'Erro interno ao fazer login.' };
   }
 });
 
@@ -404,9 +423,11 @@ ipcMain.handle('auth:verify-session', async (e, token) => {
     if (!sessionData) {
       return { success: false, error: 'Sessão inválida ou expirada' };
     }
+    setSession(sessionData.user, token);
     return { success: true, user: sessionData.user };
   } catch (e) {
-    return { success: false, error: e.message };
+    console.error('[auth:verify-session] Error:', e.message);
+    return { success: false, error: 'Erro ao verificar sessão.' };
   }
 });
 
@@ -414,129 +435,123 @@ ipcMain.handle('auth:logout', async (e, { token, userId }) => {
   try {
     deleteSession(token);
     createAuditLog(userId, 'LOGOUT', null, null, 'User logged out');
+    clearSession();
     return { success: true };
   } catch (e) {
-    return { success: false, error: e.message };
+    console.error('[auth:logout] Error:', e.message);
+    return { success: false, error: 'Erro ao fazer logout.' };
   }
 });
 
 // ============================================================
-// USUÁRIOS - IPC Handlers
+// USUÁRIOS - IPC Handlers (admin only)
 // ============================================================
-ipcMain.handle('users:get', async () => { try { return { success: true, data: getUsers() }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('users:add', async (e, user) => {
-  try {
-    if (!user || !user.username || !user.password || !user.full_name || !user.role) {
-      return { success: false, error: 'Invalid user data' };
-    }
-    return { success: true, id: addUser(user) };
-  } catch (e) {
-    console.error('Error adding user:', e);
-    return { success: false, error: e.message };
+createHandler('users:get', async () => ({ data: getUsers() }));
+createHandler('users:add', async (user) => ({ id: addUser(user) }), { minRole: 'admin' });
+createHandler('users:update', async (data) => ({ count: updateUser(data.id, data.user) }), { minRole: 'admin' });
+createHandler('users:delete', async (id) => ({ count: deleteUser(id) }), { minRole: 'admin' });
+createHandler('users:toggle-active', async (id) => ({ count: toggleUserActive(id) }), { minRole: 'admin' });
+createHandler('auth:change-user-password', async ({ userId, current, new: newPassword }) => {
+  const user = getUserById(userId);
+  if (!user) {
+    throw new Error('Usuário não encontrado');
   }
-});
-ipcMain.handle('users:update', async (e, { id, user }) => {
-  try {
-    if (!id || !user || !user.username || !user.full_name || !user.role) {
-      return { success: false, error: 'Invalid user data' };
-    }
-    return { success: true, count: updateUser(id, user) };
-  } catch (e) {
-    console.error('Error updating user:', e);
-    return { success: false, error: e.message };
+
+  const isValid = bcrypt.compareSync(current, user.password_hash);
+  if (!isValid) {
+    throw new Error('Senha atual incorreta');
   }
-});
-ipcMain.handle('users:delete', async (e, id) => { try { return { success: true, count: deleteUser(id) }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('users:toggle-active', async (e, id) => { try { return { success: true, count: toggleUserActive(id) }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('auth:change-user-password', async (e, { userId, current, new: newPassword }) => {
-  try {
-    const user = getUserById(userId);
-    if (!user) {
-      return { success: false, error: 'Usuário não encontrado' };
-    }
 
-    const isValid = bcrypt.compareSync(current, user.password_hash);
-    if (!isValid) {
-      return { success: false, error: 'Senha atual incorreta' };
-    }
+  const newPasswordHash = bcrypt.hashSync(newPassword, 10);
+  db.prepare('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?').run(newPasswordHash, userId);
 
-    const newPasswordHash = bcrypt.hashSync(newPassword, 10);
-    const stmt = db.prepare('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?');
-    stmt.run(newPasswordHash, userId);
+  createAuditLog(userId, 'PASSWORD_CHANGE', null, null, 'User changed password');
 
-    createAuditLog(userId, 'PASSWORD_CHANGE', null, null, 'User changed password');
-
-    return { success: true };
-  } catch (e) {
-    return { success: false, error: e.message };
-  }
+  return { success: true };
 });
 
 // ============================================================
 // AUDITORIA - IPC Handlers
 // ============================================================
-ipcMain.handle('audit:get-logs', async (e, limit) => { try { return { success: true, data: getAuditLogs(limit) }; } catch (e) { return { success: false, error: e.message }; } });
+createHandler('audit:get-logs', async (limit) => ({ data: getAuditLogs(limit) }), { minRole: 'manager' });
 
 // ============================================================
 // ESTOQUE - IPC Handlers
 // ============================================================
-ipcMain.handle('inventory:get', async () => { try { return { success: true, data: getInventory() }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('inventory:add', async (e, { productId, quantity, unit, minQuantity }) => {
-  try {
-    if (!productId || !quantity || quantity < 0) {
-      return { success: false, error: 'Invalid inventory data' };
-    }
-    return { success: true, id: addInventory(productId, quantity, unit, minQuantity) };
-  } catch (e) {
-    console.error('Error adding inventory:', e);
-    return { success: false, error: e.message };
-  }
-});
-ipcMain.handle('inventory:update-quantity', async (e, { inventoryId, newQuantity }) => {
-  try {
-    if (!inventoryId || newQuantity === undefined || newQuantity < 0) {
-      return { success: false, error: 'Invalid inventory data' };
-    }
-    return { success: true, count: updateInventoryQuantity(inventoryId, newQuantity) };
-  } catch (e) {
-    console.error('Error updating inventory quantity:', e);
-    return { success: false, error: e.message };
-  }
-});
-ipcMain.handle('inventory:adjust', async (e, { inventoryId, delta, reason }) => {
-  try {
-    if (!inventoryId || delta === undefined || isNaN(delta)) {
-      return { success: false, error: 'Invalid inventory adjustment data' };
-    }
-    return { success: true, data: adjustInventory(inventoryId, delta, reason) };
-  } catch (e) {
-    console.error('Error adjusting inventory:', e);
-    return { success: false, error: e.message };
-  }
-});
-ipcMain.handle('inventory:get-movements', async (e, { inventoryId, limit }) => { try { return { success: true, data: getInventoryMovements(inventoryId, limit) }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('inventory:get-low-stock', async () => { try { return { success: true, data: getLowStockItems() }; } catch (e) { return { success: false, error: e.message }; } });
+createHandler('inventory:get', async () => ({ data: getInventory() }));
+createHandler('inventory:add', async (data) => ({ id: addInventory(data.productId, data.quantity, data.unit, data.minQuantity) }));
+createHandler('inventory:update-quantity', async ({ inventoryId, newQuantity }) => ({ count: updateInventoryQuantity(inventoryId, newQuantity) }));
+createHandler('inventory:adjust', async (data) => ({ data: adjustInventory(data.inventoryId, data.delta, data.reason) }));
+createHandler('inventory:get-movements', async ({ inventoryId, limit }) => ({ data: getInventoryMovements(inventoryId, limit) }));
+createHandler('inventory:get-low-stock', async () => ({ data: getLowStockItems() }));
 
 // ============================================================
 // FINANCEIRO - IPC Handlers
 // ============================================================
-ipcMain.handle('financial:get-accounts', async (e, { type, status }) => { try { return { success: true, data: getFinancialAccounts(type, status) }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('financial:add-account', async (e, account) => { try { return { success: true, id: addFinancialAccount(account) }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('financial:update-account', async (e, { id, account }) => { try { return { success: true, count: updateFinancialAccount(id, account) }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('financial:delete-account', async (e, id) => { try { return { success: true, count: deleteFinancialAccount(id) }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('financial:add-transaction', async (e, transaction) => { try { return { success: true, id: addFinancialTransaction(transaction) }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('financial:get-transactions', async (e, accountId) => { try { return { success: true, data: getFinancialTransactions(accountId) }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('financial:get-summary', async (e, { startDate, endDate }) => { try { return { success: true, data: getFinancialSummary(startDate, endDate) }; } catch (e) { return { success: false, error: e.message }; } });
+createHandler('financial:get-accounts', async ({ type, status }) => ({ data: getFinancialAccounts(type, status) }));
+createHandler('financial:add-account', async (account) => ({ id: addFinancialAccount(account) }));
+createHandler('financial:update-account', async (data) => ({ count: updateFinancialAccount(data.id, data.account) }));
+createHandler('financial:delete-account', async (id) => ({ count: deleteFinancialAccount(id) }));
+createHandler('financial:add-transaction', async (transaction) => ({ id: addFinancialTransaction(transaction) }));
+createHandler('financial:get-transactions', async (accountId) => ({ data: getFinancialTransactions(accountId) }));
+createHandler('financial:get-summary', async ({ startDate, endDate }) => ({ data: getFinancialSummary(startDate, endDate) }));
 
 // ============================================================
 // CLIENTES - IPC Handlers
 // ============================================================
-ipcMain.handle('clients:get', async () => { try { return { success: true, data: getClients() }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('clients:add', async (e, client) => { try { return { success: true, id: addClient(client) }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('clients:update', async (e, { id, client }) => { try { return { success: true, count: updateClient(id, client) }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('clients:delete', async (e, id) => { try { return { success: true, count: deleteClient(id) }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('clients:get-orders', async (e, clientId) => { try { return { success: true, data: getClientOrders(clientId) }; } catch (e) { return { success: false, error: e.message }; } });
-ipcMain.handle('clients:add-order', async (e, { clientId, orderId, totalAmount }) => { try { return { success: true, id: addClientOrder(clientId, orderId, totalAmount) }; } catch (e) { return { success: false, error: e.message }; } });
+createHandler('clients:get', async () => ({ data: getClients() }));
+createHandler('clients:add', async (client) => ({ id: addClient(client) }));
+createHandler('clients:update', async (data) => ({ count: updateClient(data.id, data.client) }));
+createHandler('clients:delete', async (id) => ({ count: deleteClient(id) }));
+createHandler('clients:get-orders', async (clientId) => ({ data: getClientOrders(clientId) }));
+createHandler('clients:add-order', async ({ clientId, orderId, totalAmount }) => ({ id: addClientOrder(clientId, orderId, totalAmount) }));
+
+// ============================================================
+// RECUPERAÇÃO DE SENHAS (redundância)
+// ============================================================
+ipcMain.handle('auth:reset-manager-password', async (e, data) => {
+  try {
+    requireRole('admin');
+    const defaultHash = bcrypt.hashSync('1234', 10);
+    updateConfig('manager_password', defaultHash);
+    const admin = currentSession ? currentSession.user : null;
+    createAuditLog(admin?.id, 'MANAGER_PASSWORD_RESET', null, null, 'Manager password reset to default by admin');
+    return { success: true };
+  } catch (e) {
+    console.error('[auth:reset-manager-password] Error:', e.message);
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('auth:force-reset-admin', async (e, { adminId, newPassword }) => {
+  try {
+    requireRole('admin');
+    const target = getUserById(adminId);
+    if (!target || target.role !== 'admin') {
+      return { success: false, error: 'Administrador não encontrado' };
+    }
+    if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 4) {
+      return { success: false, error: 'A nova senha deve ter no mínimo 4 caracteres' };
+    }
+    const newHash = bcrypt.hashSync(newPassword, 10);
+    db.prepare('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?').run(newHash, adminId);
+    const admin = currentSession ? currentSession.user : null;
+    createAuditLog(admin?.id, 'ADMIN_PASSWORD_RESET', 'users', adminId, `Admin password reset by ${admin?.username}`);
+    return { success: true };
+  } catch (e) {
+    console.error('[auth:force-reset-admin] Error:', e.message);
+    return { success: false, error: e.message };
+  }
+});
+
+// ============================================================
+// CONFIGURAÇÕES - IPC Handlers (printer, etc.)
+// ============================================================
+createHandler('config:get-all', async () => ({ data: getAllConfigs() }));
+createHandler('config:update', async ({ key, value }) => {
+  updateConfig(key, value);
+  return { success: true };
+});
 
 app.whenReady().then(() => {
   createWindow();

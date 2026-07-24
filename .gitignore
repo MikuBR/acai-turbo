@@ -25,3 +25,7 @@ dist-ssr
 .agents/
 .cline/
 .clinerules/
+
+# SQLite runtime files
+database/*.db-shm
+database/*.db-wal

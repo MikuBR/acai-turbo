@@ -74,6 +74,14 @@ const ALLOWED_CHANNELS = {
   'clients:delete': true,
   'clients:get-orders': true,
   'clients:add-order': true,
+
+  // --- CONFIGURAÇÕES ---
+  'config:get-all': true,
+  'config:update': true,
+
+  // --- RECUPERAÇÃO ---
+  'auth:reset-manager-password': true,
+  'auth:force-reset-admin': true,
 };
 
 // ============================================================
@@ -151,6 +159,14 @@ const api = {
     delete: (...args) => ipcRenderer.invoke('clients:delete', ...args),
     getOrders: (...args) => ipcRenderer.invoke('clients:get-orders', ...args),
     addOrder: (...args) => ipcRenderer.invoke('clients:add-order', ...args),
+  },
+  config: {
+    getAll: (...args) => ipcRenderer.invoke('config:get-all', ...args),
+    update: (...args) => ipcRenderer.invoke('config:update', ...args),
+  },
+  recovery: {
+    resetManagerPassword: (...args) => ipcRenderer.invoke('auth:reset-manager-password', ...args),
+    forceResetAdmin: (...args) => ipcRenderer.invoke('auth:force-reset-admin', ...args),
   },
 };
 

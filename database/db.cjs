@@ -1,6 +1,8 @@
 const Database = require('better-sqlite3');
 const path = require('path');
+const crypto = require('crypto');
 const { app } = require('electron');
+const bcrypt = require('bcrypt');
 
 // Função para obter o caminho do banco - funciona tanto em dev quanto em produção
 function getDbPath() {
@@ -272,33 +274,26 @@ try {
 }
 
 // --- SEED DE DADOS PADRÃO ---
-const checkConfig = db.prepare('SELECT COUNT(*) as count FROM config').get();
-if (checkConfig.count === 0) {
-  const bcrypt = require('bcrypt');
-  const passwordHash = bcrypt.hashSync('1234', 10);
-  db.prepare('INSERT INTO config (key, value) VALUES (?, ?)').run('manager_password', passwordHash);
-  console.log('[db] Manager password initialized with hash:', passwordHash);
-} else {
-  // Always reset manager password to '1234' for now to ensure it works
-  const bcrypt = require('bcrypt');
-  const passwordHash = bcrypt.hashSync('1234', 10);
-  const existing = db.prepare('SELECT * FROM config WHERE key = ?').get('manager_password');
-  if (existing) {
-    db.prepare('UPDATE config SET value = ? WHERE key = ?').run(passwordHash, 'manager_password');
-    console.log('[db] Manager password reset to hash:', passwordHash);
-  } else {
-    db.prepare('INSERT INTO config (key, value) VALUES (?, ?)').run('manager_password', passwordHash);
-    console.log('[db] Manager password created with hash:', passwordHash);
+const seedDefaults = db.transaction(() => {
+  const configCount = db.prepare('SELECT COUNT(*) as count FROM config').get();
+  if (configCount.count === 0) {
+    const passwordHash = bcrypt.hashSync('1234', 10);
+    const insertCfg = db.prepare('INSERT INTO config (key, value) VALUES (?, ?)');
+    insertCfg.run('manager_password', passwordHash);
+    insertCfg.run('printer_kitchen_ip', '192.168.1.100');
+    insertCfg.run('printer_front_name', 'TANCA');
+    console.log('[db] Default config seeded');
   }
-}
 
-const checkUsers = db.prepare('SELECT COUNT(*) as count FROM users').get();
-if (checkUsers.count === 0) {
-  // Create default admin user with password "admin123" (hashed with bcrypt)
-  const bcrypt = require('bcrypt');
-  const passwordHash = bcrypt.hashSync('admin123', 10);
-  db.prepare('INSERT INTO users (username, password_hash, full_name, role) VALUES (?, ?, ?, ?)').run('admin', passwordHash, 'Administrador', 'admin');
-}
+  const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get();
+  if (userCount.count === 0) {
+    const tempPassword = crypto.randomBytes(4).toString('hex');
+    const passwordHash = bcrypt.hashSync(tempPassword, 10);
+    db.prepare('INSERT INTO users (username, password_hash, full_name, role, must_change_password) VALUES (?, ?, ?, ?, ?)').run('admin', passwordHash, 'Administrador', 'admin', 1);
+    console.log(`[db] Admin user created. Temporary password: ${tempPassword}`);
+  }
+});
+seedDefaults();
 
 const checkCats = db.prepare('SELECT COUNT(*) as count FROM categories').get();
 if (checkCats.count === 0) {
@@ -510,7 +505,6 @@ const addUser = (user) => {
   if (!user || !user.username || !user.password || !user.full_name || !user.role) {
     throw new Error('Invalid user data');
   }
-  const bcrypt = require('bcrypt');
   const passwordHash = bcrypt.hashSync(user.password, 10);
   const stmt = db.prepare('INSERT INTO users (username, password_hash, full_name, role) VALUES (?, ?, ?, ?)');
   return stmt.run(user.username, passwordHash, user.full_name, user.role).lastInsertRowid;
@@ -521,7 +515,6 @@ const updateUser = (id, user) => {
   }
   let stmt;
   if (user.password) {
-    const bcrypt = require('bcrypt');
     const passwordHash = bcrypt.hashSync(user.password, 10);
     stmt = db.prepare('UPDATE users SET username = ?, password_hash = ?, full_name = ?, role = ? WHERE id = ?');
     return stmt.run(user.username, passwordHash, user.full_name, user.role, id).changes > 0;
@@ -534,17 +527,28 @@ const deleteUser = (id) => {
   if (!id || isNaN(id)) {
     throw new Error('Invalid user ID');
   }
+  const user = db.prepare('SELECT role FROM users WHERE id = ?').get(id);
+  if (user && user.role === 'admin') {
+    const adminCount = db.prepare('SELECT COUNT(*) as count FROM users WHERE role = ?').get('admin');
+    if (adminCount.count <= 1) {
+      throw new Error('Não é possível excluir o último administrador');
+    }
+  }
   return db.prepare('DELETE FROM users WHERE id = ?').run(id).changes > 0;
 };
 const toggleUserActive = (id) => {
   if (!id || isNaN(id)) {
     throw new Error('Invalid user ID');
   }
-  const user = db.prepare('SELECT is_active FROM users WHERE id = ?').get(id);
-  if (user) {
-    return db.prepare('UPDATE users SET is_active = ? WHERE id = ?').run(user.is_active ? 0 : 1, id).changes > 0;
+  const user = db.prepare('SELECT is_active, role FROM users WHERE id = ?').get(id);
+  if (!user) return false;
+  if (user.is_active && user.role === 'admin') {
+    const adminCount = db.prepare('SELECT COUNT(*) as count FROM users WHERE role = ? AND is_active = ?').get('admin', 1);
+    if (adminCount.count <= 1) {
+      throw new Error('Não é possível desativar o último administrador ativo');
+    }
   }
-  return false;
+  return db.prepare('UPDATE users SET is_active = ? WHERE id = ?').run(user.is_active ? 0 : 1, id).changes > 0;
 };
 
 // --- EXPORTAÇÕES DE SESSÕES ---
@@ -822,11 +826,13 @@ const addClientOrder = (clientId, orderId, totalAmount) => {
   return stmt.run(clientId, orderId, totalAmount).lastInsertRowid;
 };
 
+const getAllConfigs = () => db.prepare('SELECT key, value FROM config ORDER BY key ASC').all();
+
 module.exports = {
   db,
   getCategories, addCategory, deleteCategory,
   getProducts, addProduct, updateProduct, deleteProduct,
-  getConfig, updateConfig,
+  getConfig, updateConfig, getAllConfigs,
   saveFullOrder,
   getOrdersHistory, deleteOrder,
   registerCashMovement,

@@ -86,6 +86,9 @@ function App() {
   const [clientForm, setClientForm] = useState({ id: null, name: '', phone: '', address: '', email: '', notes: '' });
   const [selectedClientOrders, setSelectedClientOrders] = useState([]);
 
+  // ESTADOS IMPRESSORAS
+  const [printerConfig, setPrinterConfig] = useState({ kitchenIp: '192.168.1.100', frontName: 'TANCA' });
+
   const syncDB = () => {
     const ipc = getIPC();
     if (ipc) {
@@ -185,7 +188,34 @@ function App() {
     return 0;
   };
 
-  useEffect(() => { syncDB(); }, []);
+  const loadPrinterConfig = () => {
+    const ipc = getIPC();
+    if (ipc) {
+      ipc.invoke('config:get-all').then(res => {
+        if (res && res.success) {
+          const configs = res.data || [];
+          const getCfg = (key, def) => { const c = configs.find(x => x.key === key); return c ? c.value : def; };
+          setPrinterConfig({
+            kitchenIp: getCfg('printer_kitchen_ip', '192.168.1.100'),
+            frontName: getCfg('printer_front_name', 'TANCA'),
+          });
+        }
+      });
+    }
+  };
+
+  const savePrinterConfig = () => {
+    const ipc = getIPC();
+    if (ipc) {
+      ipc.invoke('config:update', { key: 'printer_kitchen_ip', value: printerConfig.kitchenIp }).then(() => {
+        ipc.invoke('config:update', { key: 'printer_front_name', value: printerConfig.frontName }).then(() => {
+          alert('Configurações de impressão salvas com sucesso!');
+        });
+      });
+    }
+  };
+
+  useEffect(() => { syncDB(); loadPrinterConfig(); }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -585,7 +615,10 @@ function App() {
         loadClientOrders={loadClientOrders}
         runWithAuth={runWithAuth}
         getIPC={getIPC}
-       
+        printerConfig={printerConfig}
+        setPrinterConfig={setPrinterConfig}
+        savePrinterConfig={savePrinterConfig}
+        currentUser={currentUser}
       />
 
       {/* MODAL: CHECKOUT */}

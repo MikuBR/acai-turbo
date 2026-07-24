@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pencil, Trash2, X, Check, FileText, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import { Pencil, Trash2, X, Check, FileText, ArrowUpCircle, ArrowDownCircle, Save } from 'lucide-react';
 import SettingsTabs from '../molecules/SettingsTabs';
 import ProductForm from '../forms/ProductForm';
 import PromotionForm from '../forms/PromotionForm';
@@ -10,7 +10,7 @@ import ClientForm from '../forms/ClientForm';
 import CategoryForm from '../forms/CategoryForm';
 import ModalHeader from '../molecules/ModalHeader';
 
-export default function SettingsModal({ isOpen, onClose, settingsTab, setSettingsTab, safeCatalog, categories, newCatName, setNewCatName, newProd, setNewProd, newPromo, setNewPromo, users, newUser, setNewUser, inventory, inventoryForm, setInventoryForm, selectedInventoryItem, setSelectedInventoryItem, inventoryMovements, loadInventoryMovements, financialAccounts, financialForm, setFinancialForm, financialFilter, setFinancialFilter, clients, clientForm, setClientForm, selectedClientOrders, promotions, pwdForm, setPwdForm, syncDB, loadUsers, loadInventory, loadFinancialAccounts, loadClients, loadClientOrders, runWithAuth, getIPC }) {
+export default function SettingsModal({ isOpen, onClose, settingsTab, setSettingsTab, safeCatalog, categories, newCatName, setNewCatName, newProd, setNewProd, newPromo, setNewPromo, users, newUser, setNewUser, inventory, inventoryForm, setInventoryForm, selectedInventoryItem, setSelectedInventoryItem, inventoryMovements, loadInventoryMovements, financialAccounts, financialForm, setFinancialForm, financialFilter, setFinancialFilter, clients, clientForm, setClientForm, selectedClientOrders, promotions, pwdForm, setPwdForm, syncDB, loadUsers, loadInventory, loadFinancialAccounts, loadClients, loadClientOrders, runWithAuth, getIPC, printerConfig, setPrinterConfig, savePrinterConfig, currentUser }) {
   if (!isOpen) return null;
 
   const handleAddCategory = () => {
@@ -196,7 +196,7 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                   <button onClick={handlePasswordChange} className="w-full bg-success hover:bg-success py-3 rounded-lg font-bold text-xs uppercase tracking-widest text-white transition-all">Alterar Senha</button>
                 </div>
               </div>
-              <div className="flex-1 p-6 flex flex-col overflow-hidden">
+               <div className="flex-1 p-6 flex flex-col overflow-hidden">
                 <h3 className="text-[10px] font-bold text-muted uppercase mb-4 tracking-widest border-b border-border pb-2">Informações de Segurança</h3>
                 <div className="flex-1 overflow-y-auto space-y-4 custom-scrollbar pr-2">
                   <div className="bg-surface-light border border-border p-4 rounded-lg">
@@ -209,9 +209,17 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                       <li>Cancelar pedidos (estorno)</li>
                     </ul>
                   </div>
+                  {currentUser?.role === 'admin' && (
+                    <div className="bg-warning/10 border border-warning/30 p-4 rounded-lg space-y-3">
+                      <div className="font-bold text-xs uppercase text-warning mb-1">Recuperação de Senhas</div>
+                      <div className="text-[10px] text-muted">Administradores podem resetar senhas para evitar bloqueio do sistema.</div>
+                      <button onClick={() => { const ipc = getIPC(); if(ipc && window.confirm('Resetar a senha do gerente para o padrão (1234)?')) { ipc.invoke('auth:reset-manager-password').then(res => { if(res.success) alert('Senha do gerente resetada para 1234!'); else alert('Erro: ' + res.error); }); } }} className="w-full bg-warning hover:bg-warning py-2 rounded-lg font-bold text-[10px] uppercase tracking-widest text-white transition-all">Resetar Senha do Gerente</button>
+                      <button onClick={() => { if(!users || users.length === 0) { alert('Nenhum usuário encontrado'); return; } const adminUser = window.prompt('ID do administrador para resetar senha:'); if(adminUser) { const newPwd = window.prompt('Nova senha (mínimo 4 caracteres):'); if(newPwd && newPwd.length >= 4) { const ipc = getIPC(); if(ipc) ipc.invoke('auth:force-reset-admin', { adminId: parseInt(adminUser), newPassword: newPwd }).then(res => { if(res.success) alert('Senha do administrador alterada com sucesso!'); else alert('Erro: ' + res.error); }); } } }} className="w-full bg-info hover:bg-info py-2 rounded-lg font-bold text-[10px] uppercase tracking-widest text-white transition-all">Resetar Senha de Admin</button>
+                    </div>
+                  )}
                   <div className="bg-success/10 border border-success/30 p-4 rounded-lg">
-                    <div className="font-bold text-xs uppercase text-success mb-2">Dica de Segurança</div>
-                    <div className="text-[10px] text-muted">Mantenha sua senha segura e altere-a regularmente. A senha padrão é "1234".</div>
+                    <div className="font-bold text-xs uppercase text-success mb-2">Redundância de Segurança</div>
+                    <div className="text-[10px] text-muted">Administradores podem recuperar a senha do gerente. Gerentes podem solicitar a administradores que recuperem suas senhas. O último administrador nunca pode ser deletado ou desativado.</div>
                   </div>
                 </div>
               </div>
@@ -359,6 +367,43 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                     </div>
                   </div>
                 )}
+              </div>
+            </>
+          )}
+          {settingsTab === 'printers' && (
+            <>
+              <div className="w-80 p-6 border-r border-border bg-surface overflow-y-auto custom-scrollbar">
+                <h3 className="text-[10px] font-bold text-success uppercase mb-4 tracking-widest border-b border-border pb-2">Configurar Impressoras</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Impressora da Cozinha (IP)</label>
+                    <input type="text" placeholder="192.168.1.100" value={printerConfig.kitchenIp} onChange={e => setPrinterConfig({...printerConfig, kitchenIp: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Impressora do Balcão (Nome)</label>
+                    <input type="text" placeholder="TANCA" value={printerConfig.frontName} onChange={e => setPrinterConfig({...printerConfig, frontName: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
+                  </div>
+                  <button onClick={() => savePrinterConfig()} className="w-full bg-success hover:bg-success py-3 rounded-lg font-bold text-xs uppercase tracking-widest text-white transition-all flex items-center justify-center gap-2"><Save size={16} /> Salvar Configurações</button>
+                </div>
+              </div>
+              <div className="flex-1 p-6 flex flex-col overflow-hidden">
+                <h3 className="text-[10px] font-bold text-muted uppercase mb-4 tracking-widest border-b border-border pb-2">Informações</h3>
+                <div className="flex-1 overflow-y-auto space-y-4 custom-scrollbar pr-2">
+                  <div className="bg-surface-light border border-border p-4 rounded-lg">
+                    <div className="font-bold text-xs uppercase text-primary mb-2">Impressora da Cozinha</div>
+                    <div className="text-[10px] text-muted">Utiliza conexão TCP/IP direta. Configure o IP da impressora térmica da cozinha.</div>
+                    <div className="text-[9px] text-muted mt-2">Formato: 192.168.1.100 (apenas o IP, sem protocolo)</div>
+                  </div>
+                  <div className="bg-surface-light border border-border p-4 rounded-lg">
+                    <div className="font-bold text-xs uppercase text-primary mb-2">Impressora do Balcão</div>
+                    <div className="text-[10px] text-muted">Nome da impressora instalada no Windows para impressão de bebidas e abertura de gaveta.</div>
+                    <div className="text-[9px] text-muted mt-2">Formato: Nome exato da impressora no sistema</div>
+                  </div>
+                  <div className="bg-info/10 border border-info/30 p-4 rounded-lg">
+                    <div className="font-bold text-xs uppercase text-info mb-2">Dica</div>
+                    <div className="text-[10px] text-muted">As alterações são aplicadas imediatamente após salvar. Não é necessário reiniciar o sistema.</div>
+                  </div>
+                </div>
               </div>
             </>
           )}

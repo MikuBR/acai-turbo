@@ -1,5 +1,5 @@
 import React from 'react';
-import { Package, Tag, Shield, Users, Package2, DollarSign, UserCheck } from 'lucide-react';
+import { Package, Tag, Shield, Users, Package2, DollarSign, UserCheck, Printer } from 'lucide-react';
 import SettingsTab from './SettingsTab';
 
 const tabs = [
@@ -10,6 +10,7 @@ const tabs = [
   { id: 'inventory', label: 'Estoque', icon: Package2 },
   { id: 'financial', label: 'Financeiro', icon: DollarSign },
   { id: 'clients', label: 'Clientes', icon: UserCheck },
+  { id: 'printers', label: 'Impressoras', icon: Printer },
 ];
 
 export default function SettingsTabs({ activeTab, onTabChange }) {
