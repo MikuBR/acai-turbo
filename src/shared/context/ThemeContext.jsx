@@ -6,7 +6,7 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     const root = document.documentElement
     root.removeAttribute('data-theme')
-    localStorage.removeItem('acai-theme')
+    localStorage.removeItem('acai-wave-theme')
   }, [])
 
   const toggleTheme = () => {}

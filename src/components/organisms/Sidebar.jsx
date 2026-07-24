@@ -9,7 +9,7 @@ export default function Sidebar({ safeTables, activeTableId, setActiveTable, onR
       <div className="p-5 border-b border-border flex justify-between items-center">
         <div className="flex items-center gap-2">
           <div className="w-1.5 h-5 bg-success rounded-full"></div>
-          <span className="font-bold text-sm tracking-widest text-primary uppercase">TURBO PDV</span>
+          <span className="font-bold text-sm tracking-widest text-primary uppercase">AÇAÍ WAVE</span>
         </div>
         <div className="flex gap-1">
           <button onClick={onReportsClick} className="p-1.5 hover:bg-surface-light rounded-md text-muted hover:text-success transition-colors" title="Caixa e Relatórios">

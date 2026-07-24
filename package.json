@@ -1,5 +1,5 @@
 {
-  "name": "acai-turbo",
+  "name": "acai-wave",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -42,8 +42,8 @@
     "wait-on": "^9.0.10"
   },
   "build": {
-    "appId": "com.acaiturbo.pdv",
-    "productName": "Acai Turbo",
+    "appId": "com.acaiwave.app",
+    "productName": "Açaí Wave",
     "asarUnpack": [
       "node_modules/better-sqlite3"
     ],

@@ -24,7 +24,7 @@ export default function LoginModal({
           <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-primary/30">
             <Lock size={40} className="text-primary"/>
           </div>
-          <h2 className="text-2xl font-bold text-primary mb-1">Açaí Turbo PDV</h2>
+          <h2 className="text-2xl font-bold text-primary mb-1">Açaí Wave</h2>
           <p className="text-muted text-sm">Faça login para acessar o sistema</p>
         </div>
 

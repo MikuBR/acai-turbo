@@ -28,7 +28,7 @@ export function OrderSidebar({
         <div className="flex items-center gap-2">
           <div className="w-1.5 h-5 bg-gradient-to-b from-primary to-highlight rounded-full" />
           <span className="font-bold text-sm tracking-widest text-primary uppercase">
-            TURBO PDV
+            AÇAÍ WAVE
           </span>
         </div>
         <div className="flex gap-1">
