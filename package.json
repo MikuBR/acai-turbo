@@ -15,7 +15,7 @@
     "build:dev": "vite build && electron-builder --win --x64"
   },
   "dependencies": {
-    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.3",
     "better-sqlite3": "^13.0.1",
     "lucide-react": "^1.21.0",
     "node-thermal-printer": "^4.6.0",
@@ -47,7 +47,7 @@
   },
   "build": {
     "appId": "com.acaiwave.app",
-    "productName": "Açaí Wave",
+    "productName": "Acai Wave",
     "asarUnpack": [
       "node_modules/better-sqlite3"
     ],

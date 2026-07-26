@@ -2,7 +2,7 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const crypto = require('crypto');
 const { app } = require('electron');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
 // Função para obter o caminho do banco - funciona tanto em dev quanto em produção
 function getDbPath() {
