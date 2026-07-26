@@ -79,6 +79,13 @@ try {
   console.log('[build] 3/3 - Packaging with electron-builder...');
   execSync('npx electron-builder --win --x64', { stdio: 'inherit', cwd: ROOT });
 
+  // Clean up intermediate artifacts
+  const winUnpacked = path.join(ROOT, 'release', 'win-unpacked');
+  if (fs.existsSync(winUnpacked)) {
+    fs.rmSync(winUnpacked, { recursive: true, force: true });
+    console.log('[build] Cleaned up win-unpacked artifacts.');
+  }
+
   console.log('\n[build] Production build completed successfully!');
 } catch (error) {
   console.error(`\n[build] Build failed: ${error.message}`);

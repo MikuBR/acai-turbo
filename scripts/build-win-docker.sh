@@ -35,6 +35,9 @@ docker run --rm \
     npm run build:win
   "
 
+echo "[build:docker] Removendo artefatos intermediários..."
+rm -rf "$PROJECT_DIR/release/win-unpacked"
+
 echo ""
 echo "[build:docker] Build concluído!"
 echo "[build:docker] Instalador disponível em: $PROJECT_DIR/release/"
