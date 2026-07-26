@@ -20,15 +20,19 @@ echo "[build:docker] Cache: $CACHE_DIR"
 echo ""
 
 docker run --rm \
+  --shm-size=512m \
   -v "$PROJECT_DIR:/project" \
   -v "$CACHE_DIR/electron:/root/.cache/electron" \
   -v "$CACHE_DIR/electron-builder:/root/.cache/electron-builder" \
   -v "$CACHE_DIR/npm:/root/.npm" \
+  -e WINEDEBUG=-all \
   -w /project \
   "$IMAGE" \
   /bin/bash -c "
+    echo '[build:docker] Inicializando Wine...' && \
+    wine wineboot --init 2>/dev/null || true && \
     echo '[build:docker] Instalando dependências...' && \
-    npm install && \
+    npm install --ignore-scripts && \
     echo '[build:docker] Recompilando módulos nativos para Electron...' && \
     npx electron-builder install-app-deps && \
     echo '[build:docker] Executando build:win...' && \
