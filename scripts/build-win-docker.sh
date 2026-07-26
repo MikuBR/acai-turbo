@@ -29,6 +29,8 @@ docker run --rm \
   /bin/bash -c "
     echo '[build:docker] Instalando dependências...' && \
     npm install && \
+    echo '[build:docker] Recompilando módulos nativos para Electron...' && \
+    npx electron-builder install-app-deps && \
     echo '[build:docker] Executando build:win...' && \
     npm run build:win
   "
