@@ -10,7 +10,8 @@
     "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
     "build": "vite build",
     "postinstall": "electron-rebuild -w better-sqlite3",
-    "build:win": "vite build && electron-builder --win --x64"
+    "build:win": "node scripts/build-prod.cjs",
+    "build:dev": "vite build && electron-builder --win --x64"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -32,10 +33,12 @@
     "electron": "^28.3.3",
     "electron-builder": "^24.13.3",
     "electron-rebuild": "^3.2.9",
+    "esbuild": "^0.28.1",
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
+    "javascript-obfuscator": "^4.1.1",
     "postcss": "^8.5.15",
     "tailwindcss": "^4.3.1",
     "vite": "^8.0.12",

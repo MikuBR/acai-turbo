@@ -87,7 +87,18 @@ function createHandler(channel, handler, options = {}) {
 }
 
 app.disableHardwareAcceleration();
-// Segurança: desabilitar avisos apenas em desenvolvimento
+
+// ============================================================
+// SEGURANÇA: Bloquear depuração remota e --inspect
+// ============================================================
+const cliArgs = process.argv.join(' ');
+if (cliArgs.includes('--inspect') || cliArgs.includes('--inspect-brk') || cliArgs.includes('--remote-debugging-port')) {
+  console.error('[segurança] Depuração remota detectada. Encerrando.');
+  app.exit(0);
+}
+app.commandLine.appendSwitch('remote-debugging-port', '-1');
+
+// Avisos de segurança apenas em desenvolvimento
 if (!app.isPackaged) {
   process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true';
 }
@@ -184,6 +195,12 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js')
     },
   });
+
+  if (app.isPackaged) {
+    mainWindow.webContents.on('devtools-opened', () => {
+      mainWindow.webContents.closeDevTools();
+    });
+  }
 
   mainWindow.on('closed', () => {
     mainWindow = null;
