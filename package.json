@@ -11,6 +11,7 @@
     "build": "vite build",
     "postinstall": "electron-rebuild -w better-sqlite3",
     "build:win": "node scripts/build-prod.cjs",
+    "build:win:docker": "bash scripts/build-win-docker.sh",
     "build:dev": "vite build && electron-builder --win --x64"
   },
   "dependencies": {
