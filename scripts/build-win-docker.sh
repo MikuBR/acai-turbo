@@ -19,6 +19,9 @@ echo "[build:docker] Projeto: $PROJECT_DIR"
 echo "[build:docker] Cache: $CACHE_DIR"
 echo ""
 
+echo "[build:docker] Limpando builds anteriores..."
+rm -f "$PROJECT_DIR/release/"*.exe "$PROJECT_DIR/release/"*.yml "$PROJECT_DIR/release/"*.blockmap
+
 docker run --rm \
   --shm-size=512m \
   -v "$PROJECT_DIR:/project" \
