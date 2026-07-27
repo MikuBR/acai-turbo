@@ -271,6 +271,13 @@ try {
 }
 
 // --- SEED DE DADOS PADRÃO ---
+// Reset login counters on startup to prevent persistent lockout after reinstall
+try {
+  db.prepare('UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE failed_login_attempts > 0 OR locked_until IS NOT NULL').run();
+} catch (e) {
+  // Table might not exist yet during first init, ignore
+}
+
 const seedDefaults = db.transaction(() => {
   const configCount = db.prepare('SELECT COUNT(*) as count FROM config').get();
   if (configCount.count === 0) {
