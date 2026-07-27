@@ -51,6 +51,8 @@ jobs:
     if: github.event_name == 'push'
     needs: [lint, test]
     runs-on: windows-2022
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -86,3 +88,4 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
