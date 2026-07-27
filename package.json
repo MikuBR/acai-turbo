@@ -14,7 +14,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "postinstall": "electron-builder install-app-deps",
-    "build:win": "vite build && electron-builder --win --x64 --publish never"
+    "build:win": "vite build && electron-builder --win --x64 --publish never",
+    "package:win": "electron-builder --win --x64 --publish never"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
