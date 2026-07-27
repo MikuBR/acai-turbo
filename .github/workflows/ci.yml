@@ -34,7 +34,7 @@ jobs:
   build-electron:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: lint-and-test
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     steps:
       - uses: actions/checkout@v4
@@ -45,10 +45,14 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Install dependencies (with rebuild)
-        run: |
-          npm ci
-          npm run postinstall
+      - name: Add MSVC build tools
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Install dependencies (skip native rebuild)
+        run: npm ci --ignore-scripts
+
+      - name: Rebuild native modules for Electron
+        run: npx @electron/rebuild -o better-sqlite3
 
       - name: Build Electron installer
         run: npm run build:win
