@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main, develop]
+    tags: ['v*']
   pull_request:
     branches: [main]
 
@@ -69,12 +70,19 @@ jobs:
         run: npm ci
 
       - name: Build Electron installer
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run build:win
 
-      - name: Upload installer
+      - name: Upload installer (artifact)
         uses: actions/upload-artifact@v4
         with:
           name: acai-wave-installer
           path: release/
+
+      - name: Publish to GitHub Releases
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*.exe
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
