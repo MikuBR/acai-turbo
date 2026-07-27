@@ -1,7 +1,7 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const crypto = require('crypto');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const {
   saveFullOrder, getProducts, addProduct, deleteProduct, registerCashMovement,
   getDailyReport, getReportByPeriod, updateProduct, getConfig, updateConfig, getAllConfigs,
