@@ -4,15 +4,30 @@ on:
   push:
     branches: [main, develop]
     tags: ['v*']
+    paths-ignore:
+      - '**.md'
+      - '.gitattributes'
+      - '.gitignore'
+      - '.env.example'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - '.gitattributes'
+      - '.gitignore'
+      - '.env.example'
 
 env:
   NODE_VERSION: 20
+  # Impede publicação de secrets em logs
+  ACTIONS_STEP_DEBUG: false
 
 jobs:
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -20,21 +35,20 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - uses: actions/cache@v4
-        id: cache-lint
+        id: cache
         with:
           path: node_modules
           key: deps-linux-${{ hashFiles('package-lock.json') }}
+          restore-keys: deps-linux-
       - run: npm ci
-        if: steps.cache-lint.outputs.cache-hit != 'true'
+        if: steps.cache.outputs.cache-hit != 'true'
       - run: npx eslint src/ database/
 
-  test:
-    needs: lint
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-2022]
-    runs-on: ${{ matrix.os }}
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -42,14 +56,43 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - uses: actions/cache@v4
-        id: cache-test
+        id: cache
+        with:
+          path: node_modules
+          key: deps-linux-${{ hashFiles('package-lock.json') }}
+          restore-keys: deps-linux-
+      - run: npm ci
+        if: steps.cache.outputs.cache-hit != 'true'
+      - run: npm audit --audit-level=high
+        continue-on-error: true
+
+  test:
+    needs: [lint, audit]
+    if: success()
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - uses: actions/cache@v4
+        id: cache
         with:
           path: node_modules
           key: deps-${{ matrix.os }}-test-${{ hashFiles('package-lock.json') }}
-      - run: npm ci
-        if: steps.cache-test.outputs.cache-hit != 'true' && matrix.os != 'windows-2022'
+          restore-keys: |
+            deps-${{ matrix.os }}-
+            deps-linux-
       - run: npm ci --ignore-scripts
-        if: steps.cache-test.outputs.cache-hit != 'true' && matrix.os == 'windows-2022'
+        if: steps.cache.outputs.cache-hit != 'true'
       - run: npm test
       - run: npm run build
       - uses: actions/upload-artifact@v4
@@ -60,33 +103,29 @@ jobs:
           retention-days: 1
 
   build-windows:
-    if: github.event_name == 'push'
-    needs: [lint, test]
+    if: github.event_name == 'push' && success()
+    needs: test
     runs-on: windows-2022
+    timeout-minutes: 30
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-
       - uses: actions/cache@v4
-        id: cache-build
+        id: cache
         with:
           path: node_modules
           key: deps-win-full-${{ hashFiles('package-lock.json') }}
-
+          restore-keys: deps-win-
       - uses: microsoft/setup-msbuild@v2
-
       - name: Fix Python distutils
         run: pip install setuptools
-
       - run: npm ci
-        if: steps.cache-build.outputs.cache-hit != 'true'
-
+        if: steps.cache.outputs.cache-hit != 'true'
       - uses: actions/download-artifact@v4
         with:
           name: frontend-build
@@ -94,6 +133,16 @@ jobs:
 
       - name: Package Electron installer
         run: npm run package:win
+
+      - name: Validate installer
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -Path release\*.exe
+          if (-not $files) { throw "No .exe found in release/" }
+          foreach ($f in $files) {
+            $size = ($f.Length / 1MB).ToString("F2")
+            Write-Host "✅ $($f.Name) — ${size}MB"
+          }
 
       - uses: actions/upload-artifact@v4
         with:
