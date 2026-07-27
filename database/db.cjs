@@ -4,18 +4,15 @@ const crypto = require('crypto');
 const { app } = require('electron');
 const bcrypt = require('bcryptjs');
 
-// Função para obter o caminho do banco - funciona tanto em dev quanto em produção
+// Função para obter o caminho do banco - sempre usa userData (diretório gravável)
+// app.getPath('userData') está disponível antes do evento ready para o nome 'userData'
 function getDbPath() {
-  // Se o app já está pronto, usa userData; senão usa diretório local
   try {
-    if (app && app.isReady()) {
-      return path.join(app.getPath('userData'), 'acai_turbo_v4.db');
-    }
+    return path.join(app.getPath('userData'), 'acai_turbo_v4.db');
   } catch (e) {
-    // app não está pronto, usa diretório local
+    // Fallback apenas se app.getPath falhar (ex: testes sem Electron)
+    return path.join(__dirname, 'acai_turbo_v4.db');
   }
-  // Em desenvolvimento, usa o diretório do projeto
-  return path.join(__dirname, 'acai_turbo_v4.db');
 }
 
 const dbPath = getDbPath();
@@ -360,7 +357,7 @@ function saveFullOrder(orderData, items) {
     throw new Error('Invalid order data');
   }
   const transaction = db.transaction((order, orderItems) => {
-    const info = db.prepare('INSERT INTO orders (customer_name, total, payment_method, is_delivery, address, phone) VALUES (?, ?, ?, ?, ?, ?)').run(order.tableName, order.total, order.paymentMethod || '', order.isDelivery ? 1 : 0, order.address || "", order.phone || "");
+    const info = db.prepare('INSERT INTO orders (customer_name, total, original_total, discount, promotion_id, promotion_name, payment_method, is_delivery, address, phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(order.tableName, order.total, order.originalTotal || 0, order.discount || 0, order.promotionId || null, order.promotionName || null, order.paymentMethod || '', order.isDelivery ? 1 : 0, order.address || "", order.phone || "");
     const orderId = info.lastInsertRowid;
     const insertItem = db.prepare('INSERT INTO order_items (order_id, product_name, price, notes, category) VALUES (?, ?, ?, ?, ?)');
     for (const item of orderItems) {

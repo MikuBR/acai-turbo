@@ -61,7 +61,7 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
               <>
                 <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-4 border-b border-border pb-2">Resumo de Vendas</h3>
                 <div className="space-y-2 mb-8">
-                  {reportData.sales.map((s, i) => (
+                  {(reportData?.sales || []).map((s, i) => (
                     <div key={i} className="flex justify-between items-center bg-surface-light p-3 rounded-lg border border-border">
                       <span className="text-xs font-bold text-primary">{s.payment_method}</span>
                       <span className="font-mono text-success font-bold">R$ {s.total_amount.toFixed(2)}</span>
@@ -69,7 +69,7 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                   ))}
                   <div className="flex justify-between items-center bg-surface-light p-3 rounded-lg border border-border mt-2">
                     <span className="text-xs font-bold text-primary uppercase tracking-widest">Total Bruto</span>
-                    <span className="font-mono text-success font-bold text-lg">R$ {reportData.sales.reduce((acc, curr) => acc + curr.total_amount, 0).toFixed(2)}</span>
+                    <span className="font-mono text-success font-bold text-lg">R$ {(reportData?.sales || []).reduce((acc, curr) => acc + curr.total_amount, 0).toFixed(2)}</span>
                   </div>
                 </div>
               </>

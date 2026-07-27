@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
@@ -97,6 +97,21 @@ if (!app.isPackaged) {
   process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true';
 }
 app.commandLine.appendSwitch('log-level', '3');
+
+// ============================================================
+// PREVENÇÃO DE PROCESSOS FANTASMAS NO WINDOWS
+// Captura exceções não tratadas e finaliza o app corretamente
+// para não deixar processos filho (GPU, utility) órfãos.
+// ============================================================
+process.on('uncaughtException', (error) => {
+  console.error('[main] UNCAUGHT EXCEPTION:', error);
+  dialog.showErrorBox('Erro Fatal', `Ocorreu um erro inesperado:\n\n${error.message}\n\nO aplicativo será encerrado.`);
+  app.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[main] UNHANDLED REJECTION:', reason);
+});
 
 let mainWindow = null;
 

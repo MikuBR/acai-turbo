@@ -1,7 +1,7 @@
 import { X } from 'lucide-react';
 
 export default function QuickBuilderModal({ builder, onClose, setBuilder, confirmSimpleBuild, }) {
-  if (!builder) return null;
+  if (!builder || !builder.product) return null;
 
   const product = builder.product;
 

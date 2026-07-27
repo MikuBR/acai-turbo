@@ -1,1 +1,1 @@
-const { app } = require("electron/main"); console.log("app:", typeof app);
+const { app } = require("electron"); console.log("app:", typeof app);
