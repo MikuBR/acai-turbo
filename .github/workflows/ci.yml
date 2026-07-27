@@ -45,14 +45,14 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Add MSVC build tools
+      - name: Setup MSVC tools
         uses: microsoft/setup-msbuild@v2
 
-      - name: Install dependencies (skip native rebuild)
-        run: npm ci --ignore-scripts
+      - name: Fix Python distutils (removed in Python 3.12)
+        run: pip install setuptools
 
-      - name: Rebuild native modules for Electron
-        run: npx @electron/rebuild -o better-sqlite3
+      - name: Install dependencies (rebuilds native for Electron)
+        run: npm ci
 
       - name: Build Electron installer
         run: npm run build:win
