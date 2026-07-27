@@ -1,0 +1,24 @@
+# Normalização de line endings
+* text=auto
+
+# Arquivos com LF explícito (scripts, shell)
+*.sh text eol=lf
+*.cjs text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.css text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+
+# Husky hooks precisam de LF mesmo no Windows
+.husky/** text eol=lf
+
+# Binários
+*.db binary
+*.db-shm binary
+*.db-wal binary
+*.png binary
+*.jpg binary
+*.ico binary

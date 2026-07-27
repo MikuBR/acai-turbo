@@ -86,7 +86,12 @@ function createHandler(channel, handler, options = {}) {
   });
 }
 
-app.disableHardwareAcceleration();
+// Desabilitar aceleração de hardware apenas no Linux (drivers de GPU instáveis)
+// No Windows, manter habilitado para melhor performance
+// Sobrescrever com env: ENABLE_GPU=true ou DISABLE_GPU=true
+if (process.env.DISABLE_GPU === 'true' || (process.platform === 'linux' && process.env.ENABLE_GPU !== 'true')) {
+  app.disableHardwareAcceleration();
+}
 // Segurança: desabilitar avisos apenas em desenvolvimento
 if (!app.isPackaged) {
   process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true';
