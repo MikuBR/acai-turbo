@@ -1,4 +1,3 @@
-import React from 'react';
 import { ShoppingCart, FileText, Settings, X } from 'lucide-react';
 
 /**

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Package, Tag, Shield, Users, Package2, DollarSign, UserCheck, Printer } from 'lucide-react';
 import SettingsTab from './SettingsTab';
 

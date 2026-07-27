@@ -1,4 +1,3 @@
-import React from 'react';
 
 export default function InventoryForm({ inventoryForm, setInventoryForm, products, onSubmit, }) {
   return (

@@ -1,5 +1,4 @@
-import React from 'react';
-import { Search, ChevronRight, Plus } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { ProductCard } from '../atoms/ProductCard';
 
 /**
@@ -23,7 +22,6 @@ export function CatalogPanel({
   onSearchChange,
   onCategoryChange,
   onProductSelect,
-  onCustomBuild,
 }) {
   const categoriesMenu = ['TODOS', ...categories.map((c) => c.name.toUpperCase())].filter(
     (c) => c !== 'ADICIONAIS DOCES'

@@ -1,4 +1,3 @@
-import React from 'react';
 
 const variants = {
   default: 'bg-surface-light text-muted',

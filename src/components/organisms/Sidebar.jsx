@@ -1,8 +1,6 @@
-import React from 'react';
 import { FileText, Settings, X } from 'lucide-react';
 
 export default function Sidebar({ safeTables, activeTableId, setActiveTable, onReportsClick, onSettingsClick, handleLogout }) {
-  const activeTable = safeTables.find(t => t.id === activeTableId) || safeTables[0] || null;
 
   return (
     <div className="w-64 shrink-0 bg-surface border-r border-border flex flex-col shadow-xl z-10">

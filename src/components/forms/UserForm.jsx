@@ -1,4 +1,3 @@
-import React from 'react';
 
 export default function UserForm({ newUser, setNewUser, onSubmit, onCancel, }) {
   return (

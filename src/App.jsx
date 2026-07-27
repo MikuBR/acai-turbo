@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useMemo, useDeferredValue } from 'react';
+import { useState, useEffect, useMemo, useDeferredValue } from 'react';
 import { useStore } from './store/useStore';
 import { 
-  ShoppingCart, Search, ChevronRight, Plus, Settings, Lock 
+  Search, ChevronRight, Plus
 } from 'lucide-react';
 
 import {
-  OrderSidebar, CartPanel, CatalogPanel, SettingsModal, LoginModal,
+  OrderSidebar, CartPanel, SettingsModal, LoginModal,
   CheckoutModal, AcaiBuilderModal, QuickBuilderModal, PasswordModal,
   ManagerAuthModal, ReportsModal, NewTableModal
 } from './components/organisms';
@@ -29,7 +29,7 @@ function App() {
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [loginError, setLoginError] = useState('');
   
-  const [authTime, setAuthTime] = useState(0);
+  const [authTime] = useState(0);
 
   // Helper function to get IPC instance
   const getIPC = () => {
@@ -165,15 +165,6 @@ function App() {
     if (ipc && reportPeriod.startDate && reportPeriod.endDate) {
       ipc.invoke('reports:by-period', reportPeriod).then(res => {
         if (res && res.success) setAdvancedReportData(res.data);
-      });
-    }
-  };
-
-  const loadActivePromotions = () => {
-    const ipc = getIPC();
-    if (ipc) {
-      ipc.invoke('promotions:get-active').then(res => {
-        if (res && res.success) setPromotions(res.data || []);
       });
     }
   };

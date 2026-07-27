@@ -1,4 +1,3 @@
-import React from 'react';
 
 export default function ProductForm({ newProd, setNewProd, categories, onSubmit, onCancel, }) {
   return (

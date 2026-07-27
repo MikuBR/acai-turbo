@@ -1,4 +1,3 @@
-import React from 'react';
 import { X } from 'lucide-react';
 
 export default function AcaiBuilderModal({ builder, onClose, setBuilder, acaiBases, availableAddons, toggleRemoval, updateExtraInBuilder, confirmFullBuild, }) {

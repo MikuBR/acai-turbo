@@ -1,4 +1,3 @@
-import React from 'react';
 
 export default function ClientForm({ clientForm, setClientForm, onSubmit, onCancel, }) {
   return (

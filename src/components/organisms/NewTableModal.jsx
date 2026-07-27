@@ -1,4 +1,3 @@
-import React from 'react';
 import { X } from 'lucide-react';
 
 export default function NewTableModal({ isOpen, onClose, tableType, setTableType, newTableName, setNewTableName, delivForm, setDelivForm, handleAddTable, }) {

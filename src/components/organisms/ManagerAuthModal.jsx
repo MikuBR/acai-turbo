@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import { useRef } from 'react';
 import { Lock } from 'lucide-react';
 
 export default function ManagerAuthModal({ show, onCancel, ipcGet }) {

@@ -1,5 +1,4 @@
-import React from 'react';
-import { Pencil, Trash2, X, Check, FileText, ArrowUpCircle, ArrowDownCircle, Save } from 'lucide-react';
+import { Pencil, Trash2, X, Check, FileText, ArrowUpCircle, Save } from 'lucide-react';
 import SettingsTabs from '../molecules/SettingsTabs';
 import ProductForm from '../forms/ProductForm';
 import PromotionForm from '../forms/PromotionForm';
@@ -8,7 +7,7 @@ import InventoryForm from '../forms/InventoryForm';
 import FinancialForm from '../forms/FinancialForm';
 import ClientForm from '../forms/ClientForm';
 import CategoryForm from '../forms/CategoryForm';
-import ModalHeader from '../molecules/ModalHeader';
+
 
 export default function SettingsModal({ isOpen, onClose, settingsTab, setSettingsTab, safeCatalog, categories, newCatName, setNewCatName, newProd, setNewProd, newPromo, setNewPromo, users, newUser, setNewUser, inventory, inventoryForm, setInventoryForm, selectedInventoryItem, setSelectedInventoryItem, inventoryMovements, loadInventoryMovements, financialAccounts, financialForm, setFinancialForm, financialFilter, setFinancialFilter, clients, clientForm, setClientForm, selectedClientOrders, promotions, pwdForm, setPwdForm, syncDB, loadUsers, loadInventory, loadFinancialAccounts, loadClients, loadClientOrders, runWithAuth, getIPC, printerConfig, setPrinterConfig, savePrinterConfig, currentUser }) {
   if (!isOpen) return null;

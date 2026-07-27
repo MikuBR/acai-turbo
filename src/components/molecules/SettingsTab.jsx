@@ -1,4 +1,3 @@
-import React from 'react';
 
 export default function SettingsTab({ icon: Icon, label, isActive, onClick }) {
   return (

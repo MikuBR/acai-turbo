@@ -1,5 +1,4 @@
-import React from 'react';
-import { X, Trash2, FileText, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import { X, Trash2, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 
 export default function ReportsModal({ isOpen, onClose, advancedReportData, setAdvancedReportData, reportData, reportPeriod, setReportPeriod, ordersHistory, cashMove, setCashMove, loadReports, loadAdvancedReport, runWithAuth, getIPC }) {
   if (!isOpen) return null;

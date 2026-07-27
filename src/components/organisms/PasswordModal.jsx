@@ -1,7 +1,6 @@
-import React from 'react';
 import { Lock } from 'lucide-react';
 
-export default function PasswordModal({ isOpen, onClose, changePasswordForm, setChangePasswordForm, handleChangePassword }) {
+export default function PasswordModal({ isOpen, changePasswordForm, setChangePasswordForm, handleChangePassword }) {
   if (!isOpen) return null;
 
   return (

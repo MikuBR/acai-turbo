@@ -1,9 +1,7 @@
-import React from 'react';
 import { Lock } from 'lucide-react';
 
 export default function LoginModal({
   isOpen,
-  onClose,
   loginForm = { username: '', password: '' },
   setLoginForm = () => {},
   loginError,

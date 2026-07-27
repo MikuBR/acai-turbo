@@ -1,4 +1,3 @@
-import React from 'react';
 
 export default function Card({ children, className = '', hover = false, padding = 'p-4', onClick, ...props }) {
   return (

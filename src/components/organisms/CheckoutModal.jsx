@@ -1,4 +1,3 @@
-import React from 'react';
 import { X, Check } from 'lucide-react';
 
 export default function CheckoutModal({ isOpen, onClose, activeTable, promotions, selectedPromotion, setSelectedPromotion, calculateDiscount, paymentMethod, setPaymentMethod, amountReceived, setAmountReceived, handleFinalize, }) {

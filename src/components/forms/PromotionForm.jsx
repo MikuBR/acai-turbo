@@ -1,4 +1,3 @@
-import React from 'react';
 
 export default function PromotionForm({ newPromo, setNewPromo, categories, onSubmit, onCancel, }) {
   return (

@@ -1,4 +1,3 @@
-import React from 'react';
 
 export default function FinancialForm({ financialForm, setFinancialForm, onSubmit, onCancel, }) {
   return (

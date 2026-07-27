@@ -1,4 +1,3 @@
-import React from 'react';
 
 const variants = {
   primary: 'bg-success hover:bg-success text-white shadow-lg active:scale-95',

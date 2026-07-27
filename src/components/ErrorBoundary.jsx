@@ -1,13 +1,13 @@
-import React from 'react';
+import { Component } from 'react';
 
-class ErrorBoundary extends React.Component {
+class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
     this.state = { hasError: false, error: null, errorInfo: null };
   }
 
   static getDerivedStateFromError(error) {
-    return { hasError: true };
+    return { hasError: !!error };
   }
 
   componentDidCatch(error, errorInfo) {
@@ -17,6 +17,8 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
+      const isDev = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'development';
+
       return (
         <div className="flex h-screen bg-surface items-center justify-center">
           <div className="bg-card p-8 rounded-2xl border border-border shadow-2xl max-w-md text-center">
@@ -33,7 +35,7 @@ class ErrorBoundary extends React.Component {
             >
               Reiniciar Aplicação
             </button>
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {isDev && this.state.error && (
               <details className="mt-4 text-left">
                 <summary className="text-xs text-muted cursor-pointer">Detalhes do erro</summary>
                 <pre className="mt-2 text-xs bg-surface-light p-2 rounded overflow-auto max-h-40">
