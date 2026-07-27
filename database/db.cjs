@@ -10,8 +10,8 @@ function getDbPath() {
   try {
     return path.join(app.getPath('userData'), 'acai_turbo_v4.db');
   } catch (e) {
-    // Fallback apenas se app.getPath falhar (ex: testes sem Electron)
-    return path.join(__dirname, 'acai_turbo_v4.db');
+    const os = require('os');
+    return path.join(os.tmpdir(), 'acai-wave', 'acai_turbo_v4.db');
   }
 }
 

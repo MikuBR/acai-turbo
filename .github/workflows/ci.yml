@@ -90,7 +90,6 @@ jobs:
           key: deps-${{ matrix.os }}-test-${{ hashFiles('package-lock.json') }}
           restore-keys: |
             deps-${{ matrix.os }}-
-            deps-linux-
       - run: npm ci --ignore-scripts
         if: steps.cache.outputs.cache-hit != 'true'
       - run: npm test

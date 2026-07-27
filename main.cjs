@@ -126,7 +126,7 @@ function showFallbackErrorPage() {
         <title>Açaí Wave</title>
         <style>
           body {
-            font-family: Arial, sans-serif;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, sans-serif;
             background: #020617;
             color: #f8fafc;
             display: grid;
@@ -225,10 +225,17 @@ function createWindow() {
 function getPrinterConfig() {
   const kitchenIp = getConfig('printer_kitchen_ip');
   const frontName = getConfig('printer_front_name');
+  const frontIp = getConfig('printer_front_ip');
   return {
     kitchenIp: kitchenIp ? kitchenIp.value : '192.168.1.100',
     frontName: frontName ? frontName.value : 'TANCA',
+    frontIp: frontIp ? frontIp.value : '',
   };
+}
+
+function resolvePrinterInterface(name, ip) {
+  if (ip) return `tcp://${ip}`;
+  return `printer:${name}`;
 }
 
 async function printTickets(orderData, items) {
@@ -273,7 +280,8 @@ async function printTickets(orderData, items) {
 
   if (frontItems.length > 0) {
     try {
-      const printerFront = new ThermalPrinter({ type: PrinterTypes.EPSON, interface: `printer:${frontName}`, timeout: 1000, characterSet: CharacterSet.PC852_LATIN2 });
+      const frontInterface = resolvePrinterInterface(frontName, frontIp);
+      const printerFront = new ThermalPrinter({ type: PrinterTypes.EPSON, interface: frontInterface, timeout: 1000, characterSet: CharacterSet.PC852_LATIN2 });
       if (await printerFront.isPrinterConnected()) {
         printerFront.alignLeft(); 
         printerFront.setTextDoubleHeight(); 
