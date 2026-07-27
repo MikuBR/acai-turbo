@@ -7,23 +7,38 @@ on:
     branches: [main]
 
 jobs:
-  lint-and-test:
+  lint:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx eslint src/ database/
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+  test:
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-2022]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
-      - name: Install dependencies
+      - name: Install dependencies (with postinstall for native addons)
         run: npm ci
+        if: matrix.os != 'windows-2022'
 
-      - name: Lint
-        run: npx eslint src/ database/
+      - name: Install dependencies (skip native rebuild, tests don't need SQLite)
+        run: npm ci --ignore-scripts
+        if: matrix.os == 'windows-2022'
 
       - name: Run tests
         run: npm test
@@ -31,11 +46,10 @@ jobs:
       - name: Build frontend
         run: npm run build
 
-  build-electron:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: lint-and-test
+  build-windows:
+    if: github.event_name == 'push'
+    needs: [lint, test]
     runs-on: windows-2022
-
     steps:
       - uses: actions/checkout@v4
 
