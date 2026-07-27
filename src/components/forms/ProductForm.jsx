@@ -1,0 +1,35 @@
+
+export default function ProductForm({ newProd, setNewProd, categories, onSubmit, onCancel, }) {
+  return (
+    <form onSubmit={onSubmit} className="space-y-4 select-text">
+      <div>
+        <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Nome</label>
+        <input type="text" value={newProd.name} onChange={e => setNewProd({...newProd, name: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" required />
+      </div>
+      <div>
+        <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Ficha Técnica</label>
+        <input type="text" placeholder="Ingredientes padrão..." value={newProd.ingredients} onChange={e => setNewProd({...newProd, ingredients: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Preço</label>
+          <input type="number" step="0.01" value={newProd.price} onChange={e => setNewProd({...newProd, price: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" required />
+        </div>
+        <div>
+          <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Categoria</label>
+          <input type="text" list="cat-list-adm" value={newProd.category} onChange={e => setNewProd({...newProd, category: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" required />
+          <datalist id="cat-list-adm">
+            {categories.map(c => <option key={c.id} value={c.name}/>)}
+            <option value="ADICIONAIS DOCES"/>
+          </datalist>
+        </div>
+      </div>
+      <button type="submit" className={`w-full ${newProd.id ? 'bg-info hover:bg-info' : 'bg-success hover:bg-success'} py-3 rounded-lg font-bold text-xs uppercase tracking-widest text-white transition-all mt-4 active:scale-95`}>
+        {newProd.id ? 'Atualizar Produto' : 'Salvar Produto'}
+      </button>
+        {newProd.id && (
+          <button type="button" onClick={onCancel} className="w-full py-2 text-[10px] font-bold uppercase text-muted hover:text-primary transition-colors">Cancelar Edição</button>
+        )}
+    </form>
+  );
+}

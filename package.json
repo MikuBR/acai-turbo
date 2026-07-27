@@ -1,17 +1,23 @@
 {
-  "name": "acai-turbo",
+  "name": "acai-wave",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "main": "main.js",
+  "main": "main.cjs",
   "scripts": {
     "dev:vite": "vite",
-    "dev:electron": "wait-on tcp:5173 && electron .",
+    "dev:electron": "electron .",
     "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
     "build": "vite build",
+    "lint": "eslint src/ database/",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "postinstall": "electron-rebuild -w better-sqlite3",
     "build:win": "vite build && electron-builder --win --x64"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.11.1",
     "lucide-react": "^1.21.0",
     "node-thermal-printer": "^4.6.0",
@@ -22,25 +28,31 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@tailwindcss/postcss": "^4.3.1",
+    "@testing-library/jest-dom": "^7.0.0",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.5.0",
     "concurrently": "^10.0.3",
-    "electron": "^42.4.1",
+    "electron": "^28.3.3",
     "electron-builder": "^24.13.3",
+    "electron-rebuild": "^3.2.9",
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
+    "jsdom": "^25.0.1",
     "postcss": "^8.5.15",
     "tailwindcss": "^4.3.1",
     "vite": "^8.0.12",
+    "vitest": "^4.1.10",
     "wait-on": "^9.0.10"
   },
   "build": {
-    "appId": "com.acaiturbo.pdv",
-    "productName": "Acai Turbo",
+    "appId": "com.acaiwave.app",
+    "productName": "Açaí Wave",
     "asarUnpack": [
       "node_modules/better-sqlite3"
     ],
@@ -49,7 +61,7 @@
     },
     "files": [
       "dist/**/*",
-      "main.js",
+      "main.cjs",
       "database/**/*",
       "package.json"
     ],

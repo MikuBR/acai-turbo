@@ -1,0 +1,22 @@
+/* Tema claro (único tema do sistema) */
+:root {
+  --bg-primary: #faf9fc;
+  --bg-secondary: #f3f0fa;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f8f6ff;
+  --border: #d8cce8;
+  --border-light: #e8e0f0;
+  --text-primary: #1a0a2e;
+  --text-secondary: #5a4a7a;
+  --text-muted: #9a8ab8;
+  --accent-primary: #7e22ce;
+  --accent-secondary: #9333ea;
+  --highlight: #ca8a04;
+  --highlight-bg: rgba(202, 138, 4, 0.1);
+  --danger: #dc2626;
+  --success: #16a34a;
+  --warning: #d97706;
+  --info: #2563eb;
+  --scrollbar-thumb: #c4b5d8;
+  --scrollbar-thumb-hover: #7e22ce;
+}
