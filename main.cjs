@@ -509,14 +509,39 @@ createHandler('clients:add-order', async ({ clientId, orderId, totalAmount }) =>
 // ============================================================
 // RECUPERAÇÃO DE SENHAS (redundância)
 // ============================================================
+const resetPasswordAttempts = {};
+
+function checkResetRateLimit(userId) {
+  const now = Date.now();
+  const entry = resetPasswordAttempts[userId];
+  if (entry && entry.count >= 3 && now < entry.resetAt) {
+    const secondsLeft = Math.ceil((entry.resetAt - now) / 1000);
+    throw new Error(`Muitas tentativas de reset. Tente novamente em ${secondsLeft} segundos.`);
+  }
+  if (!entry || now >= entry.resetAt) {
+    resetPasswordAttempts[userId] = { count: 0, resetAt: now + 3600000 };
+  }
+}
+
+function recordResetAttempt(userId) {
+  if (resetPasswordAttempts[userId]) {
+    resetPasswordAttempts[userId].count++;
+  }
+}
+
 ipcMain.handle('auth:reset-manager-password', async (e, data) => {
   try {
     requireRole('admin');
-    const defaultHash = bcrypt.hashSync('1234', 10);
-    updateConfig('manager_password', defaultHash);
     const admin = currentSession ? currentSession.user : null;
-    createAuditLog(admin?.id, 'MANAGER_PASSWORD_RESET', null, null, 'Manager password reset to default by admin');
-    return { success: true };
+    checkResetRateLimit(admin?.id);
+
+    const tempPassword = crypto.randomBytes(4).toString('hex');
+    const hash = bcrypt.hashSync(tempPassword, 10);
+    updateConfig('manager_password', hash);
+    createAuditLog(admin?.id, 'MANAGER_PASSWORD_RESET', 'config', 'manager_password', 'Manager password reset by admin');
+
+    recordResetAttempt(admin?.id);
+    return { success: true, tempPassword };
   } catch (e) {
     console.error('[auth:reset-manager-password] Error:', e.message);
     return { success: false, error: e.message };
@@ -526,17 +551,26 @@ ipcMain.handle('auth:reset-manager-password', async (e, data) => {
 ipcMain.handle('auth:force-reset-admin', async (e, { adminId, newPassword }) => {
   try {
     requireRole('admin');
+    const admin = currentSession ? currentSession.user : null;
+    if (!admin) {
+      return { success: false, error: 'Sessão inválida' };
+    }
+    checkResetRateLimit(admin.id);
+
     const target = getUserById(adminId);
     if (!target || target.role !== 'admin') {
       return { success: false, error: 'Administrador não encontrado' };
     }
-    if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 4) {
-      return { success: false, error: 'A nova senha deve ter no mínimo 4 caracteres' };
+    if (target.id === admin.id) {
+      return { success: false, error: 'Use a opção de trocar sua própria senha' };
+    }
+    if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 8) {
+      return { success: false, error: 'A nova senha deve ter no mínimo 8 caracteres' };
     }
     const newHash = bcrypt.hashSync(newPassword, 10);
-    db.prepare('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?').run(newHash, adminId);
-    const admin = currentSession ? currentSession.user : null;
-    createAuditLog(admin?.id, 'ADMIN_PASSWORD_RESET', 'users', adminId, `Admin password reset by ${admin?.username}`);
+    db.prepare('UPDATE users SET password_hash = ?, must_change_password = 1 WHERE id = ?').run(newHash, adminId);
+    createAuditLog(admin.id, 'ADMIN_PASSWORD_RESET', 'users', adminId, `Admin password reset by ${admin.username}`);
+    recordResetAttempt(admin.id);
     return { success: true };
   } catch (e) {
     console.error('[auth:force-reset-admin] Error:', e.message);
