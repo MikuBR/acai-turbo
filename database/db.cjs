@@ -284,10 +284,9 @@ const seedDefaults = db.transaction(() => {
 
   const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get();
   if (userCount.count === 0) {
-    const tempPassword = crypto.randomBytes(4).toString('hex');
-    const passwordHash = bcrypt.hashSync(tempPassword, 10);
-    db.prepare('INSERT INTO users (username, password_hash, full_name, role, must_change_password) VALUES (?, ?, ?, ?, ?)').run('admin', passwordHash, 'Administrador', 'admin', 1);
-    console.log(`[db] Admin user created. Temporary password: ${tempPassword}`);
+    const passwordHash = bcrypt.hashSync('admin123', 10);
+    db.prepare('INSERT INTO users (username, password_hash, full_name, role, must_change_password) VALUES (?, ?, ?, ?, ?)').run('admin', passwordHash, 'Administrador', 'admin', 0);
+    console.log('[db] Admin user created. Default password: admin123');
   }
 });
 seedDefaults();
