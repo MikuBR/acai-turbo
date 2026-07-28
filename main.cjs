@@ -77,7 +77,7 @@ function createHandler(channel, handler, options = {}) {
       if (options.minRole) {
         requireRole(options.minRole);
       }
-      return await handler(valid.data);
+      return { success: true, ...await handler(valid.data) };
     } catch (e) {
       console.error(`[${channel}] Error:`, e.message);
       const message = e.message || 'Erro interno. Tente novamente.';

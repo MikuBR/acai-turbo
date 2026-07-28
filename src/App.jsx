@@ -425,28 +425,29 @@ function App() {
       const discount = selectedPromotion ? calculateDiscount(selectedPromotion, activeTable.total) : 0;
       const finalTotal = activeTable.total - discount;
 
-      ipc.invoke('orders:save', {
-        orderData: {
-          tableName: activeTable.name,
-          total: finalTotal,
-          originalTotal: activeTable.total,
-          discount: discount,
-          promotionId: selectedPromotion?.id || null,
-          promotionName: selectedPromotion?.name || null,
-          paymentMethod: paymentMethod,
-          isDelivery: activeTable.isDelivery,
-          address: activeTable.address,
-          phone: activeTable.phone
-        },
-        items: activeTable.items || []
-      }).then(res => {
-        if (res && res.success) {
-          checkoutActiveTable();
-          setModals({ ...modals, checkout: false });
-          setAmountReceived(''); setPaymentMethod('DINHEIRO');
-          setSelectedPromotion(null);
-        }
-      });
+       ipc.invoke('orders:save', {
+         orderData: {
+           tableName: activeTable.name,
+           total: finalTotal,
+           originalTotal: activeTable.total,
+           discount: discount,
+           promotionId: selectedPromotion?.id || null,
+           promotionName: selectedPromotion?.name || null,
+           paymentMethod: paymentMethod,
+           isDelivery: activeTable.isDelivery,
+           address: activeTable.address,
+           phone: activeTable.phone
+         },
+         items: activeTable.items || []
+       }).then(res => {
+         if (res && res.success) {
+           checkoutActiveTable();
+           loadReports();
+           setModals({ ...modals, checkout: false });
+           setAmountReceived(''); setPaymentMethod('DINHEIRO');
+           setSelectedPromotion(null);
+         }
+       });
     }
   };
 

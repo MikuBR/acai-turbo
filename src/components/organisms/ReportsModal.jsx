@@ -87,16 +87,20 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
               </div>
               <input type="number" step="0.01" placeholder="Valor R$" value={cashMove.amount} onChange={e => setCashMove({...cashMove, amount: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
               <input type="text" placeholder="Motivo (Ex: Troco, Gelo...)" value={cashMove.description} onChange={e => setCashMove({...cashMove, description: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
-              <button onClick={() => {
-                const ipc = getIPC();
-                if(cashMove.amount && cashMove.description && ipc) {
-                  ipc.invoke('cash:register', { ...cashMove, amount: parseFloat(cashMove.amount) }).then(() => {
-                    setCashMove({ type: 'SAIDA', amount: '', description: '' });
-                    loadReports();
-                  });
-                }
-              }} className="w-full bg-surface-light hover:bg-border py-3 rounded-lg font-bold text-xs uppercase tracking-widest text-primary transition-all">
-                Registrar Movimento
+                  <button onClick={() => {
+                  const ipc = getIPC();
+                 if(cashMove.amount && cashMove.description && ipc) {
+                   ipc.invoke('cash:register', { ...cashMove, amount: parseFloat(cashMove.amount) }).then(res => {
+                     if (res.success) {
+                       setCashMove({ type: 'SAIDA', amount: '', description: '' });
+                       loadReports();
+                     } else {
+                       alert(res.error);
+                     }
+                   });
+                 }
+               }} className="w-full bg-success hover:bg-success py-3 rounded-lg font-bold text-xs uppercase tracking-widest text-white transition-all">
+                 Registrar Movimento
               </button>
             </div>
             

@@ -408,16 +408,16 @@ function getReportByPeriod(startDate, endDate) {
   const sales = db.prepare(`
     SELECT payment_method, is_delivery, SUM(total) as total_amount, COUNT(*) as order_count
     FROM orders
-    WHERE date(created_at, 'localtime') >= date(?, 'localtime')
-    AND date(created_at, 'localtime') <= date(?, 'localtime')
+    WHERE datetime(created_at, 'localtime') >= datetime(?, 'localtime')
+    AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
     GROUP BY payment_method, is_delivery
   `).all(startDate, endDate);
 
   const movements = db.prepare(`
     SELECT type, SUM(amount) as total_amount
     FROM cash_movements
-    WHERE date(created_at, 'localtime') >= date(?, 'localtime')
-    AND date(created_at, 'localtime') <= date(?, 'localtime')
+    WHERE datetime(created_at, 'localtime') >= datetime(?, 'localtime')
+    AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
     GROUP BY type
   `).all(startDate, endDate);
 
@@ -425,8 +425,8 @@ function getReportByPeriod(startDate, endDate) {
     SELECT product_name, COUNT(*) as qty, SUM(price) as total_revenue
     FROM order_items
     JOIN orders ON order_items.order_id = orders.id
-    WHERE date(orders.created_at, 'localtime') >= date(?, 'localtime')
-    AND date(orders.created_at, 'localtime') <= date(?, 'localtime')
+    WHERE datetime(orders.created_at, 'localtime') >= datetime(?, 'localtime')
+    AND datetime(orders.created_at, 'localtime') <= datetime(?, 'localtime')
     GROUP BY product_name
     ORDER BY qty DESC
     LIMIT 10
@@ -435,8 +435,8 @@ function getReportByPeriod(startDate, endDate) {
   const peakHours = db.prepare(`
     SELECT strftime('%H', created_at) as hour, COUNT(*) as order_count, SUM(total) as total_amount
     FROM orders
-    WHERE date(created_at, 'localtime') >= date(?, 'localtime')
-    AND date(created_at, 'localtime') <= date(?, 'localtime')
+    WHERE datetime(created_at, 'localtime') >= datetime(?, 'localtime')
+    AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
     GROUP BY hour
     ORDER BY order_count DESC
   `).all(startDate, endDate);
@@ -444,8 +444,8 @@ function getReportByPeriod(startDate, endDate) {
   const ticketAverage = db.prepare(`
     SELECT AVG(total) as avg_ticket
     FROM orders
-    WHERE date(created_at, 'localtime') >= date(?, 'localtime')
-    AND date(created_at, 'localtime') <= date(?, 'localtime')
+    WHERE datetime(created_at, 'localtime') >= datetime(?, 'localtime')
+    AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
   `).get(startDate, endDate);
 
   return { sales, movements, topProducts, peakHours, ticketAverage: ticketAverage?.avg_ticket || 0 };
@@ -566,7 +566,7 @@ const getSession = (token) => {
   if (!token || typeof token !== 'string') {
     throw new Error('Invalid session token');
   }
-  const session = db.prepare('SELECT * FROM user_sessions WHERE session_token = ? AND expires_at > datetime("now")').get(token);
+  const session = db.prepare("SELECT * FROM user_sessions WHERE session_token = ? AND expires_at > datetime('now')").get(token);
   if (session) {
     const user = db.prepare('SELECT id, username, full_name, role FROM users WHERE id = ?').get(session.user_id);
     return { session, user };
@@ -579,7 +579,7 @@ const deleteSession = (token) => {
   }
   return db.prepare('DELETE FROM user_sessions WHERE session_token = ?').run(token).changes > 0;
 };
-const cleanupExpiredSessions = () => db.prepare('DELETE FROM user_sessions WHERE expires_at < datetime("now")').run();
+const cleanupExpiredSessions = () => db.prepare("DELETE FROM user_sessions WHERE expires_at < datetime('now')").run();
 
 // --- EXPORTAÇÕES DE AUDIT LOGS ---
 const createAuditLog = (userId, action, entityType, entityId, details) => {

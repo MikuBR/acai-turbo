@@ -281,7 +281,50 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                       </div>
                       <div className="flex gap-2">
                         <button onClick={() => { setSelectedInventoryItem(inv); loadInventoryMovements(inv.id); }} className="p-2 bg-info/10 hover:bg-info/20 text-info rounded-lg transition-colors" title="Ver Histórico"><FileText size={16} /></button>
-                        <button onClick={() => { const ipc = getIPC(); if(window.confirm(`Ajustar estoque de ${inv.product_name}?`) && ipc) { const delta = prompt('Quantidade a adicionar (positivo) ou remover (negativo):', '0'); if (delta) { ipc.invoke('inventory:adjust', { inventoryId: inv.id, delta: parseFloat(delta), reason: 'Ajuste manual' }).then(() => loadInventory()); } } }} className="p-2 bg-warning/10 hover:bg-warning/20 text-warning rounded-lg transition-colors" title="Ajustar Estoque"><ArrowUpCircle size={16} /></button>
+                        <button onClick={() => {
+                          const ipc = getIPC();
+                          if(ipc && window.confirm(`Ajustar estoque de ${inv.product_name}?`)) {
+                            const deltaInput = document.createElement('input');
+                            deltaInput.type = 'number';
+                            deltaInput.placeholder = 'Quantidade a adicionar (positivo) ou remover (negativo)';
+                            deltaInput.value = '0';
+                            deltaInput.className = 'bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm w-full';
+                            
+                            const modal = document.createElement('div');
+                            modal.className = 'fixed inset-0 bg-surface z-[901] flex items-center justify-center p-6';
+                            modal.innerHTML = `
+                              <div class="bg-card w-full max-w-xs rounded-2xl border border-border p-6 shadow-2xl">
+                                <h3 class="text-xs font-bold uppercase text-muted mb-4">Ajustar Estoque</h3>
+                                <div class="space-y-4">
+                                  <div>
+                                    <label class="text-[10px] text-muted font-bold uppercase block mb-1">Quantidade</label>
+                                    ${deltaInput.outerHTML}
+                                  </div>
+                                  <div class="flex gap-2">
+                                    <button onclick="this.closest('.fixed').style.display='none'" class="flex-1 bg-surface-light hover:bg-border py-2 rounded-lg font-bold text-[10px] uppercase">Cancelar</button>
+                                    <button id="confirmBtn" class="flex-1 bg-warning hover:bg-warning py-2 rounded-lg font-bold text-[10px] uppercase text-white">Confirmar</button>
+                                  </div>
+                                </div>
+                              </div>
+                            `;
+                            
+                            document.body.appendChild(modal);
+                            
+                            const confirmBtn = modal.querySelector('#confirmBtn');
+                            confirmBtn.onclick = () => {
+                              const inputEl = modal.querySelector('input');
+                              const delta = parseFloat(inputEl ? inputEl.value : '0');
+                              if(!isNaN(delta)) {
+                                ipc.invoke('inventory:adjust', { inventoryId: inv.id, delta: delta, reason: 'Ajuste manual' })
+                                  .then(() => {
+                                    loadInventory();
+                                    document.body.removeChild(modal);
+                                  })
+                                  .catch(err => console.error(err));
+                              }
+                            };
+                          }
+                        }} className="p-2 bg-warning/10 hover:bg-warning/20 text-warning rounded-lg transition-colors" title="Ajustar Estoque"><ArrowUpCircle size={16} /></button>
                       </div>
                     </div>
                   ))}
