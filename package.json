@@ -6,7 +6,7 @@
   "main": "main.cjs",
   "scripts": {
     "dev:vite": "vite",
-    "dev:electron": "electron .",
+    "dev:electron": "wait-on http://localhost:5173/ && electron .",
     "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
     "build": "vite build",
     "lint": "eslint src/ database/",

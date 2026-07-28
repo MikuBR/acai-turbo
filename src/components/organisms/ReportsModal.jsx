@@ -78,29 +78,30 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
             <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-4 border-b border-border pb-2">Lançamento Manual (Gaveta)</h3>
             <div className="bg-surface-light p-4 rounded-xl border border-border space-y-4">
               <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => setCashMove({...cashMove, type: 'ENTRADA'})}
+                <button type="button" onClick={() => setCashMove({...cashMove, type: 'ENTRADA'})}
                   className={`py-2 rounded font-bold text-[10px] flex items-center justify-center gap-1 transition-all ${cashMove.type === 'ENTRADA' ? 'bg-success/20 text-success border border-success/50' : 'bg-surface-light text-muted border border-border'}`}>
                   <ArrowUpCircle size={14}/> ENTRADA</button>
-                <button onClick={() => setCashMove({...cashMove, type: 'SAIDA'})}
+                <button type="button" onClick={() => setCashMove({...cashMove, type: 'SAIDA'})}
                   className={`py-2 rounded font-bold text-[10px] flex items-center justify-center gap-1 transition-all ${cashMove.type === 'SAIDA' ? 'bg-danger/20 text-danger border border-danger/50' : 'bg-surface-light text-muted border border-border'}`}>
                   <ArrowDownCircle size={14}/> SANGRIA</button>
               </div>
               <input type="number" step="0.01" placeholder="Valor R$" value={cashMove.amount} onChange={e => setCashMove({...cashMove, amount: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
               <input type="text" placeholder="Motivo (Ex: Troco, Gelo...)" value={cashMove.description} onChange={e => setCashMove({...cashMove, description: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
-                  <button onClick={() => {
-                  const ipc = getIPC();
-                 if(cashMove.amount && cashMove.description && ipc) {
-                   ipc.invoke('cash:register', { ...cashMove, amount: parseFloat(cashMove.amount) }).then(res => {
-                     if (res.success) {
-                       setCashMove({ type: 'SAIDA', amount: '', description: '' });
-                       loadReports();
-                     } else {
-                       alert(res.error);
-                     }
-                   });
-                 }
-               }} className="w-full bg-success hover:bg-success py-3 rounded-lg font-bold text-xs uppercase tracking-widest text-white transition-all">
-                 Registrar Movimento
+              <button type="button" onClick={() => {
+                const ipc = getIPC();
+                if(!ipc) { alert('Sem conexão com o sistema'); return; }
+                if(!cashMove.amount) { alert('Informe o valor'); return; }
+                if(!cashMove.description) { alert('Informe o motivo'); return; }
+                ipc.invoke('cash:register', { ...cashMove, amount: parseFloat(cashMove.amount) }).then(res => {
+                  if (res.success) {
+                    setCashMove({ type: 'SAIDA', amount: '', description: '' });
+                    loadReports();
+                  } else {
+                    alert(res.error);
+                  }
+                });
+              }} className="w-full bg-success hover:bg-success py-3 rounded-lg font-bold text-xs uppercase tracking-widest text-white transition-all">
+                Registrar Movimento
               </button>
             </div>
             
