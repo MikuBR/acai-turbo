@@ -38,7 +38,6 @@ function initializeDatabase() {
       backupDir: path.join(path.dirname(dbPath), 'backups'),
       lockDir: path.dirname(dbPath),
       dryRun: process.env.DRY_RUN_MIGRATIONS === 'true',
-      timeout: 30000,
     });
 
     const result = engine.runMigrations();

@@ -94,6 +94,7 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
       - run: npm rebuild better-sqlite3
       - run: npm test
+      - run: node scripts/smoke-test-db.cjs
       - run: npm run build
       - uses: actions/upload-artifact@v4
         if: matrix.os == 'ubuntu-latest'
@@ -145,6 +146,10 @@ jobs:
             $size = ($f.Length / 1MB).ToString("F2")
             Write-Host "✅ $($f.Name) — ${size}MB"
           }
+
+      - name: Smoke test DB migration
+        shell: bash
+        run: node scripts/smoke-test-db.cjs
 
       - uses: actions/upload-artifact@v4
         with:

@@ -2,6 +2,8 @@ const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
 
+const Database = require('better-sqlite3');
+
 class SqliteAdapter {
   constructor(db, backupDir) {
     if (!db || typeof db.prepare !== 'function') {
@@ -9,6 +11,10 @@ class SqliteAdapter {
     }
     this.db = db;
     this.backupDir = backupDir;
+  }
+
+  getDbPath() {
+    return this.db.name;
   }
 
   query(sql, params = []) {
@@ -83,30 +89,37 @@ class SqliteAdapter {
       this.backupDir,
       `acai_turbo_v4.db.${Date.now()}.bak`
     );
-    const dbPath = this.db.name;
-    if (fs.existsSync(dbPath)) {
-      fs.copyFileSync(dbPath, backupPath);
-      if (fs.existsSync(dbPath + '-wal')) {
-        fs.copyFileSync(dbPath + '-wal', backupPath + '-wal');
-      }
-      if (fs.existsSync(dbPath + '-shm')) {
-        fs.copyFileSync(dbPath + '-shm', backupPath + '-shm');
+    const dbPath = this.getDbPath();
+    if (!fs.existsSync(dbPath)) return null;
+
+    let lastErr;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        fs.copyFileSync(dbPath, backupPath);
+        return backupPath;
+      } catch (err) {
+        lastErr = err;
+        if (attempt < 2) {
+          const waitMs = 200 * (attempt + 1);
+          const start = Date.now();
+          while (Date.now() - start < waitMs);
+        }
       }
     }
-    return backupPath;
+    console.warn(`[sqlite] Backup não-fatal falhou após 3 tentativas: ${lastErr.message}`);
+    return null;
   }
 
   restore(backupPath) {
     if (!backupPath || !fs.existsSync(backupPath)) {
       throw new Error(`Backup not found: ${backupPath}`);
     }
+    const dbPath = this.getDbPath();
     this.db.close();
-    const dbPath = this.db.name;
     fs.copyFileSync(backupPath, dbPath);
-    const walPath = backupPath + '-wal';
-    if (fs.existsSync(walPath)) {
-      fs.copyFileSync(walPath, dbPath + '-wal');
-    }
+    this.db = new Database(dbPath);
+    this.db.pragma('journal_mode = WAL');
+    this.db.pragma('foreign_keys = ON');
     return dbPath;
   }
 

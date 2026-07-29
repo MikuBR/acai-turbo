@@ -56,7 +56,8 @@
     "appId": "com.acaiwave.app",
     "productName": "Açaí Wave",
     "asarUnpack": [
-      "node_modules/better-sqlite3"
+      "node_modules/better-sqlite3",
+      "database/migrations/**/*"
     ],
     "directories": {
       "output": "release"

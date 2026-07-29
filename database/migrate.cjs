@@ -20,7 +20,6 @@ class MigrationEngine {
     this.backupDir = options.backupDir;
     this.lockDir = options.lockDir;
     this.dryRun = options.dryRun === true;
-    this.timeout = options.timeout || 30000;
     this._migrations = null;
     this.lockFile = this.lockDir ? path.join(this.lockDir, 'migrate.lock') : null;
   }
@@ -44,6 +43,7 @@ class MigrationEngine {
         up: mod.up,
         down: mod.down || null,
         validate: mod.validate || null,
+        preValidate: mod.preValidate || null,
         dependencies: mod.dependencies || [],
       });
     }
@@ -159,21 +159,26 @@ class MigrationEngine {
           }
         }
 
-        if (migration.validate) {
+        if (migration.preValidate) {
           try {
-            migration.validate(this.adapter);
+            migration.preValidate(this.adapter);
           } catch (e) {
             throw new MigrationError(
-              `Falha na validação pré-migration v${migration.version}: ${e.message}`,
-              { version: migration.version, stage: 'validate-pre', cause: e }
+              `Falha na pré-validação v${migration.version}: ${e.message}`,
+              { version: migration.version, stage: 'pre-validate', cause: e }
             );
           }
         }
 
         if (!backupPath && this.backupDir) {
-          backupPath = this.adapter.backup();
-          if (backupPath) {
-            console.log(`[migrate] Backup created: ${backupPath}`);
+          try {
+            backupPath = this.adapter.backup();
+            if (backupPath) {
+              console.log(`[migrate] Backup created: ${backupPath}`);
+            }
+          } catch (e) {
+            console.warn(`[migrate] Backup não-fatal falhou: ${e.message}`);
+            backupPath = null;
           }
         }
 
@@ -217,8 +222,8 @@ class MigrationEngine {
 
           if (backupPath) {
             try {
-              const newDbPath = this.adapter.restore(backupPath);
-              console.log(`[migrate] Database restored from backup: ${newDbPath}`);
+              this.adapter.restore(backupPath);
+              console.log(`[migrate] Database restored from backup: ${backupPath}`);
             } catch (restoreError) {
               throw new MigrationError(
                 `Falha na migration v${migration.version} E falha no restore do backup: ${restoreError.message}. Backup manual em: ${backupPath}`,

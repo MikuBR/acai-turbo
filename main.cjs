@@ -91,6 +91,9 @@ function createHandler(channel, handler, options = {}) {
   });
 }
 
+// Forçar nome ASCII para evitar problemas com path no Windows (Açaí Wave → AcaiWave)
+app.name = 'AcaiWave';
+
 // Desabilitar aceleração de hardware apenas no Linux (drivers de GPU instáveis)
 // No Windows, manter habilitado para melhor performance
 // Sobrescrever com env: ENABLE_GPU=true ou DISABLE_GPU=true
@@ -111,7 +114,10 @@ app.commandLine.appendSwitch('log-level', '3');
 process.on('uncaughtException', (error) => {
   console.error('[main] UNCAUGHT EXCEPTION:', error);
   dialog.showErrorBox('Erro Fatal', `Ocorreu um erro inesperado:\n\n${error.message}\n\nO aplicativo será encerrado.`);
-  app.exit(1);
+  app.quit();
+  setTimeout(() => {
+    app.exit(1);
+  }, 5000);
 });
 
 process.on('unhandledRejection', (reason) => {
