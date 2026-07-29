@@ -17,6 +17,7 @@ const {
   getProductPriceHistory,
   addIfoodPendingOrder, getIfoodPendingOrders, getIfoodPendingOrderByOrderId,
   updateIfoodPendingOrderStatus, removeIfoodPendingOrder, countIfoodPendingOrders,
+  getMigrationError,
   db
 } = require('./database/db.cjs');
 const { ThermalPrinter, PrinterTypes, CharacterSet } = require('node-thermal-printer');
@@ -1076,6 +1077,17 @@ createHandler('config:update', async ({ key, value }) => {
 });
 
 app.whenReady().then(() => {
+  const migrationError = getMigrationError();
+  if (migrationError) {
+    console.error('[main] Migration error detected:', migrationError);
+    dialog.showErrorBox(
+      'Erro de Banco de Dados',
+      `${migrationError}\n\nO aplicativo não pode iniciar. Se o problema persistir, contate o suporte.`
+    );
+    app.quit();
+    return;
+  }
+
   createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

@@ -3,9 +3,16 @@ const path = require('path');
 const crypto = require('crypto');
 const { app } = require('electron');
 const bcrypt = require('bcryptjs');
+const { SqliteAdapter } = require('./adapters/sqlite.cjs');
+const { MigrationEngine, MigrationError } = require('./migrate.cjs');
 
-// Função para obter o caminho do banco - sempre usa userData (diretório gravável)
-// app.getPath('userData') está disponível antes do evento ready para o nome 'userData'
+let db;
+let _migrationError = null;
+
+function getMigrationError() {
+  return _migrationError;
+}
+
 function getDbPath() {
   try {
     return path.join(app.getPath('userData'), 'acai_turbo_v4.db');
@@ -16,296 +23,49 @@ function getDbPath() {
 }
 
 const dbPath = getDbPath();
-let db;
 
 function initializeDatabase() {
   try {
     console.log('[db] Initializing database at:', dbPath);
-    console.log('[db] better-sqlite3 Database constructor:', typeof Database);
-    
+
     db = new Database(dbPath);
-    console.log('[db] Database instance created:', typeof db);
-    console.log('[db] Database prepare method:', typeof db.prepare);
-    
     db.pragma('journal_mode = WAL');
+    db.pragma('foreign_keys = ON');
+
+    const adapter = new SqliteAdapter(db, path.join(path.dirname(dbPath), 'backups'));
+    const engine = new MigrationEngine(adapter, {
+      migrationsDir: path.join(__dirname, 'migrations'),
+      backupDir: path.join(path.dirname(dbPath), 'backups'),
+      lockDir: path.dirname(dbPath),
+      dryRun: process.env.DRY_RUN_MIGRATIONS === 'true',
+      timeout: 30000,
+    });
+
+    const result = engine.runMigrations();
+    if (result.status === 'success' && result.applied && result.applied.length > 0) {
+      console.log('[db] Migrations applied:', result.applied.join(', '));
+    } else if (result.status === 'noop') {
+      console.log('[db] Schema is up to date (v' + result.currentVersion + ')');
+    }
+
     console.log('[db] Database initialized successfully');
   } catch (error) {
-    console.error('[db] Failed to initialize database:', error.message);
-    console.error('[db] Error stack:', error.stack);
-    throw new Error(`Database initialization failed: ${error.message}. Please check file permissions and disk space.`);
+    const msg = error instanceof MigrationError
+      ? `Database migration failed at v${error.version} (${error.stage}): ${error.message}`
+      : `Database initialization failed: ${error.message}`;
+    console.error('[db]', msg);
+    _migrationError = msg;
+    if (error instanceof MigrationError && error.backupPath) {
+      _migrationError += `. Backup preserved at: ${error.backupPath}`;
+    }
   }
 }
 
-// Initialize database immediately for now
 initializeDatabase();
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS categories (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT UNIQUE NOT NULL
-  );
-
-  CREATE TABLE IF NOT EXISTS products (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    price REAL NOT NULL,
-    category TEXT NOT NULL,
-    ingredients TEXT DEFAULT ''
-  );
-
-  CREATE TABLE IF NOT EXISTS orders (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    customer_name TEXT,
-    total REAL NOT NULL,
-    original_total REAL DEFAULT 0,
-    discount REAL DEFAULT 0,
-    promotion_id INTEGER,
-    promotion_name TEXT,
-    payment_method TEXT,
-    is_delivery BOOLEAN DEFAULT 0,
-    address TEXT,
-    phone TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS order_items (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    order_id INTEGER,
-    product_name TEXT,
-    price REAL,
-    notes TEXT,
-    category TEXT,
-    FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE CASCADE
-  );
-
-  CREATE TABLE IF NOT EXISTS cash_movements (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    type TEXT NOT NULL,
-    amount REAL NOT NULL,
-    description TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS config (
-    key TEXT PRIMARY KEY,
-    value TEXT
-  );
-
-  CREATE TABLE IF NOT EXISTS promotions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    type TEXT NOT NULL,
-    value REAL NOT NULL,
-    applies_to TEXT NOT NULL,
-    target_category TEXT,
-    target_product_id INTEGER,
-    min_quantity INTEGER DEFAULT 1,
-    start_date DATETIME NOT NULL,
-    end_date DATETIME NOT NULL,
-    is_active BOOLEAN DEFAULT 1,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS ifood_pending_orders (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    order_id TEXT UNIQUE NOT NULL,
-    display_id TEXT NOT NULL,
-    event_id TEXT NOT NULL,
-    merchant_id TEXT NOT NULL,
-    order_data TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'pending',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    full_name TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'operator',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    is_active BOOLEAN DEFAULT 1,
-    must_change_password BOOLEAN DEFAULT 0,
-    failed_login_attempts INTEGER DEFAULT 0,
-    locked_until DATETIME
-  );
-
-  CREATE TABLE IF NOT EXISTS user_sessions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    session_token TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    expires_at DATETIME NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-  );
-
-  CREATE TABLE IF NOT EXISTS audit_logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
-    action TEXT NOT NULL,
-    entity_type TEXT,
-    entity_id INTEGER,
-    details TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
-  );
-
-  CREATE TABLE IF NOT EXISTS inventory (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    product_id INTEGER NOT NULL,
-    quantity REAL NOT NULL DEFAULT 0,
-    unit TEXT NOT NULL DEFAULT 'un',
-    min_quantity REAL DEFAULT 0,
-    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
-  );
-
-  CREATE TABLE IF NOT EXISTS inventory_movements (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    inventory_id INTEGER NOT NULL,
-    type TEXT NOT NULL,
-    quantity REAL NOT NULL,
-    reason TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (inventory_id) REFERENCES inventory (id) ON DELETE CASCADE
-  );
-
-  CREATE TABLE IF NOT EXISTS financial_accounts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    type TEXT NOT NULL,
-    description TEXT NOT NULL,
-    amount REAL NOT NULL,
-    due_date DATE,
-    status TEXT NOT NULL DEFAULT 'pending',
-    category TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS financial_transactions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    account_id INTEGER NOT NULL,
-    type TEXT NOT NULL,
-    amount REAL NOT NULL,
-    payment_method TEXT,
-    notes TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (account_id) REFERENCES financial_accounts (id) ON DELETE CASCADE
-  );
-
-  CREATE TABLE IF NOT EXISTS clients (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    phone TEXT,
-    address TEXT,
-    email TEXT,
-    notes TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS client_orders (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    client_id INTEGER NOT NULL,
-    order_id INTEGER NOT NULL,
-    order_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    total_amount REAL NOT NULL,
-    FOREIGN KEY (client_id) REFERENCES clients (id) ON DELETE CASCADE,
-    FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE CASCADE
-  );
-
-  CREATE TABLE IF NOT EXISTS product_price_history (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    product_id INTEGER NOT NULL,
-    old_price REAL NOT NULL,
-    new_price REAL NOT NULL,
-    changed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
-  );
-`);
-
-// Migration: Add address and phone columns if they don't exist
-try {
-  db.prepare('ALTER TABLE orders ADD COLUMN address TEXT').run();
-} catch (e) {
-  // Column already exists, ignore error
-}
-try {
-  db.prepare('ALTER TABLE orders ADD COLUMN phone TEXT').run();
-} catch (e) {
-  // Column already exists, ignore error
-}
-try {
-  db.prepare('ALTER TABLE orders ADD COLUMN original_total REAL DEFAULT 0').run();
-} catch (e) {
-  // Column already exists, ignore error
-}
-try {
-  db.prepare('ALTER TABLE orders ADD COLUMN discount REAL DEFAULT 0').run();
-} catch (e) {
-  // Column already exists, ignore error
-}
-try {
-  db.prepare('ALTER TABLE orders ADD COLUMN promotion_id INTEGER').run();
-} catch (e) {
-  // Column already exists, ignore error
-}
-try {
-  db.prepare('ALTER TABLE orders ADD COLUMN promotion_name TEXT').run();
-} catch (e) {
-  // Column already exists, ignore error
-}
-
-// Migration: Add security columns to users table
-try {
-  db.prepare('ALTER TABLE users ADD COLUMN must_change_password BOOLEAN DEFAULT 0').run();
-} catch (e) {
-  // Column already exists, ignore error
-}
-try {
-  db.prepare('ALTER TABLE users ADD COLUMN failed_login_attempts INTEGER DEFAULT 0').run();
-} catch (e) {
-  // Column already exists, ignore error
-}
-try {
-  db.prepare('ALTER TABLE users ADD COLUMN locked_until DATETIME').run();
-} catch (e) {
-  // Column already exists, ignore error
-}
-
-// Create indexes for better report performance
-try {
-  db.prepare('CREATE INDEX IF NOT EXISTS idx_cash_movements_created_at ON cash_movements(created_at)').run();
-} catch (e) {
-  // Index already exists, ignore error
-}
-try {
-  db.prepare('CREATE INDEX IF NOT EXISTS idx_financial_accounts_due_date ON financial_accounts(due_date)').run();
-} catch (e) {
-  // Index already exists, ignore error
-}
-try {
-  db.prepare('CREATE INDEX IF NOT EXISTS idx_inventory_movements_created_at ON inventory_movements(created_at)').run();
-} catch (e) {
-  // Index already exists, ignore error
-}
-try {
-  db.prepare('CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at)').run();
-} catch (e) {
-  // Index already exists, ignore error
-}
-try {
-  db.prepare('CREATE INDEX IF NOT EXISTS idx_financial_transactions_account_id ON financial_transactions(account_id)').run();
-} catch (e) {
-  // Index already exists, ignore error
-}
-try {
-  db.prepare('CREATE INDEX IF NOT EXISTS idx_client_orders_client_id ON client_orders(client_id)').run();
-} catch (e) {
-  // Index already exists, ignore error
-}
-
 // --- SEED DE DADOS PADRÃO ---
+// Only run seed if migration succeeded
+if (!_migrationError) {
 // Reset login counters on startup to prevent persistent lockout after reinstall
 try {
   db.prepare('UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE failed_login_attempts > 0 OR locked_until IS NOT NULL').run();
@@ -348,6 +108,7 @@ if (checkProducts.count === 0) {
   
   const adicionais = ['Banana', 'Morango', 'Leite em Pó', 'Leite Condensado', 'Nutella', 'Granola', 'Uva Verde s/ Semente', 'Ovomaltine', 'Paçoca', 'Kiwi', 'Confete', 'Chantilly', 'Salada de Frutas', 'Mel'];
   adicionais.forEach(add => insertProd.run(add, 0.0, 'ADICIONAIS DOCES', ''));
+}
 }
 
 // --- EXPORTAÇÕES DE CATEGORIAS ---
@@ -937,6 +698,7 @@ const getProductPriceHistory = (productId) => {
 
 module.exports = {
   db,
+  getMigrationError,
   getCategories, addCategory, deleteCategory,
   getProducts, addProduct, updateProduct, deleteProduct,
   getConfig, updateConfig, getAllConfigs, getProductPriceHistory,

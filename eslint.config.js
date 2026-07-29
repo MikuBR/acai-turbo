@@ -18,4 +18,13 @@ export default defineConfig([
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },
+  {
+    files: ['database/migrations/*.cjs', 'database/adapters/*.cjs', 'database/migrate.cjs', 'database/db.cjs', 'database/validate.cjs', 'main.cjs', 'preload.js'],
+    languageOptions: {
+      globals: globals.node,
+    },
+    rules: {
+      'no-undef': 'error',
+    },
+  },
 ])
