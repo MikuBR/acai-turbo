@@ -147,6 +147,9 @@ jobs:
             Write-Host "✅ $($f.Name) — ${size}MB"
           }
 
+      - name: Rebuild native addon before smoke test
+        run: npm rebuild better-sqlite3
+
       - name: Smoke test DB migration
         shell: bash
         run: node scripts/smoke-test-db.cjs
