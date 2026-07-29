@@ -64,13 +64,28 @@ preload.js            # Preload script (contextBridge + channel allowlist)
 
 Comunicação entre renderer e main via `contextBridge` com **allowlist explícita** de canais. Nenhum `ipcRenderer` bruto é exposto ao frontend. Validação de entrada em `validate.cjs`.
 
-## Windows Build
+## CI / Releases
 
-O CI faz build automaticamente em pushes para `main` usando `windows-2022`. O instalador NSIS é gerado e disponibilizado como artifact.
+Em pushes para `main` (sem tag), o CI gera automaticamente uma **pré-release** com versão incrementada a partir da última tag oficial:
+
+```
+v1.0.1        ← tag oficial (release normal, Latest)
+v1.0.2-ci.29  ← CI build (pré-release)
+v1.0.3-ci.30  ← próximo CI build
+```
+
+Cada release de CI inclui um checkbox para marcar se foi **testada no Windows**.
 
 ```bash
 npm run build:win    # Gera instalador em release/
 ```
+
+## Roadmap
+
+| Prioridade | Funcionalidade |
+|------------|----------------|
+| 🔜 | [#7 — iFood no delivery](https://github.com/MikuBR/acai-turbo/issues/7) — integração com iFood para receber pedidos automaticamente |
+| 🔜 | [#8 — Relatório financeiro em PDF](https://github.com/MikuBR/acai-turbo/issues/8) — exportar relatório diário financeiro em formato PDF |
 
 ## Licença
 
