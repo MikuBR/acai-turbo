@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { ShoppingCart, FileText, Settings, X } from 'lucide-react';
+import { ShoppingCart, FileText, Settings, X, Wifi } from 'lucide-react';
 
 /**
  * OrderSidebar - Sidebar de comandas (esquerda)
@@ -12,6 +12,8 @@ import { ShoppingCart, FileText, Settings, X } from 'lucide-react';
  * @param {Function} props.onOpenReports - Callback ao abrir relatórios
  * @param {Function} props.onOpenSettings - Callback ao abrir configurações
  * @param {Function} props.onLogout - Callback ao sair
+ * @param {boolean} props.ifoodConnected - Status da conexao iFood
+ * @param {number} props.ifoodUnreadCount - Pedidos iFood nao visualizados
  */
 export const OrderSidebar = memo(function OrderSidebar({
   tables = [],
@@ -21,6 +23,8 @@ export const OrderSidebar = memo(function OrderSidebar({
   onOpenReports,
   onOpenSettings,
   onLogout,
+  ifoodConnected = false,
+  ifoodUnreadCount = 0,
 }) {
   return (
     <div className="w-64 shrink-0 bg-surface border-r border-border flex flex-col shadow-xl z-10">
@@ -30,6 +34,14 @@ export const OrderSidebar = memo(function OrderSidebar({
           <span className="font-bold text-sm tracking-widest text-primary uppercase">
             AÇAÍ WAVE
           </span>
+          <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md border transition-all ${ifoodConnected ? 'bg-highlight/10 border-highlight/30' : 'bg-surface-light border-border'}`} title={ifoodConnected ? 'iFood conectado' : 'iFood desconectado'}>
+            <Wifi size={10} className={ifoodConnected ? 'text-success' : 'text-danger'} />
+            {ifoodUnreadCount > 0 && (
+              <span className="text-[9px] font-bold bg-danger text-white px-1 min-w-[14px] h-[14px] flex items-center justify-center rounded-full animate-pulse">
+                {ifoodUnreadCount > 9 ? '9+' : ifoodUnreadCount}
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex gap-1">
           <button
@@ -77,7 +89,9 @@ export const OrderSidebar = memo(function OrderSidebar({
                 <span className="font-bold text-xs text-primary uppercase tracking-wide">{t.name}</span>
               </div>
               {t.isDelivery && (
-                <span className="text-[9px] font-bold text-highlight uppercase">Delivery</span>
+                <span className={`text-[9px] font-bold uppercase ${t.name?.startsWith('iFood') ? 'text-warning' : 'text-highlight'}`}>
+                  {t.name?.startsWith('iFood') ? 'iFood' : 'Delivery'}
+                </span>
               )}
             </div>
             <div className="mt-2 flex items-center justify-between">

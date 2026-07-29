@@ -10,15 +10,12 @@ export const useStore = create((set) => ({
   
   addTable: (payload) => set((state) => {
     const newId = Date.now();
-    let newTable = { id: newId, name: '', isDelivery: false, address: '', phone: '', items: [], total: 0 };
+    let newTable = { id: newId, name: '', isDelivery: false, address: '', phone: '', items: [], total: 0, ifoodOrderId: null };
 
     if (typeof payload === 'string') {
       newTable.name = payload;
     } else {
-      newTable.name = payload.name;
-      newTable.isDelivery = payload.isDelivery;
-      newTable.address = payload.address;
-      newTable.phone = payload.phone;
+      newTable = { ...newTable, ...payload, items: [], total: 0 };
       if (payload.fee > 0) {
         newTable.items.push({ name: 'Taxa de Entrega', price: payload.fee, category: 'TAXA', notes: '' });
         newTable.total = payload.fee;

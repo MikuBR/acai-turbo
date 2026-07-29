@@ -106,6 +106,17 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
+  CREATE TABLE IF NOT EXISTS ifood_pending_orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id TEXT UNIQUE NOT NULL,
+    display_id TEXT NOT NULL,
+    event_id TEXT NOT NULL,
+    merchant_id TEXT NOT NULL,
+    order_data TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
@@ -390,7 +401,7 @@ const deleteProduct = (id) => {
 
 // --- EXPORTAÇÕES GERAIS E CAIXA ---
 const getConfig = (key) => db.prepare('SELECT value FROM config WHERE key = ?').get(key);
-const updateConfig = (key, value) => db.prepare('UPDATE config SET value = ? WHERE key = ?').run(value, key);
+const updateConfig = (key, value) => db.prepare('INSERT INTO config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, value);
 
 function saveFullOrder(orderData, items) {
   if (!orderData || !items || !Array.isArray(items)) {
@@ -412,6 +423,40 @@ function saveFullOrder(orderData, items) {
     return orderId;
   });
   return transaction(orderData, items);
+}
+
+// --- iFOOD: PEDIDOS PENDENTES ---
+function addIfoodPendingOrder(orderId, displayId, eventId, merchantId, orderData) {
+  if (!orderId || !displayId || !eventId || !merchantId || !orderData) {
+    throw new Error('Invalid ifood pending order data');
+  }
+  db.prepare('INSERT OR IGNORE INTO ifood_pending_orders (order_id, display_id, event_id, merchant_id, order_data) VALUES (?, ?, ?, ?, ?)').run(orderId, displayId, eventId, merchantId, JSON.stringify(orderData));
+  return true;
+}
+
+function getIfoodPendingOrders() {
+  const rows = db.prepare('SELECT * FROM ifood_pending_orders WHERE status != ? ORDER BY created_at ASC').all('cancelled');
+  return rows.map(r => ({ ...r, order_data: JSON.parse(r.order_data) }));
+}
+
+function getIfoodPendingOrderByOrderId(orderId) {
+  const row = db.prepare('SELECT * FROM ifood_pending_orders WHERE order_id = ?').get(orderId);
+  if (!row) return null;
+  return { ...row, order_data: JSON.parse(row.order_data) };
+}
+
+function updateIfoodPendingOrderStatus(orderId, status) {
+  if (!orderId || !status) throw new Error('Invalid params');
+  db.prepare('UPDATE ifood_pending_orders SET status = ? WHERE order_id = ?').run(status, orderId);
+}
+
+function removeIfoodPendingOrder(orderId) {
+  db.prepare('DELETE FROM ifood_pending_orders WHERE order_id = ?').run(orderId);
+}
+
+function countIfoodPendingOrders() {
+  const row = db.prepare('SELECT COUNT(*) as count FROM ifood_pending_orders WHERE status = ?').get('pending');
+  return row?.count || 0;
 }
 
 // --- NOVO: HISTÓRICO E CANCELAMENTO ---
@@ -905,5 +950,7 @@ module.exports = {
   createAuditLog, getAuditLogs,
   getInventory, getInventoryByProductId, addInventory, updateInventoryQuantity, adjustInventory, getInventoryMovements, getLowStockItems,
   getFinancialAccounts, addFinancialAccount, updateFinancialAccount, deleteFinancialAccount, addFinancialTransaction, getFinancialTransactions, getFinancialSummary,
-  getClients, addClient, updateClient, deleteClient, getClientById, getClientOrders, addClientOrder
+  getClients, addClient, updateClient, deleteClient, getClientById, getClientOrders, addClientOrder,
+  addIfoodPendingOrder, getIfoodPendingOrders, getIfoodPendingOrderByOrderId,
+  updateIfoodPendingOrderStatus, removeIfoodPendingOrder, countIfoodPendingOrders
 };

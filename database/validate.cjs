@@ -248,6 +248,47 @@ const validators = {
     if (limit !== undefined && limit !== null && (isNaN(Number(limit)) || Number(limit) < 1)) return { success: false, error: 'Limite inválido' };
     return { success: true, data: limit ? Number(limit) : 100 };
   },
+
+  'dialog:save-pdf': (data) => {
+    if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
+    if (!data.data || typeof data.data !== 'string' || data.data.length === 0) return { success: false, error: 'Dados PDF inválidos' };
+    if (!data.defaultName || typeof data.defaultName !== 'string') return { success: false, error: 'Nome padrão inválido' };
+    return { success: true, data };
+  },
+
+  'ifood:test-connection': (data) => {
+    if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
+    if (!data.clientId || typeof data.clientId !== 'string' || data.clientId.trim() === '') return { success: false, error: 'Client ID é obrigatório' };
+    if (!data.clientSecret || typeof data.clientSecret !== 'string' || data.clientSecret.trim() === '') return { success: false, error: 'Client Secret é obrigatório' };
+    if (!data.merchantId || typeof data.merchantId !== 'string' || data.merchantId.trim() === '') return { success: false, error: 'Merchant ID é obrigatório' };
+    return { success: true, data };
+  },
+
+  'ifood:poll': () => ({ success: true, data: {} }),
+
+  'ifood:start-preparation': (data) => {
+    if (!data || !data.orderId || typeof data.orderId !== 'string') return { success: false, error: 'Order ID inválido' };
+    return { success: true, data };
+  },
+
+  'ifood:ready-to-pickup': (data) => {
+    if (!data || !data.orderId || typeof data.orderId !== 'string') return { success: false, error: 'Order ID inválido' };
+    return { success: true, data };
+  },
+
+  'ifood:dispatch': (data) => {
+    if (!data || !data.orderId || typeof data.orderId !== 'string') return { success: false, error: 'Order ID inválido' };
+    return { success: true, data };
+  },
+
+  'ifood:start-polling': (data) => {
+    if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
+    if (!data.clientId || typeof data.clientId !== 'string') return { success: false, error: 'Client ID inválido' };
+    if (!data.clientSecret || typeof data.clientSecret !== 'string') return { success: false, error: 'Client Secret inválido' };
+    if (!data.merchantId || typeof data.merchantId !== 'string') return { success: false, error: 'Merchant ID inválido' };
+    if (typeof data.enabled !== 'boolean') return { success: false, error: 'Enabled deve ser booleano' };
+    return { success: true, data };
+  },
 };
 
 function validateIPC(channel, data) {

@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const {
@@ -14,6 +15,8 @@ const {
   getFinancialAccounts, addFinancialAccount, updateFinancialAccount, deleteFinancialAccount, addFinancialTransaction, getFinancialTransactions, getFinancialSummary,
   getClients, addClient, updateClient, deleteClient, getClientById, getClientOrders, addClientOrder,
   getProductPriceHistory,
+  addIfoodPendingOrder, getIfoodPendingOrders, getIfoodPendingOrderByOrderId,
+  updateIfoodPendingOrderStatus, removeIfoodPendingOrder, countIfoodPendingOrders,
   db
 } = require('./database/db.cjs');
 const { ThermalPrinter, PrinterTypes, CharacterSet } = require('node-thermal-printer');
@@ -358,6 +361,447 @@ createHandler('reports:daily', async () => ({ data: getDailyReport() }));
 createHandler('reports:by-period', async ({ startDate, endDate }) => ({ data: getReportByPeriod(startDate, endDate) }));
 
 // ============================================================
+// DIÁLOGO - IPC Handlers
+// ============================================================
+ipcMain.handle('dialog:save-pdf', async (event, { data, defaultName }) => {
+  try {
+    const result = await dialog.showSaveDialog(mainWindow, {
+      defaultPath: defaultName || 'relatorio.pdf',
+      filters: [{ name: 'PDF', extensions: ['pdf'] }],
+    });
+    if (result.canceled) return { success: false };
+    const buffer = Buffer.from(data, 'base64');
+    fs.writeFileSync(result.filePath, buffer);
+    return { success: true, path: result.filePath };
+  } catch (e) {
+    console.error('[dialog:save-pdf] Error:', e.message);
+    return { success: false, error: e.message };
+  }
+});
+
+// ============================================================
+// iFOOD - Integração com Polling
+// ============================================================
+
+const IFOOD_API_BASE = 'https://merchant-api.ifood.com.br';
+const IFOOD_POLL_INTERVAL_MS = 30000;
+const IFOOD_MAX_BACKOFF_MS = 300000; // 5 min
+const IFOOD_EVENT_TIMEOUT_MS = 15000;
+
+let ifoodPollInterval = null;
+let ifoodPollLock = false;
+let ifoodConsecutiveErrors = 0;
+let ifoodAbortController = null;
+const ifoodProcessedEventIds = new Set();
+
+function ifoodGetStoredConfig() {
+  const clientId = getConfig('ifood_client_id');
+  const clientSecret = getConfig('ifood_client_secret');
+  const merchantId = getConfig('ifood_merchant_id');
+  const accessToken = getConfig('ifood_access_token');
+  const refreshToken = getConfig('ifood_refresh_token');
+  const tokenExpiresAt = getConfig('ifood_token_expires_at');
+  return {
+    clientId: clientId?.value || '',
+    clientSecret: clientSecret?.value || '',
+    merchantId: merchantId?.value || '',
+    accessToken: accessToken?.value || '',
+    refreshToken: refreshToken?.value || '',
+    tokenExpiresAt: tokenExpiresAt?.value || '0',
+  };
+}
+
+function ifoodSaveTokens(accessToken, refreshToken, expiresIn) {
+  const expiresAt = String(Date.now() + (expiresIn * 1000));
+  updateConfig('ifood_access_token', accessToken);
+  updateConfig('ifood_refresh_token', refreshToken || '');
+  updateConfig('ifood_token_expires_at', expiresAt);
+}
+
+async function ifoodFetchToken(clientId, clientSecret) {
+  const url = `${IFOOD_API_BASE}/authentication/v1.0/oauth/token`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      clientId,
+      clientSecret,
+      grantType: 'client_credentials',
+    }),
+    signal: AbortSignal.timeout(IFOOD_EVENT_TIMEOUT_MS),
+  });
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(`Falha na autenticacao iFood: ${response.status} ${text}`);
+  }
+  return response.json();
+}
+
+async function ifoodRefreshTokenIfNeeded() {
+  const config = ifoodGetStoredConfig();
+  if (!config.clientId || !config.clientSecret) {
+    throw new Error('iFood nao configurado');
+  }
+  if (!config.accessToken || !config.tokenExpiresAt) {
+    const data = await ifoodFetchToken(config.clientId, config.clientSecret);
+    ifoodSaveTokens(data.accessToken, data.refreshToken || '', data.expiresIn || 3600);
+    return data.accessToken;
+  }
+  const expiresAt = parseInt(config.tokenExpiresAt, 10);
+  if (Date.now() >= expiresAt - 60000) {
+    console.log('[ifood] Token expirado, renovando...');
+    try {
+      const data = await ifoodFetchToken(config.clientId, config.clientSecret);
+      ifoodSaveTokens(data.accessToken, data.refreshToken || '', data.expiresIn || 3600);
+      return data.accessToken;
+    } catch (e) {
+      console.error('[ifood] Falha ao renovar token:', e.message);
+      throw e;
+    }
+  }
+  return config.accessToken;
+}
+
+async function ifoodFetch(path, options = {}) {
+  const token = await ifoodRefreshTokenIfNeeded();
+  const url = `${IFOOD_API_BASE}${path}`;
+  const controller = new AbortController();
+  ifoodAbortController = controller;
+  const timeoutId = setTimeout(() => controller.abort(), IFOOD_EVENT_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+      signal: controller.signal,
+    });
+
+    if (response.status === 401) {
+      console.log('[ifood] Token rejeitado (401), renovando e tentando novamente...');
+      try {
+        const config = ifoodGetStoredConfig();
+        const newTokenData = await ifoodFetchToken(config.clientId, config.clientSecret);
+        ifoodSaveTokens(newTokenData.accessToken, newTokenData.refreshToken || '', newTokenData.expiresIn || 3600);
+        const retryResponse = await fetch(url, {
+          ...options,
+          headers: {
+            'Authorization': `Bearer ${newTokenData.accessToken}`,
+            'Content-Type': 'application/json',
+            ...options.headers,
+          },
+          signal: AbortSignal.timeout(IFOOD_EVENT_TIMEOUT_MS),
+        });
+        clearTimeout(timeoutId);
+        ifoodAbortController = null;
+        if (!retryResponse.ok) {
+          const text = await retryResponse.text().catch(() => '');
+          throw new Error(`iFood API error apos retry: ${retryResponse.status} ${text}`);
+        }
+        const contentType = retryResponse.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) return retryResponse.json();
+        return retryResponse.text();
+      } catch (retryError) {
+        console.error('[ifood] Retry apos 401 falhou:', retryError.message);
+        throw retryError;
+      }
+    }
+
+    clearTimeout(timeoutId);
+    ifoodAbortController = null;
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      throw new Error(`iFood API error: ${response.status} ${text}`);
+    }
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) return response.json();
+    return response.text();
+  } catch (e) {
+    clearTimeout(timeoutId);
+    ifoodAbortController = null;
+    throw e;
+  }
+}
+
+async function ifoodGetOrderDetails(orderId) {
+  return ifoodFetch(`/order/v1.0/orders/${orderId}`);
+}
+
+async function ifoodPollEvents() {
+  const events = await ifoodFetch('/events/v1.0/events:polling');
+  if (!Array.isArray(events)) return [];
+  return events;
+}
+
+async function ifoodAcknowledgeEvents(eventIds) {
+  if (!eventIds || eventIds.length === 0) return;
+  await ifoodFetch('/events/v1.0/events/acknowledgment', {
+    method: 'POST',
+    body: JSON.stringify({ events: eventIds.map(id => ({ id })) }),
+  });
+}
+
+async function ifoodTakeAction(orderId, action) {
+  return ifoodFetch(`/order/v1.0/orders/${orderId}/${action}`, { method: 'POST' });
+}
+
+async function ifoodProcessPollCycle() {
+  if (ifoodPollLock) {
+    console.log('[ifood] Poll anterior ainda em execucao, pulando ciclo');
+    return;
+  }
+  ifoodPollLock = true;
+
+  try {
+    const events = await ifoodPollEvents();
+    const placedEvents = events.filter(e => e.fullCode === 'PLACED' || e.code === 'PLC');
+    const cancelledEvents = events.filter(e => e.fullCode === 'CANCELLED' || e.code === 'CAN');
+    const acknowledgedIds = [];
+
+    for (const event of placedEvents) {
+      if (ifoodProcessedEventIds.has(event.id)) {
+        acknowledgedIds.push(event.id);
+        continue;
+      }
+      ifoodProcessedEventIds.add(event.id);
+
+      try {
+        const order = await ifoodGetOrderDetails(event.orderId);
+        const existing = getIfoodPendingOrderByOrderId(event.orderId);
+        if (existing) {
+          console.log(`[ifood] Pedido ${event.orderId} ja processado, ignorando`);
+          acknowledgedIds.push(event.id);
+          continue;
+        }
+
+        addIfoodPendingOrder(event.orderId, order.displayId || order.id, event.id, event.merchantId || '', order);
+        console.log(`[ifood] Novo pedido recebido: #${order.displayId || order.id} - ${order.customer?.name || 'N/A'}`);
+
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('ifood:new-order', {
+            orderId: event.orderId,
+            displayId: order.displayId || order.id,
+            orderData: order,
+          });
+        }
+
+        acknowledgedIds.push(event.id);
+      } catch (e) {
+        console.error(`[ifood] Erro ao processar pedido ${event.orderId}:`, e.message);
+      }
+    }
+
+    for (const event of cancelledEvents) {
+      if (ifoodProcessedEventIds.has(event.id)) continue;
+      ifoodProcessedEventIds.add(event.id);
+
+      try {
+        updateIfoodPendingOrderStatus(event.orderId, 'cancelled');
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('ifood:order-cancelled', {
+            orderId: event.orderId,
+            reason: event.data?.cancellationReason || 'Cancelado pelo iFood',
+          });
+        }
+        acknowledgedIds.push(event.id);
+      } catch (e) {
+        console.error(`[ifood] Erro ao processar cancelamento ${event.orderId}:`, e.message);
+      }
+    }
+
+    if (acknowledgedIds.length > 0) {
+      try {
+        await ifoodAcknowledgeEvents(acknowledgedIds);
+        console.log(`[ifood] ${acknowledgedIds.length} eventos reconhecidos`);
+      } catch (e) {
+        console.error('[ifood] Erro ao reconhecer eventos:', e.message);
+      }
+    }
+
+    ifoodConsecutiveErrors = 0;
+  } catch (e) {
+    ifoodConsecutiveErrors++;
+    const code = e.code || e.name;
+    if (code === 'ABORT_ERR' || code === 'AbortError' || code === 'TimeoutError') {
+      console.log('[ifood] Poll timeout, pulando ciclo');
+    } else {
+      console.error(`[ifood] Erro no poll (${ifoodConsecutiveErrors}x):`, e.message);
+    }
+  } finally {
+    ifoodPollLock = false;
+    ifoodReschedulePoll();
+  }
+}
+
+function ifoodReschedulePoll() {
+  if (ifoodPollInterval) {
+    clearInterval(ifoodPollInterval);
+    ifoodPollInterval = null;
+  }
+  const config = ifoodGetStoredConfig();
+  if (!config.clientId || !config.accessToken) return;
+
+  let delay = IFOOD_POLL_INTERVAL_MS;
+  if (ifoodConsecutiveErrors > 0) {
+    delay = Math.min(
+      IFOOD_POLL_INTERVAL_MS * Math.pow(2, Math.min(ifoodConsecutiveErrors, 4)),
+      IFOOD_MAX_BACKOFF_MS
+    );
+  }
+
+  ifoodPollInterval = setInterval(() => {
+    ifoodProcessPollCycle().catch(e => {
+      console.error('[ifood] Erro no ciclo de poll:', e.message);
+    });
+  }, delay);
+  console.log(`[ifood] Poll reagendado para ${Math.round(delay / 1000)}s`);
+}
+
+function ifoodStartPolling() {
+  if (ifoodPollInterval) {
+    clearInterval(ifoodPollInterval);
+    ifoodPollInterval = null;
+  }
+  ifoodConsecutiveErrors = 0;
+  ifoodProcessPollCycle().catch(e => {
+    console.error('[ifood] Erro no primeiro poll:', e.message);
+  });
+}
+
+function ifoodStopPolling() {
+  if (ifoodPollInterval) {
+    clearInterval(ifoodPollInterval);
+    ifoodPollInterval = null;
+  }
+  if (ifoodAbortController) {
+    ifoodAbortController.abort();
+    ifoodAbortController = null;
+  }
+  ifoodPollLock = false;
+  ifoodConsecutiveErrors = 0;
+}
+
+// Recreate pending orders on startup
+function ifoodRestorePendingOrders() {
+  try {
+    const pending = getIfoodPendingOrders();
+    if (pending.length === 0) return;
+    console.log(`[ifood] Restaurando ${pending.length} pedidos pendentes...`);
+    for (const p of pending) {
+      ifoodProcessedEventIds.add(p.event_id);
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('ifood:new-order', {
+          orderId: p.order_id,
+          displayId: p.display_id,
+          orderData: p.order_data,
+          restored: true,
+        });
+      }
+    }
+  } catch (e) {
+    console.error('[ifood] Erro ao restaurar pedidos pendentes:', e.message);
+  }
+}
+
+app.on('before-quit', () => {
+  ifoodStopPolling();
+});
+
+// ============================================================
+// iFOOD - IPC Handlers
+// ============================================================
+
+createHandler('ifood:test-connection', async ({ clientId, clientSecret, merchantId }) => {
+  try {
+    const data = await ifoodFetchToken(clientId, clientSecret);
+    if (!data.accessToken) throw new Error('Token nao recebido');
+    const url = `${IFOOD_API_BASE}/merchant/v1.0/merchants/${merchantId}`;
+    const response = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${data.accessToken}` },
+      signal: AbortSignal.timeout(IFOOD_EVENT_TIMEOUT_MS),
+    });
+    if (!response.ok) throw new Error(`Merchant invalido: ${response.status}`);
+    return { success: true, message: 'Conectado ao iFood com sucesso' };
+  } catch (e) {
+    console.error('[ifood:test-connection]', e.message);
+    return { success: false, error: e.message };
+  }
+});
+
+createHandler('ifood:start-polling', async ({ clientId, clientSecret, merchantId, enabled }) => {
+  try {
+    updateConfig('ifood_client_id', clientId);
+    updateConfig('ifood_client_secret', clientSecret);
+    updateConfig('ifood_merchant_id', merchantId);
+
+    ifoodStopPolling();
+
+    if (enabled) {
+      const data = await ifoodFetchToken(clientId, clientSecret);
+      ifoodSaveTokens(data.accessToken, data.refreshToken || '', data.expiresIn || 3600);
+      ifoodStartPolling();
+      console.log('[ifood] Polling iniciado');
+      return { success: true, message: 'Polling iFood ativado' };
+    }
+    console.log('[ifood] Polling desativado');
+    return { success: true, message: 'Polling iFood desativado' };
+  } catch (e) {
+    console.error('[ifood:start-polling]', e.message);
+    return { success: false, error: e.message };
+  }
+});
+
+createHandler('ifood:poll', async () => {
+  try {
+    const config = ifoodGetStoredConfig();
+    if (!config.clientId || !config.accessToken) {
+      return { success: true, events: [], pendingCount: countIfoodPendingOrders() };
+    }
+    const events = await ifoodPollEvents();
+    return { success: true, events, pendingCount: countIfoodPendingOrders() };
+  } catch (e) {
+    console.error('[ifood:poll]', e.message);
+    return { success: false, error: e.message };
+  }
+});
+
+createHandler('ifood:start-preparation', async ({ orderId }) => {
+  try {
+    await ifoodTakeAction(orderId, 'startPreparation');
+    updateIfoodPendingOrderStatus(orderId, 'preparing');
+    return { success: true };
+  } catch (e) {
+    console.error('[ifood:start-preparation]', e.message);
+    return { success: false, error: e.message };
+  }
+});
+
+createHandler('ifood:ready-to-pickup', async ({ orderId }) => {
+  try {
+    await ifoodTakeAction(orderId, 'readyToPickup');
+    updateIfoodPendingOrderStatus(orderId, 'ready');
+    return { success: true };
+  } catch (e) {
+    console.error('[ifood:ready-to-pickup]', e.message);
+    return { success: false, error: e.message };
+  }
+});
+
+createHandler('ifood:dispatch', async ({ orderId }) => {
+  try {
+    await ifoodTakeAction(orderId, 'dispatch');
+    updateIfoodPendingOrderStatus(orderId, 'dispatched');
+    return { success: true };
+  } catch (e) {
+    console.error('[ifood:dispatch]', e.message);
+    return { success: false, error: e.message };
+  }
+});
+
+// ============================================================
 // AUTENTICAÇÃO - IPC Handlers
 // ============================================================
 ipcMain.handle('auth:verify-password', async (e, password) => {
@@ -639,6 +1083,15 @@ app.whenReady().then(() => {
     } else if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.show();
       mainWindow.focus();
+    }
+  });
+
+  // Restaurar pedidos iFood pendentes e iniciar polling se configurado
+  mainWindow.webContents.on('did-finish-load', () => {
+    const config = ifoodGetStoredConfig();
+    if (config.clientId && config.accessToken) {
+      ifoodRestorePendingOrders();
+      ifoodStartPolling();
     }
   });
 });

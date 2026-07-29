@@ -1,5 +1,246 @@
-import { X, Trash2, ArrowUpCircle, ArrowDownCircle, DollarSign } from 'lucide-react';
+import { X, Trash2, ArrowUpCircle, ArrowDownCircle, DollarSign, FileDown } from 'lucide-react';
 import useToastStore from '../../store/toastStore';
+
+function generatePDF(data, isPeriodView, financialSummary, reportPeriod) {
+  const salesTotal = (data?.sales || []).reduce((a, c) => a + Number(c.total_amount || 0), 0);
+  const entradasTotal = (data?.movements || []).reduce((a, m) => m.type === 'ENTRADA' ? a + m.total_amount : a, 0);
+  const sangriasTotal = (data?.movements || []).reduce((a, m) => m.type === 'SAIDA' ? a + m.total_amount : a, 0);
+  const saldoFinal = salesTotal + entradasTotal - sangriasTotal;
+  const totalOrders = (data?.sales || []).reduce((a, c) => a + Number(c.order_count || 0), 0);
+
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('pt-BR');
+  const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const periodLabel = isPeriodView
+    ? `Período: ${reportPeriod.startDate} a ${reportPeriod.endDate}`
+    : `Data: ${dateStr}`;
+
+  const salesRows = (data?.sales || []).map(s => [
+    s.payment_method || 'N/A',
+    { text: String(s.order_count || '-'), alignment: 'center' },
+    { text: `R$ ${Number(s.total_amount).toFixed(2)}`, alignment: 'right' },
+  ]);
+
+  const movementRows = (data?.movements || [])
+    .filter(m => m.type === 'ENTRADA' || m.type === 'SAIDA')
+    .map(m => [
+      {
+        text: m.type === 'ENTRADA' ? 'ENTRADA' : 'SAÍDA',
+        color: m.type === 'ENTRADA' ? '#16a34a' : '#dc2626',
+        bold: true,
+      },
+      m.description || '-',
+      { text: `R$ ${Number(m.total_amount).toFixed(2)}`, alignment: 'right' },
+    ]);
+
+  const fin = financialSummary || {};
+  const content = [
+    { text: 'AÇAÍ WAVE', style: 'title' },
+    { text: 'RELATÓRIO FINANCEIRO', style: 'subtitle', margin: [0, 0, 0, 10] },
+    { text: periodLabel, style: 'date', margin: [0, 0, 0, 20] },
+
+    { text: '1. RESUMO DE VENDAS', style: 'sectionTitle' },
+    {
+      style: 'table',
+      table: {
+        headerRows: 1,
+        widths: ['*', 'auto', 'auto'],
+        body: [
+          [
+            { text: 'Forma de Pagamento', style: 'tableHeader' },
+            { text: 'Pedidos', style: 'tableHeader', alignment: 'center' },
+            { text: 'Total', style: 'tableHeader', alignment: 'right' },
+          ],
+          ...salesRows,
+          [
+            { text: 'TOTAL', style: 'totalRow' },
+            { text: String(totalOrders), style: 'totalRow', alignment: 'center' },
+            { text: `R$ ${salesTotal.toFixed(2)}`, style: 'totalRow', alignment: 'right' },
+          ],
+        ],
+      },
+      layout: 'lightHorizontalLines',
+    },
+
+    { text: '2. MOVIMENTAÇÕES DE GAVETA', style: 'sectionTitle', margin: [0, 20, 0, 5] },
+    movementRows.length > 0
+      ? {
+          style: 'table',
+          table: {
+            headerRows: 1,
+            widths: ['auto', '*', 'auto'],
+            body: [
+              [
+                { text: 'Tipo', style: 'tableHeader' },
+                { text: 'Descrição', style: 'tableHeader' },
+                { text: 'Valor', style: 'tableHeader', alignment: 'right' },
+              ],
+              ...movementRows,
+            ],
+          },
+          layout: 'lightHorizontalLines',
+        }
+      : { text: 'Nenhuma movimentacao registrada.', italics: true, color: '#888', margin: [0, 5, 0, 5] },
+    { text: `Total Entradas: R$ ${entradasTotal.toFixed(2)}`, margin: [0, 10, 0, 2], color: '#16a34a', bold: true },
+    { text: `Total Saidas:   R$ ${sangriasTotal.toFixed(2)}`, margin: [0, 0, 0, 2], color: '#dc2626', bold: true },
+
+    { text: '3. SALDO DO CAIXA', style: 'sectionTitle', margin: [0, 20, 0, 5] },
+    {
+      text: `Vendas (R$ ${salesTotal.toFixed(2)}) + Entradas (R$ ${entradasTotal.toFixed(2)}) - Saidas (R$ ${sangriasTotal.toFixed(2)})`,
+      fontSize: 9,
+      color: '#555',
+      margin: [0, 0, 0, 5],
+    },
+    {
+      text: `= R$ ${saldoFinal.toFixed(2)}`,
+      style: 'balanceValue',
+      color: saldoFinal >= 0 ? '#16a34a' : '#dc2626',
+      margin: [0, 0, 0, 20],
+    },
+  ];
+
+  if (fin.payable) {
+    content.push({ text: '4. RESUMO FINANCEIRO', style: 'sectionTitle' });
+    content.push({
+      style: 'table',
+      table: {
+        headerRows: 1,
+        widths: ['*', 'auto', 'auto'],
+        body: [
+          [
+            { text: '', style: 'tableHeader' },
+            { text: 'A Pagar', style: 'tableHeader', alignment: 'right' },
+            { text: 'A Receber', style: 'tableHeader', alignment: 'right' },
+          ],
+          [
+            { text: 'Pendente' },
+            { text: `R$ ${(fin.payable?.pending || 0).toFixed(2)}`, alignment: 'right' },
+            { text: `R$ ${(fin.receivable?.pending || 0).toFixed(2)}`, alignment: 'right' },
+          ],
+          [
+            { text: 'Pago' },
+            { text: `R$ ${(fin.payable?.paid || 0).toFixed(2)}`, alignment: 'right' },
+            { text: `R$ ${(fin.receivable?.paid || 0).toFixed(2)}`, alignment: 'right' },
+          ],
+          [
+            { text: 'Total', style: 'totalRow' },
+            { text: `R$ ${(fin.payable?.total || 0).toFixed(2)}`, style: 'totalRow', alignment: 'right' },
+            { text: `R$ ${(fin.receivable?.total || 0).toFixed(2)}`, style: 'totalRow', alignment: 'right' },
+          ],
+        ],
+      },
+      layout: 'lightHorizontalLines',
+    });
+  }
+
+  if (isPeriodView && data) {
+    content.push({ text: '5. METRICAS DO PERIODO', style: 'sectionTitle', margin: [0, 20, 0, 5] });
+
+    if (data.ticketAverage !== undefined) {
+      content.push({
+        columns: [
+          { width: '*', text: '' },
+          {
+            width: 'auto',
+            stack: [
+              { text: 'Ticket Medio', fontSize: 9, color: '#555' },
+              { text: `R$ ${Number(data.ticketAverage).toFixed(2)}`, fontSize: 16, bold: true, alignment: 'center', color: '#16a34a', margin: [0, 5, 0, 15] },
+            ],
+            alignment: 'center',
+          },
+          { width: '*', text: '' },
+        ],
+      });
+    }
+
+    if (data.topProducts && data.topProducts.length > 0) {
+      content.push({ text: 'Produtos Mais Vendidos', fontSize: 10, bold: true, margin: [0, 10, 0, 5] });
+      content.push({
+        style: 'table',
+        table: {
+          headerRows: 1,
+          widths: ['*', 'auto', 'auto'],
+          body: [
+            [
+              { text: 'Produto', style: 'tableHeader' },
+              { text: 'Qtd', style: 'tableHeader', alignment: 'center' },
+              { text: 'Receita', style: 'tableHeader', alignment: 'right' },
+            ],
+            ...data.topProducts.map(p => [
+              p.product_name,
+              { text: String(p.qty), alignment: 'center' },
+              { text: `R$ ${Number(p.total_revenue || 0).toFixed(2)}`, alignment: 'right' },
+            ]),
+          ],
+        },
+        layout: 'lightHorizontalLines',
+      });
+    }
+
+    if (data.peakHours && data.peakHours.length > 0) {
+      content.push({ text: 'Horarios de Pico', fontSize: 10, bold: true, margin: [0, 15, 0, 5] });
+      content.push({
+        style: 'table',
+        table: {
+          headerRows: 1,
+          widths: ['auto', 'auto', 'auto'],
+          body: [
+            [
+              { text: 'Hora', style: 'tableHeader' },
+              { text: 'Pedidos', style: 'tableHeader', alignment: 'center' },
+              { text: 'Valor', style: 'tableHeader', alignment: 'right' },
+            ],
+            ...data.peakHours.map(h => [
+              { text: `${h.hour}:00`, alignment: 'center' },
+              { text: String(h.order_count), alignment: 'center' },
+              { text: `R$ ${Number(h.total_amount || 0).toFixed(2)}`, alignment: 'right' },
+            ]),
+          ],
+        },
+        layout: 'lightHorizontalLines',
+      });
+    }
+  }
+
+  content.push({ text: `Gerado em: ${dateStr} as ${timeStr}`, style: 'footerNote', margin: [0, 30, 0, 0] });
+  content.push({ text: 'Acai Wave - PDV', style: 'footerNote' });
+
+  return {
+    info: {
+      title: `Relatorio Financeiro - ${periodLabel}`,
+      author: 'Acai Wave',
+      subject: 'Relatorio Financeiro',
+    },
+    pageSize: 'A4',
+    pageMargins: [40, 50, 40, 50],
+    header: () => ({
+      text: 'Acai Wave - Relatorio Financeiro',
+      alignment: 'center',
+      fontSize: 8,
+      color: '#888888',
+      margin: [40, 10, 40, 0],
+    }),
+    footer: (currentPage, pageCount) => ({
+      text: `Pagina ${currentPage} de ${pageCount}`,
+      alignment: 'center',
+      fontSize: 8,
+      color: '#888888',
+      margin: [0, 10, 0, 0],
+    }),
+    content,
+    styles: {
+      title: { fontSize: 20, bold: true, alignment: 'center', color: '#1a1a1a' },
+      subtitle: { fontSize: 13, alignment: 'center', color: '#444444' },
+      date: { fontSize: 10, alignment: 'center', color: '#666666' },
+      sectionTitle: { fontSize: 12, bold: true, margin: [0, 15, 0, 5], color: '#1a56db' },
+      tableHeader: { bold: true, fontSize: 9, fillColor: '#f3f4f6', color: '#374151' },
+      totalRow: { bold: true, fontSize: 10, color: '#111827' },
+      balanceValue: { fontSize: 16, bold: true, alignment: 'center' },
+      footerNote: { fontSize: 8, color: '#888888', alignment: 'center' },
+    },
+    defaultStyle: { fontSize: 9, color: '#333333' },
+  };
+}
 
 export default function ReportsModal({ isOpen, onClose, advancedReportData, setAdvancedReportData, reportData, reportPeriod, setReportPeriod, ordersHistory, cashMove, setCashMove, loadReports, loadAdvancedReport, runWithAuth, getIPC, financialSummary }) {
   const addToast = useToastStore(s => s.addToast);
@@ -12,6 +253,36 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
   const entradasTotal = (data?.movements || []).reduce((a, m) => m.type === 'ENTRADA' ? a + m.total_amount : a, 0);
   const sangriasTotal = (data?.movements || []).reduce((a, m) => m.type === 'SAIDA' ? a + m.total_amount : a, 0);
   const saldoFinal = salesTotal + entradasTotal - sangriasTotal;
+
+  const handleExportPDF = async () => {
+    const ipc = getIPC();
+    if (!ipc) { addToast('Sem conexao com o sistema', 'error'); return; }
+
+    const docDef = generatePDF(data, isPeriodView, financialSummary, reportPeriod);
+    const now = new Date();
+    const datePart = now.toISOString().split('T')[0];
+    const defaultName = `relatorio-financeiro-${datePart}.pdf`;
+
+    try {
+      const pdfMakeModule = await import('pdfmake/build/pdfmake');
+      const pdfFontsModule = await import('pdfmake/build/vfs_fonts');
+      const pdfMake = pdfMakeModule.default;
+      pdfMake.vfs = pdfFontsModule.default;
+
+      pdfMake.createPdf(docDef).getBase64((base64) => {
+        ipc.invoke('dialog:save-pdf', { data: base64, defaultName }).then(res => {
+          if (res.success) {
+            addToast(`PDF salvo em: ${res.path}`, 'success');
+          } else if (res.error) {
+            addToast(`Erro ao salvar PDF: ${res.error}`, 'error');
+          }
+        });
+      });
+    } catch (e) {
+      addToast('Erro ao carregar gerador de PDF', 'error');
+      console.error('[pdf] Erro ao carregar pdfmake:', e);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-surface z-[900] flex items-center justify-center p-6 animate-in fade-in duration-200">
@@ -36,7 +307,12 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                 className={`text-[10px] font-bold uppercase px-3 py-1 rounded transition-all ${advancedReportData ? 'bg-success text-white' : 'bg-surface-light text-muted hover:text-primary'}`}>Período</button>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-danger/20 rounded-md text-muted hover:text-danger transition-all"><X size={20}/></button>
+          <div className="flex items-center gap-2">
+            <button onClick={handleExportPDF} className="p-1.5 hover:bg-success/20 rounded-md text-muted hover:text-success transition-all" title="Exportar PDF">
+              <FileDown size={20}/>
+            </button>
+            <button onClick={onClose} className="p-1.5 hover:bg-danger/20 rounded-md text-muted hover:text-danger transition-all"><X size={20}/></button>
+          </div>
         </div>
         
         <div className="flex-1 flex overflow-hidden">

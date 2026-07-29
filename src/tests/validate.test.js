@@ -504,4 +504,98 @@ describe('validateIPC', () => {
       expect(result.success).toBe(false)
     })
   })
+
+  describe('ifood:test-connection', () => {
+    it('accepts valid credentials', () => {
+      const result = validateIPC('ifood:test-connection', { clientId: 'abc', clientSecret: 'secret', merchantId: 'merchant_123' })
+      expect(result.success).toBe(true)
+    })
+    it('rejects missing clientId', () => {
+      const result = validateIPC('ifood:test-connection', { clientSecret: 'secret', merchantId: 'merchant_123' })
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Client ID')
+    })
+    it('rejects missing clientSecret', () => {
+      const result = validateIPC('ifood:test-connection', { clientId: 'abc', merchantId: 'merchant_123' })
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Client Secret')
+    })
+    it('rejects missing merchantId', () => {
+      const result = validateIPC('ifood:test-connection', { clientId: 'abc', clientSecret: 'secret' })
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Merchant ID')
+    })
+    it('rejects empty strings', () => {
+      const result = validateIPC('ifood:test-connection', { clientId: '', clientSecret: '', merchantId: '' })
+      expect(result.success).toBe(false)
+    })
+    it('rejects null', () => {
+      const result = validateIPC('ifood:test-connection', null)
+      expect(result.success).toBe(false)
+    })
+  })
+
+  describe('ifood:start-preparation', () => {
+    it('accepts valid orderId', () => {
+      const result = validateIPC('ifood:start-preparation', { orderId: 'order-abc-123' })
+      expect(result.success).toBe(true)
+    })
+    it('rejects missing orderId', () => {
+      const result = validateIPC('ifood:start-preparation', {})
+      expect(result.success).toBe(false)
+    })
+    it('rejects null', () => {
+      const result = validateIPC('ifood:start-preparation', null)
+      expect(result.success).toBe(false)
+    })
+  })
+
+  describe('ifood:ready-to-pickup', () => {
+    it('accepts valid orderId', () => {
+      const result = validateIPC('ifood:ready-to-pickup', { orderId: 'order-abc-123' })
+      expect(result.success).toBe(true)
+    })
+    it('rejects missing orderId', () => {
+      const result = validateIPC('ifood:ready-to-pickup', {})
+      expect(result.success).toBe(false)
+    })
+  })
+
+  describe('ifood:dispatch', () => {
+    it('accepts valid orderId', () => {
+      const result = validateIPC('ifood:dispatch', { orderId: 'order-abc-123' })
+      expect(result.success).toBe(true)
+    })
+    it('rejects missing orderId', () => {
+      const result = validateIPC('ifood:dispatch', {})
+      expect(result.success).toBe(false)
+    })
+  })
+
+  describe('ifood:start-polling', () => {
+    it('accepts valid config with enabled true', () => {
+      const result = validateIPC('ifood:start-polling', { clientId: 'abc', clientSecret: 'secret', merchantId: 'm1', enabled: true })
+      expect(result.success).toBe(true)
+    })
+    it('accepts valid config with enabled false', () => {
+      const result = validateIPC('ifood:start-polling', { clientId: 'abc', clientSecret: 'secret', merchantId: 'm1', enabled: false })
+      expect(result.success).toBe(true)
+    })
+    it('rejects missing enabled', () => {
+      const result = validateIPC('ifood:start-polling', { clientId: 'abc', clientSecret: 'secret', merchantId: 'm1' })
+      expect(result.success).toBe(false)
+    })
+    it('rejects non-boolean enabled', () => {
+      const result = validateIPC('ifood:start-polling', { clientId: 'abc', clientSecret: 'secret', merchantId: 'm1', enabled: 'yes' })
+      expect(result.success).toBe(false)
+    })
+    it('rejects missing clientId', () => {
+      const result = validateIPC('ifood:start-polling', { clientSecret: 'secret', merchantId: 'm1', enabled: true })
+      expect(result.success).toBe(false)
+    })
+    it('rejects null', () => {
+      const result = validateIPC('ifood:start-polling', null)
+      expect(result.success).toBe(false)
+    })
+  })
 })

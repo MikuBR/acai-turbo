@@ -10,7 +10,7 @@ import ClientForm from '../forms/ClientForm';
 import CategoryForm from '../forms/CategoryForm';
 
 
-export default function SettingsModal({ isOpen, onClose, settingsTab, setSettingsTab, safeCatalog, categories, newCatName, setNewCatName, newProd, setNewProd, newPromo, setNewPromo, users, newUser, setNewUser, inventory, inventoryForm, setInventoryForm, selectedInventoryItem, setSelectedInventoryItem, inventoryMovements, loadInventoryMovements, financialAccounts, financialForm, setFinancialForm, financialFilter, setFinancialFilter, clients, clientForm, setClientForm, selectedClientOrders, promotions, pwdForm, setPwdForm, syncDB, loadUsers, loadInventory, loadFinancialAccounts, loadClients, loadClientOrders, runWithAuth, getIPC, printerConfig, setPrinterConfig, savePrinterConfig, currentUser }) {
+export default function SettingsModal({ isOpen, onClose, settingsTab, setSettingsTab, safeCatalog, categories, newCatName, setNewCatName, newProd, setNewProd, newPromo, setNewPromo, users, newUser, setNewUser, inventory, inventoryForm, setInventoryForm, selectedInventoryItem, setSelectedInventoryItem, inventoryMovements, loadInventoryMovements, financialAccounts, financialForm, setFinancialForm, financialFilter, setFinancialFilter, clients, clientForm, setClientForm, selectedClientOrders, promotions, pwdForm, setPwdForm, syncDB, loadUsers, loadInventory, loadFinancialAccounts, loadClients, loadClientOrders, runWithAuth, getIPC, printerConfig, setPrinterConfig, savePrinterConfig, currentUser, ifoodConfig, setIfoodConfig, handleTestIfoodConnection, isTestingIfood, ifoodConnectionStatus, saveIfoodConfig }) {
   const addToast = useToastStore(s => s.addToast);
   if (!isOpen) return null;
 
@@ -488,6 +488,82 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                   <div className="bg-info/10 border border-info/30 p-4 rounded-lg">
                     <div className="font-bold text-xs uppercase text-info mb-2">Dica</div>
                     <div className="text-[10px] text-muted">As alterações são aplicadas imediatamente após salvar. Não é necessário reiniciar o sistema.</div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {settingsTab === 'ifood' && (
+            <>
+              <div className="w-80 p-6 border-r border-border bg-surface overflow-y-auto custom-scrollbar">
+                <h3 className="text-[10px] font-bold text-highlight uppercase mb-4 tracking-widest border-b border-border pb-2">Integração iFood</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Client ID</label>
+                    <input type="text" placeholder="Seu Client ID do iFood" value={ifoodConfig.clientId} onChange={e => setIfoodConfig({...ifoodConfig, clientId: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Client Secret</label>
+                    <input type="password" placeholder="Seu Client Secret do iFood" value={ifoodConfig.clientSecret} onChange={e => setIfoodConfig({...ifoodConfig, clientSecret: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Merchant ID</label>
+                    <input type="text" placeholder="ID da sua loja no iFood" value={ifoodConfig.merchantId} onChange={e => setIfoodConfig({...ifoodConfig, merchantId: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
+                  </div>
+                  <div className="flex items-center justify-between bg-card border border-border p-3 rounded-lg">
+                    <span className="text-[10px] font-bold text-muted uppercase">Polling Automático</span>
+                    <button onClick={() => setIfoodConfig({...ifoodConfig, enabled: !ifoodConfig.enabled})} className={`w-12 h-6 rounded-full transition-all ${ifoodConfig.enabled ? 'bg-success' : 'bg-surface-light border border-border'}`}>
+                      <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-all ${ifoodConfig.enabled ? 'ml-6' : 'ml-1'}`} />
+                    </button>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={handleTestIfoodConnection} disabled={isTestingIfood} className="flex-1 bg-info hover:bg-info py-3 rounded-lg font-bold text-xs uppercase tracking-widest text-white transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                      {isTestingIfood ? 'Testando...' : '🔌 Testar Conexão'}
+                    </button>
+                    <button onClick={() => saveIfoodConfig()} className="flex-1 bg-success hover:bg-success py-3 rounded-lg font-bold text-xs uppercase tracking-widest text-white transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                      <Save size={16} /> Salvar
+                    </button>
+                  </div>
+                  {ifoodConnectionStatus && (
+                    <div className={`p-3 rounded-lg text-xs font-bold ${ifoodConnectionStatus.includes('✅') || ifoodConnectionStatus.includes('sucesso') ? 'bg-success/10 border border-success/30 text-success' : 'bg-danger/10 border border-danger/30 text-danger'}`}>
+                      {ifoodConnectionStatus}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex-1 p-6 flex flex-col overflow-hidden">
+                <h3 className="text-[10px] font-bold text-muted uppercase mb-4 tracking-widest border-b border-border pb-2">Sobre a Integração</h3>
+                <div className="flex-1 overflow-y-auto space-y-4 custom-scrollbar pr-2">
+                  <div className="bg-surface-light border border-border p-4 rounded-lg">
+                    <div className="font-bold text-xs uppercase text-primary mb-2">Como funciona</div>
+                    <div className="text-[10px] text-muted leading-relaxed">
+                      O PDV consulta o iFood a cada 30 segundos em busca de novos pedidos. Quando um pedido chega, uma mesa de delivery é criada automaticamente na sidebar com todos os itens.
+                    </div>
+                  </div>
+                  <div className="bg-surface-light border border-border p-4 rounded-lg">
+                    <div className="font-bold text-xs uppercase text-primary mb-2">Como obter as credenciais</div>
+                    <ol className="text-[10px] text-muted space-y-1 ml-4 list-decimal">
+                      <li>Acesse <span className="text-primary">developer.ifood.com.br</span></li>
+                      <li>Faça login com sua conta iFood Partner</li>
+                      <li>Vá em "Credenciais de API"</li>
+                      <li>Gere um <strong>Client ID</strong> e <strong>Client Secret</strong></li>
+                      <li>Copie o <strong>Merchant ID</strong> da sua loja</li>
+                    </ol>
+                  </div>
+                  <div className="bg-surface-light border border-border p-4 rounded-lg">
+                    <div className="font-bold text-xs uppercase text-primary mb-2">Status do Pedido</div>
+                    <div className="text-[10px] text-muted leading-relaxed">
+                      Após receber o pedido, o operador pode marcar "Iniciar Preparo", "Pronto para Retirada" e "Saiu para Entrega" diretamente no painel do carrinho. Cada ação é enviada automaticamente ao iFood.
+                    </div>
+                  </div>
+                  <div className="bg-warning/10 border border-warning/30 p-4 rounded-lg">
+                    <div className="font-bold text-xs uppercase text-warning mb-2">Requisitos</div>
+                    <ul className="text-[10px] text-muted space-y-1 ml-4 list-disc">
+                      <li>Estabelecimento precisa ser parceiro iFood</li>
+                      <li>Conexão com internet estável</li>
+                      <li>Credenciais de API geradas no portal iFood</li>
+                    </ul>
                   </div>
                 </div>
               </div>

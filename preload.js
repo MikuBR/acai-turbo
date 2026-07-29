@@ -64,6 +64,17 @@ const ALLOWED_CHANNELS = {
   'config:get-all': true,
   'config:update': true,
 
+  'dialog:save-pdf': true,
+
+  'ifood:test-connection': true,
+  'ifood:poll': true,
+  'ifood:start-preparation': true,
+  'ifood:ready-to-pickup': true,
+  'ifood:dispatch': true,
+  'ifood:start-polling': true,
+  'ifood:new-order': true,
+  'ifood:order-cancelled': true,
+
   'auth:reset-manager-password': true,
   'auth:force-reset-admin': true,
 };
@@ -98,6 +109,7 @@ const api = {
   reports: {
     daily: (...args) => safeInvoke('reports:daily', ...args),
     byPeriod: (...args) => safeInvoke('reports:by-period', ...args),
+    exportPdf: (...args) => safeInvoke('dialog:save-pdf', ...args),
   },
   promotions: {
     get: (...args) => safeInvoke('promotions:get', ...args),
@@ -148,6 +160,14 @@ const api = {
     delete: (...args) => safeInvoke('clients:delete', ...args),
     getOrders: (...args) => safeInvoke('clients:get-orders', ...args),
     addOrder: (...args) => safeInvoke('clients:add-order', ...args),
+  },
+  ifood: {
+    testConnection: (...args) => safeInvoke('ifood:test-connection', ...args),
+    poll: (...args) => safeInvoke('ifood:poll', ...args),
+    startPreparation: (...args) => safeInvoke('ifood:start-preparation', ...args),
+    readyToPickup: (...args) => safeInvoke('ifood:ready-to-pickup', ...args),
+    dispatch: (...args) => safeInvoke('ifood:dispatch', ...args),
+    startPolling: (...args) => safeInvoke('ifood:start-polling', ...args),
   },
   config: {
     getAll: (...args) => safeInvoke('config:get-all', ...args),

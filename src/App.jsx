@@ -106,6 +106,28 @@ function App() {
   // ESTADOS IMPRESSORAS
   const [printerConfig, setPrinterConfig] = useState({ kitchenIp: '192.168.1.100', frontName: 'TANCA' });
 
+  // ESTADOS iFOOD
+  const [ifoodConfig, setIfoodConfig] = useState({ clientId: '', clientSecret: '', merchantId: '', enabled: false });
+  const [ifoodUnreadCount, setIfoodUnreadCount] = useState(0);
+  const [ifoodConnectionStatus, setIfoodConnectionStatus] = useState('');
+  const [isTestingIfood, setIsTestingIfood] = useState(false);
+
+  const playBeep = () => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 880;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.3);
+    } catch { /* silent */ }
+  };
+
   const syncDB = () => {
     const ipc = getIPC();
     if (ipc) {
@@ -275,7 +297,163 @@ function App() {
     }
   };
 
-  useEffect(() => { syncDB(); loadPrinterConfig(); }, []);
+  const loadIfoodConfig = () => {
+    const ipc = getIPC();
+    if (ipc) {
+      ipc.invoke('config:get-all').then(res => {
+        if (res && res.success) {
+          const configs = res.data || [];
+          const getCfg = (key, def) => { const c = configs.find(x => x.key === key); return c ? c.value : def; };
+          const clientId = getCfg('ifood_client_id', '');
+          const clientSecret = getCfg('ifood_client_secret', '');
+          const merchantId = getCfg('ifood_merchant_id', '');
+          const enabled = !!(clientId && clientSecret && merchantId);
+          setIfoodConfig({ clientId, clientSecret, merchantId, enabled });
+          if (enabled) {
+            ipc.invoke('ifood:start-polling', { clientId, clientSecret, merchantId, enabled });
+          }
+        }
+      });
+    }
+  };
+
+  const saveIfoodConfig = () => {
+    const ipc = getIPC();
+    if (!ipc) { addToast('Sem conexão com o sistema', 'error'); return; }
+    setLoading('Salvando configurações iFood...');
+    Promise.all([
+      ipc.invoke('config:update', { key: 'ifood_client_id', value: ifoodConfig.clientId }),
+      ipc.invoke('config:update', { key: 'ifood_client_secret', value: ifoodConfig.clientSecret }),
+      ipc.invoke('config:update', { key: 'ifood_merchant_id', value: ifoodConfig.merchantId }),
+    ]).then(([idRes, secretRes, merchantRes]) => {
+      if (idRes?.success && secretRes?.success && merchantRes?.success) {
+        ipc.invoke('ifood:start-polling', {
+          clientId: ifoodConfig.clientId,
+          clientSecret: ifoodConfig.clientSecret,
+          merchantId: ifoodConfig.merchantId,
+          enabled: ifoodConfig.enabled,
+        }).then(res => {
+          if (res?.success) {
+            addToast('Configurações iFood salvas com sucesso!', 'success');
+          } else {
+            addToast(res?.error || 'Erro ao ativar polling iFood', 'error');
+          }
+        });
+      } else {
+        addToast('Erro ao salvar configurações iFood', 'error');
+      }
+    }).finally(() => clearLoading());
+  };
+
+  const handleTestIfoodConnection = async () => {
+    const ipc = getIPC();
+    if (!ipc) { addToast('Sem conexão com o sistema', 'error'); return; }
+    if (!ifoodConfig.clientId || !ifoodConfig.clientSecret || !ifoodConfig.merchantId) {
+      addToast('Preencha todos os campos', 'warning');
+      return;
+    }
+    setIsTestingIfood(true);
+    setIfoodConnectionStatus('');
+    try {
+      const res = await ipc.invoke('ifood:test-connection', {
+        clientId: ifoodConfig.clientId,
+        clientSecret: ifoodConfig.clientSecret,
+        merchantId: ifoodConfig.merchantId,
+      });
+      if (res?.success) {
+        setIfoodConnectionStatus('✅ Conectado ao iFood com sucesso');
+        addToast('✅ Conexão iFood estabelecida!', 'success');
+      } else {
+        setIfoodConnectionStatus(`❌ ${res?.error || 'Falha na conexão'}`);
+        addToast(`❌ ${res?.error || 'Falha na conexão'}`, 'error');
+      }
+    } catch {
+      setIfoodConnectionStatus('❌ Erro ao testar conexão');
+      addToast('Erro ao testar conexão iFood', 'error');
+    } finally {
+      setIsTestingIfood(false);
+    }
+  };
+
+  const handleIfoodAction = async (action, orderId) => {
+    const ipc = getIPC();
+    if (!ipc) { addToast('Sem conexão com o sistema', 'error'); return; }
+    const channel = `ifood:${action}`;
+    try {
+      const res = await ipc.invoke(channel, { orderId });
+      if (res?.success) {
+        const label = { startPreparation: 'Preparo iniciado', readyToPickup: 'Pronto para retirada', dispatch: 'Saiu para entrega' };
+        addToast(`✅ Pedido iFood: ${label[action] || action}`, 'success');
+      } else {
+        addToast(`❌ ${res?.error || `Erro ao executar ${action}`}`, 'error');
+      }
+    } catch {
+      addToast(`❌ Erro ao executar ${action}`, 'error');
+    }
+  };
+
+  useEffect(() => {
+    syncDB();
+    loadPrinterConfig();
+    loadIfoodConfig();
+  }, []);
+
+  // Listeners para eventos push do iFood (main → renderer)
+  useEffect(() => {
+    const ipc = getIPC();
+    if (!ipc) return;
+
+    const handleNewOrder = (orderData) => {
+      const order = orderData.orderData;
+      const customer = order.customer || {};
+      const addr = order.deliveryAddress || {};
+      const tableName = `iFood #${orderData.displayId} - ${(customer.name || 'Cliente').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()}`;
+      const address = [addr.streetName, addr.streetNumber, addr.neighborhood, addr.city, addr.state].filter(Boolean).join(', ') || 'Endereço não informado';
+      const phone = customer.phone?.number || '(11) 99999-9999';
+
+      addTable({
+        name: tableName,
+        isDelivery: true,
+        phone,
+        address,
+        ifoodOrderId: orderData.orderId,
+      });
+
+      if (order.items && Array.isArray(order.items)) {
+        order.items.forEach(item => {
+          const qty = Math.max(1, item.quantity || 1);
+          const price = Math.max(0, item.unitPrice || item.totalPrice / qty || 0);
+          for (let q = 0; q < qty; q++) {
+            addItemToActiveTable({
+              name: item.name || `Item #${item.id || q}`,
+              price,
+              category: 'iFOOD',
+              notes: (item.options && Array.isArray(item.options))
+                ? item.options.map(o => o.name || '').filter(Boolean).join(', ')
+                : '',
+            });
+          }
+        });
+      }
+
+      const total = order.totalPrice || 0;
+      addToast(`🛵 Novo pedido iFood: ${customer.name || 'Cliente'} - R$ ${total.toFixed(2)}`, 'success');
+      playBeep();
+      setIfoodUnreadCount(c => c + 1);
+    };
+
+    const handleCancelled = ({ reason }) => {
+      addToast(`❌ Pedido iFood cancelado: ${reason || 'Motivo não informado'}`, 'error');
+    };
+
+    ipc.on('ifood:new-order', handleNewOrder);
+    ipc.on('ifood:order-cancelled', handleCancelled);
+
+    return () => {
+      ipc.removeListener('ifood:new-order', handleNewOrder);
+      ipc.removeListener('ifood:order-cancelled', handleCancelled);
+    };
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -518,11 +696,13 @@ function App() {
       <OrderSidebar
         tables={safeTables}
         activeTableId={activeTableId}
-        onSelectTable={setActiveTable}
+        onSelectTable={(id) => { ifoodUnreadCount > 0 && setIfoodUnreadCount(0); setActiveTable(id); }}
         onNewTable={() => setModals({...modals, newTable: true})}
         onOpenReports={() => { setModals({...modals, reports: true}); loadReports(); }}
         onOpenSettings={() => runWithManagerAuth(() => setModals({...modals, settings: true}))}
         onLogout={handleLogout}
+        ifoodConnected={!!ifoodConfig.enabled}
+        ifoodUnreadCount={ifoodUnreadCount}
       />
 
       {/* 2. ÁREA CENTRAL */}
@@ -567,6 +747,8 @@ function App() {
         activeTable={activeTable}
         onRemoveItem={removeItemFromActiveTable}
         onCheckout={() => setModals({...modals, checkout: true})}
+        ifoodOrderId={activeTable?.ifoodOrderId || null}
+        onIfoodAction={handleIfoodAction}
       />
 
       {/* --- MODAIS PRINCIPAIS --- */}
@@ -666,6 +848,12 @@ function App() {
         setPrinterConfig={setPrinterConfig}
         savePrinterConfig={savePrinterConfig}
         currentUser={currentUser}
+        ifoodConfig={ifoodConfig}
+        setIfoodConfig={setIfoodConfig}
+        handleTestIfoodConnection={handleTestIfoodConnection}
+        isTestingIfood={isTestingIfood}
+        ifoodConnectionStatus={ifoodConnectionStatus}
+        saveIfoodConfig={saveIfoodConfig}
       />}
 
       {modals.checkout && <CheckoutModal

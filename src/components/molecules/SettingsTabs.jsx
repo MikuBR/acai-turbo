@@ -1,4 +1,4 @@
-import { Package, Tag, Shield, Users, Package2, DollarSign, UserCheck, Printer } from 'lucide-react';
+import { Package, Tag, Shield, Users, Package2, DollarSign, UserCheck, Printer, Wifi } from 'lucide-react';
 import SettingsTab from './SettingsTab';
 
 const tabs = [
@@ -10,6 +10,7 @@ const tabs = [
   { id: 'financial', label: 'Financeiro', icon: DollarSign },
   { id: 'clients', label: 'Clientes', icon: UserCheck },
   { id: 'printers', label: 'Impressoras', icon: Printer },
+  { id: 'ifood', label: 'iFood', icon: Wifi },
 ];
 
 export default function SettingsTabs({ activeTab, onTabChange }) {

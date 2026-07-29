@@ -5,6 +5,9 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   base: './',
+  optimizeDeps: {
+    include: ['pdfmake/build/pdfmake', 'pdfmake/build/vfs_fonts'],
+  },
   server: {
     host: '0.0.0.0',
     port: 5173,
