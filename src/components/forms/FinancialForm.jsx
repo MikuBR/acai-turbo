@@ -15,7 +15,7 @@ export default function FinancialForm({ financialForm, setFinancialForm, onSubmi
       </div>
       <div>
         <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Valor</label>
-        <input type="number" step="0.01" value={financialForm.amount} onChange={e => setFinancialForm({...financialForm, amount: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" required />
+        <input type="number" step="0.01" min="0.01" value={financialForm.amount} onChange={e => setFinancialForm({...financialForm, amount: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" required />
       </div>
       <div>
         <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Data Vencimento</label>

@@ -1,7 +1,15 @@
-import { X, Trash2, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import { X, Trash2, ArrowUpCircle, ArrowDownCircle, DollarSign } from 'lucide-react';
 
-export default function ReportsModal({ isOpen, onClose, advancedReportData, setAdvancedReportData, reportData, reportPeriod, setReportPeriod, ordersHistory, cashMove, setCashMove, loadReports, loadAdvancedReport, runWithAuth, getIPC }) {
+export default function ReportsModal({ isOpen, onClose, advancedReportData, setAdvancedReportData, reportData, reportPeriod, setReportPeriod, ordersHistory, cashMove, setCashMove, loadReports, loadAdvancedReport, runWithAuth, getIPC, financialSummary }) {
   if (!isOpen) return null;
+
+  const isPeriodView = !!advancedReportData;
+  const data = isPeriodView ? advancedReportData : reportData;
+
+  const salesTotal = (data?.sales || []).reduce((a, c) => a + Number(c.total_amount || 0), 0);
+  const entradasTotal = (data?.movements || []).reduce((a, m) => m.type === 'ENTRADA' ? a + m.total_amount : a, 0);
+  const sangriasTotal = (data?.movements || []).reduce((a, m) => m.type === 'SAIDA' ? a + m.total_amount : a, 0);
+  const saldoFinal = salesTotal + entradasTotal - sangriasTotal;
 
   return (
     <div className="fixed inset-0 bg-surface z-[900] flex items-center justify-center p-6 animate-in fade-in duration-200">
@@ -12,7 +20,17 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
             <div className="flex gap-2">
               <button onClick={() => { setAdvancedReportData(null); loadReports(); }}
                 className={`text-[10px] font-bold uppercase px-3 py-1 rounded transition-all ${!advancedReportData ? 'bg-success text-white' : 'bg-surface-light text-muted hover:text-primary'}`}>Hoje</button>
-              <button onClick={() => { setAdvancedReportData(null); }}
+              <button onClick={() => { 
+                setAdvancedReportData(null); 
+                const today = new Date();
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(today.getDate() - 30);
+                setReportPeriod({ 
+                  startDate: thirtyDaysAgo.toISOString().split('T')[0], 
+                  endDate: today.toISOString().split('T')[0] 
+                });
+                loadAdvancedReport();
+              }}
                 className={`text-[10px] font-bold uppercase px-3 py-1 rounded transition-all ${advancedReportData ? 'bg-success text-white' : 'bg-surface-light text-muted hover:text-primary'}`}>Período</button>
             </div>
           </div>
@@ -56,6 +74,34 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                     </div>
                   </div>
                 </div>
+
+                <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-4 border-b border-border pb-2">Resumo de Vendas (Período)</h3>
+                <div className="space-y-2 mb-8">
+                  {(data?.sales || []).map((s, i) => (
+                    <div key={i} className="flex justify-between items-center bg-surface-light p-3 rounded-lg border border-border">
+                      <span className="text-xs font-bold text-primary">{s.payment_method}</span>
+                      <span className="font-mono text-success font-bold">R$ {s.total_amount.toFixed(2)}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between items-center bg-surface-light p-3 rounded-lg border border-border mt-2">
+                    <span className="text-xs font-bold text-primary uppercase tracking-widest">Total Vendas</span>
+                    <span className="font-mono text-success font-bold text-lg">R$ {salesTotal.toFixed(2)}</span>
+                  </div>
+                  {(data?.movements || []).filter(m => m.type === 'ENTRADA' || m.type === 'SAIDA').map((m, i) => (
+                    <div key={m.id || i} className={`flex justify-between items-center p-3 rounded-lg border ${m.type === 'ENTRADA' ? 'bg-success/5 border-success/20' : 'bg-danger/5 border-danger/20'}`}>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold text-primary">{m.type === 'ENTRADA' ? '➕ Entrada' : '➖ Sangria'}</span>
+                        <span className="text-[10px] text-muted">{m.description}</span>
+                        <span className="text-[9px] text-muted/60">{m.created_at ? new Date(m.created_at + 'Z').toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                      </div>
+                      <span className={`font-mono font-bold ${m.type === 'ENTRADA' ? 'text-success' : 'text-danger'}`}>R$ {m.total_amount.toFixed(2)}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between items-center bg-primary/10 border border-primary/20 p-3 rounded-lg mt-2">
+                    <span className="text-xs font-bold text-primary uppercase tracking-widest">Saldo do Caixa</span>
+                    <span className={`font-mono font-bold text-lg ${saldoFinal >= 0 ? 'text-success' : 'text-danger'}`}>R$ {saldoFinal.toFixed(2)}</span>
+                  </div>
+                </div>
               </>
             ) : (
               <>
@@ -68,14 +114,56 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                     </div>
                   ))}
                   <div className="flex justify-between items-center bg-surface-light p-3 rounded-lg border border-border mt-2">
-                    <span className="text-xs font-bold text-primary uppercase tracking-widest">Total Bruto</span>
-                    <span className="font-mono text-success font-bold text-lg">R$ {(reportData?.sales || []).reduce((acc, curr) => acc + curr.total_amount, 0).toFixed(2)}</span>
+                    <span className="text-xs font-bold text-primary uppercase tracking-widest">Total Vendas</span>
+                    <span className="font-mono text-success font-bold text-lg">R$ {salesTotal.toFixed(2)}</span>
+                  </div>
+                  {(data?.movements || []).filter(m => m.type === 'ENTRADA' || m.type === 'SAIDA').map((m, i) => (
+                    <div key={m.id || i} className={`flex justify-between items-center p-3 rounded-lg border ${m.type === 'ENTRADA' ? 'bg-success/5 border-success/20' : 'bg-danger/5 border-danger/20'}`}>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold text-primary">{m.type === 'ENTRADA' ? '➕ Entrada' : '➖ Sangria'}</span>
+                        <span className="text-[10px] text-muted">{m.description}</span>
+                        <span className="text-[9px] text-muted/60">{m.created_at ? new Date(m.created_at + 'Z').toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                      </div>
+                      <span className={`font-mono font-bold ${m.type === 'ENTRADA' ? 'text-success' : 'text-danger'}`}>R$ {m.total_amount.toFixed(2)}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between items-center bg-primary/10 border border-primary/20 p-3 rounded-lg mt-2">
+                    <span className="text-xs font-bold text-primary uppercase tracking-widest">Saldo do Caixa</span>
+                    <span className={`font-mono font-bold text-lg ${saldoFinal >= 0 ? 'text-success' : 'text-danger'}`}>R$ {saldoFinal.toFixed(2)}</span>
                   </div>
                 </div>
               </>
             )}
 
-            <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-4 border-b border-border pb-2">Lançamento Manual (Gaveta)</h3>
+            {/* Financial Summary - Today */}
+            {financialSummary && (
+              <div className="mb-8">
+                <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-4 border-b border-border pb-2 flex items-center gap-2">
+                  <DollarSign size={12} className="text-warning" />
+                  Resumo Financeiro
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-warning/10 border border-warning/30 p-3 rounded-lg">
+                    <span className="text-[9px] text-muted font-bold uppercase block">A Pagar (Total)</span>
+                    <span className="text-lg font-bold text-warning font-mono">R$ {financialSummary.payable?.total?.toFixed(2) || '0.00'}</span>
+                  </div>
+                  <div className="bg-success/10 border border-success/30 p-3 rounded-lg">
+                    <span className="text-[9px] text-muted font-bold uppercase block">A Receber (Total)</span>
+                    <span className="text-lg font-bold text-success font-mono">R$ {financialSummary.receivable?.total?.toFixed(2) || '0.00'}</span>
+                  </div>
+                  <div className="bg-danger/10 border border-danger/30 p-3 rounded-lg">
+                    <span className="text-[9px] text-muted font-bold uppercase block">A Pagar (Pendente)</span>
+                    <span className="text-lg font-bold text-danger font-mono">R$ {financialSummary.payable?.pending?.toFixed(2) || '0.00'}</span>
+                  </div>
+                  <div className="bg-info/10 border border-info/30 p-3 rounded-lg">
+                    <span className="text-[9px] text-muted font-bold uppercase block">A Receber (Pendente)</span>
+                    <span className="text-lg font-bold text-info font-mono">R$ {financialSummary.receivable?.pending?.toFixed(2) || '0.00'}</span>
+</div>
+                </div>
+              </div>
+            )}
+
+              <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-4 border-b border-border pb-2">Lançamento Manual (Gaveta)</h3>
             <div className="bg-surface-light p-4 rounded-xl border border-border space-y-4">
               <div className="grid grid-cols-2 gap-2">
                 <button type="button" onClick={() => setCashMove({...cashMove, type: 'ENTRADA'})}
@@ -96,6 +184,7 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                   if (res.success) {
                     setCashMove({ type: 'SAIDA', amount: '', description: '' });
                     loadReports();
+                    if (advancedReportData) loadAdvancedReport();
                   } else {
                     alert(res.error);
                   }
@@ -104,16 +193,6 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                 Registrar Movimento
               </button>
             </div>
-            
-            {reportData.movements?.length > 0 && (
-              <div className="mt-4 space-y-2">
-                {reportData.movements.map((m, i) => (
-                  <div key={i} className={`flex justify-between text-[10px] p-2 rounded ${m.type === 'ENTRADA' ? 'text-success bg-success/10' : 'text-danger bg-danger/10'}`}>
-                    <span>Total {m.type}</span><span>R$ {m.total_amount.toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
           <div className="flex-1 p-6 flex flex-col overflow-hidden bg-surface">
@@ -147,7 +226,10 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                           onClick={() => runWithAuth(() => {
                             const ipc = getIPC();
                             if(window.confirm(`Tem certeza que deseja CANCELAR (estornar) o pedido #${o.id} - ${o.customer_name}?`) && ipc) {
-                              ipc.invoke('orders:delete', o.id).then(() => loadReports());
+                              ipc.invoke('orders:delete', o.id).then(() => {
+                                loadReports();
+                                if (advancedReportData) loadAdvancedReport();
+                              });
                             }
                           }, 'cancel_orders')}
                           className="p-2 bg-danger/10 hover:bg-danger hover:text-white text-danger rounded-lg transition-colors flex items-center gap-2"

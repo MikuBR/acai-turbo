@@ -126,6 +126,19 @@ const validators = {
     return { success: true, data: { ...data, id: Number(data.id), account: { ...data.account, amount: Number(data.account.amount) } } };
   },
 
+  'financial:delete-account': (id) => {
+    if (id === undefined || id === null || isNaN(Number(id))) return { success: false, error: 'ID inválido' };
+    return { success: true, data: Number(id) };
+  },
+
+  'financial:add-transaction': (data) => {
+    if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
+    if (!data.account_id || isNaN(Number(data.account_id))) return { success: false, error: 'ID da conta inválido' };
+    if (!data.type || typeof data.type !== 'string' || data.type.trim() === '') return { success: false, error: 'Tipo de transação inválido' };
+    if (data.amount === undefined || isNaN(Number(data.amount)) || Number(data.amount) <= 0) return { success: false, error: 'Valor inválido' };
+    return { success: true, data: { ...data, account_id: Number(data.account_id), amount: Number(data.amount) } };
+  },
+
   'clients:add': (data) => {
     if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
     if (!data.name || typeof data.name !== 'string' || data.name.trim() === '') return { success: false, error: 'Nome é obrigatório' };

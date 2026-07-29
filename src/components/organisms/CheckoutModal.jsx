@@ -56,10 +56,10 @@ export default function CheckoutModal({ isOpen, onClose, activeTable, promotions
         <div className="mb-6">
           <label className="text-[10px] text-muted font-bold uppercase ml-1 mb-2 block">Dinheiro Recebido</label>
           <input type="number" step="0.01" value={amountReceived} onChange={e => setAmountReceived(e.target.value)} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-2xl text-center font-mono font-medium shadow-sm" placeholder="0.00" />
-          {amountReceived && activeTable && parseFloat(amountReceived) >= activeTable.total && (
+          {amountReceived && activeTable && parseFloat(amountReceived) >= finalTotal && (
             <div className="mt-4 p-3 bg-surface-light border border-border rounded-lg text-center animate-in fade-in">
               <span className="text-[10px] text-muted font-bold uppercase tracking-widest block mb-1">Troco a Devolver</span>
-              <span className="text-2xl font-bold text-warning font-mono">R$ {(parseFloat(amountReceived) - activeTable.total).toFixed(2)}</span>
+              <span className="text-2xl font-bold text-warning font-mono">R$ {(parseFloat(amountReceived) - finalTotal).toFixed(2)}</span>
             </div>
           )}
         </div>

@@ -399,7 +399,7 @@ function registerCashMovement(data) {
 
 function getDailyReport() {
   const sales = db.prepare(`SELECT payment_method, is_delivery, SUM(total) as total_amount FROM orders WHERE date(created_at, 'localtime') = date('now', 'localtime') GROUP BY payment_method, is_delivery`).all();
-  const movements = db.prepare(`SELECT type, SUM(amount) as total_amount FROM cash_movements WHERE date(created_at, 'localtime') = date('now', 'localtime') GROUP BY type`).all();
+  const movements = db.prepare(`SELECT id, type, amount as total_amount, description, created_at FROM cash_movements WHERE date(created_at, 'localtime') = date('now', 'localtime') ORDER BY created_at DESC`).all();
   const topProducts = db.prepare(`SELECT product_name, COUNT(*) as qty FROM order_items JOIN orders ON order_items.order_id = orders.id WHERE date(orders.created_at, 'localtime') = date('now', 'localtime') GROUP BY product_name ORDER BY qty DESC LIMIT 5`).all();
   return { sales, movements, topProducts };
 }
@@ -414,11 +414,11 @@ function getReportByPeriod(startDate, endDate) {
   `).all(startDate, endDate);
 
   const movements = db.prepare(`
-    SELECT type, SUM(amount) as total_amount
+    SELECT id, type, amount as total_amount, description, created_at
     FROM cash_movements
     WHERE datetime(created_at, 'localtime') >= datetime(?, 'localtime')
     AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
-    GROUP BY type
+    ORDER BY created_at DESC
   `).all(startDate, endDate);
 
   const topProducts = db.prepare(`
@@ -671,7 +671,7 @@ const getLowStockItems = () => {
 };
 
 // --- EXPORTAÇÕES FINANCEIRAS ---
-const getFinancialAccounts = (type = null, status = null) => {
+const getFinancialAccounts = (type = null, status = null, startDate = null, endDate = null) => {
   let query = 'SELECT * FROM financial_accounts WHERE 1=1';
   const params = [];
 
@@ -682,6 +682,14 @@ const getFinancialAccounts = (type = null, status = null) => {
   if (status) {
     query += ' AND status = ?';
     params.push(status);
+  }
+  if (startDate) {
+    query += ' AND date(due_date) >= date(?)';
+    params.push(startDate);
+  }
+  if (endDate) {
+    query += ' AND date(due_date) <= date(?)';
+    params.push(endDate);
   }
 
   query += ' ORDER BY due_date ASC';

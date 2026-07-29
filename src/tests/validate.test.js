@@ -118,6 +118,23 @@ describe('validateIPC', () => {
     })
   })
 
+  describe('users:update', () => {
+    it('accepts valid user update', () => {
+      const result = validateIPC('users:update', { id: 1, user: { username: 'op', full_name: 'Op', role: 'operator' } })
+      expect(result.success).toBe(true)
+    })
+
+    it('rejects missing id', () => {
+      const result = validateIPC('users:update', { user: { username: 'op', full_name: 'Op', role: 'operator' } })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects invalid role', () => {
+      const result = validateIPC('users:update', { id: 1, user: { username: 'op', full_name: 'Op', role: 'invalid' } })
+      expect(result.success).toBe(false)
+    })
+  })
+
   describe('cash:register', () => {
     it('accepts valid cash movement', () => {
       const result = validateIPC('cash:register', { type: 'ENTRADA', amount: 100, description: 'Venda' })
@@ -133,6 +150,11 @@ describe('validateIPC', () => {
       const result = validateIPC('cash:register', { type: 'ENTRADA', amount: 0, description: 'Test' })
       expect(result.success).toBe(false)
     })
+
+    it('rejects missing description', () => {
+      const result = validateIPC('cash:register', { type: 'ENTRADA', amount: 50, description: '' })
+      expect(result.success).toBe(false)
+    })
   })
 
   describe('promotions:add', () => {
@@ -143,6 +165,28 @@ describe('validateIPC', () => {
 
     it('rejects invalid type', () => {
       const result = validateIPC('promotions:add', { name: 'Off', type: 'INVALID', value: 10, start_date: '2025-01-01', end_date: '2025-12-31' })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects missing dates', () => {
+      const result = validateIPC('promotions:add', { name: 'Off', type: 'PERCENTAGE', value: 10 })
+      expect(result.success).toBe(false)
+    })
+  })
+
+  describe('promotions:update', () => {
+    it('accepts valid promotion update', () => {
+      const result = validateIPC('promotions:update', { id: 1, promo: { name: 'Off', type: 'PERCENTAGE', value: 10 } })
+      expect(result.success).toBe(true)
+    })
+
+    it('rejects missing id', () => {
+      const result = validateIPC('promotions:update', { promo: { name: 'Off', type: 'PERCENTAGE', value: 10 } })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects invalid type', () => {
+      const result = validateIPC('promotions:update', { id: 1, promo: { name: 'Off', type: 'INVALID', value: 10 } })
       expect(result.success).toBe(false)
     })
   })
@@ -183,6 +227,69 @@ describe('validateIPC', () => {
     })
   })
 
+  describe('financial:update-account', () => {
+    it('accepts valid account update', () => {
+      const result = validateIPC('financial:update-account', { id: 1, account: { type: 'payable', description: 'Aluguel', amount: 1600 } })
+      expect(result.success).toBe(true)
+    })
+
+    it('rejects missing id', () => {
+      const result = validateIPC('financial:update-account', { account: { type: 'payable', description: 'Test', amount: 100 } })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects invalid account data', () => {
+      const result = validateIPC('financial:update-account', { id: 1, account: null })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects invalid type in update', () => {
+      const result = validateIPC('financial:update-account', { id: 1, account: { type: 'invalid', description: 'Test', amount: 100 } })
+      expect(result.success).toBe(false)
+    })
+  })
+
+  describe('financial:delete-account', () => {
+    it('accepts valid id', () => {
+      const result = validateIPC('financial:delete-account', 1)
+      expect(result.success).toBe(true)
+    })
+
+    it('rejects undefined id', () => {
+      expect(validateIPC('financial:delete-account', undefined).success).toBe(false)
+    })
+
+    it('rejects null id', () => {
+      expect(validateIPC('financial:delete-account', null).success).toBe(false)
+    })
+
+    it('rejects NaN id', () => {
+      expect(validateIPC('financial:delete-account', NaN).success).toBe(false)
+    })
+  })
+
+  describe('financial:add-transaction', () => {
+    it('accepts valid transaction', () => {
+      const result = validateIPC('financial:add-transaction', { account_id: 1, type: 'payment', amount: 300 })
+      expect(result.success).toBe(true)
+    })
+
+    it('rejects missing account_id', () => {
+      const result = validateIPC('financial:add-transaction', { type: 'payment', amount: 300 })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects invalid amount', () => {
+      const result = validateIPC('financial:add-transaction', { account_id: 1, type: 'payment', amount: 0 })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects empty type', () => {
+      const result = validateIPC('financial:add-transaction', { account_id: 1, type: '', amount: 100 })
+      expect(result.success).toBe(false)
+    })
+  })
+
   describe('clients:add', () => {
     it('accepts valid client', () => {
       const result = validateIPC('clients:add', { name: 'João' })
@@ -191,6 +298,23 @@ describe('validateIPC', () => {
 
     it('rejects empty name', () => {
       const result = validateIPC('clients:add', { name: '' })
+      expect(result.success).toBe(false)
+    })
+  })
+
+  describe('clients:update', () => {
+    it('accepts valid client update', () => {
+      const result = validateIPC('clients:update', { id: 1, client: { name: 'João Atualizado' } })
+      expect(result.success).toBe(true)
+    })
+
+    it('rejects missing id', () => {
+      const result = validateIPC('clients:update', { client: { name: 'Test' } })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects empty name', () => {
+      const result = validateIPC('clients:update', { id: 1, client: { name: '' } })
       expect(result.success).toBe(false)
     })
   })

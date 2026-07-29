@@ -67,6 +67,7 @@ function App() {
   const [cashMove, setCashMove] = useState({ type: 'SAIDA', amount: '', description: '' });
   const [reportPeriod, setReportPeriod] = useState({ startDate: '', endDate: '' });
   const [advancedReportData, setAdvancedReportData] = useState(null);
+  const [financialSummary, setFinancialSummary] = useState({ payable: { pending: 0, paid: 0, total: 0 }, receivable: { pending: 0, paid: 0, total: 0 } });
   
   // ESTADOS PROMOÇÕES
   const [promotions, setPromotions] = useState([]);
@@ -87,7 +88,7 @@ function App() {
   // ESTADOS FINANCEIROS
   const [financialAccounts, setFinancialAccounts] = useState([]);
   const [financialForm, setFinancialForm] = useState({ id: null, type: 'payable', description: '', amount: '', due_date: '', status: 'pending', category: '' });
-  const [financialFilter, setFinancialFilter] = useState({ type: 'all', status: 'all' });
+  const [financialFilter, setFinancialFilter] = useState({ type: 'all', status: 'all', startDate: '', endDate: '' });
 
   // ESTADOS CLIENTES
   const [clients, setClients] = useState([]);
@@ -142,7 +143,9 @@ function App() {
     if (ipc) {
       const typeFilter = financialFilter.type === 'all' ? null : financialFilter.type;
       const statusFilter = financialFilter.status === 'all' ? null : financialFilter.status;
-      ipc.invoke('financial:get-accounts', { type: typeFilter, status: statusFilter }).then(res => { if (res && res.success) setFinancialAccounts(res.data || []); });
+      const startDate = financialFilter.startDate || null;
+      const endDate = financialFilter.endDate || null;
+      ipc.invoke('financial:get-accounts', { type: typeFilter, status: statusFilter, startDate, endDate }).then(res => { if (res && res.success) setFinancialAccounts(res.data || []); });
     }
   };
 
@@ -165,6 +168,9 @@ function App() {
     if (ipc) {
       ipc.invoke('reports:daily').then(res => { if (res && res.success) setReportData(res.data); });
       ipc.invoke('orders:get-history').then(res => { if (res && res.success) setOrdersHistory(res.data); });
+      // Load financial summary for today
+      const today = new Date().toISOString().split('T')[0];
+      loadFinancialSummary(today, today);
     }
   };
 
@@ -173,6 +179,16 @@ function App() {
     if (ipc && reportPeriod.startDate && reportPeriod.endDate) {
       ipc.invoke('reports:by-period', reportPeriod).then(res => {
         if (res && res.success) setAdvancedReportData(res.data);
+      });
+      loadFinancialSummary(reportPeriod.startDate, reportPeriod.endDate);
+    }
+  };
+
+  const loadFinancialSummary = (startDate, endDate) => {
+    const ipc = getIPC();
+    if (ipc) {
+      ipc.invoke('financial:get-summary', { startDate, endDate }).then(res => {
+        if (res && res.success) setFinancialSummary(res.data);
       });
     }
   };
@@ -547,6 +563,7 @@ function App() {
         runWithAuth={runWithAuth}
        
         getIPC={getIPC}
+        financialSummary={financialSummary}
       />
 
       {/* MODAL: BUILDER AÇAÍ */}

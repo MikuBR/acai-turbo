@@ -341,7 +341,9 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
               <div className="flex-1 p-6 flex flex-col overflow-hidden">
                 <div className="flex items-center gap-4 mb-4 border-b border-border pb-4">
                   <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest">Contas Financeiras</h3>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap items-center">
+                    <input type="date" value={financialFilter.startDate} onChange={e => setFinancialFilter({...financialFilter, startDate: e.target.value})} className="text-[9px] border border-border rounded px-2 py-1" />
+                    <input type="date" value={financialFilter.endDate} onChange={e => setFinancialFilter({...financialFilter, endDate: e.target.value})} className="text-[9px] border border-border rounded px-2 py-1" />
                     <select value={financialFilter.type} onChange={e => setFinancialFilter({...financialFilter, type: e.target.value})} className="text-[9px] border border-border rounded px-2 py-1">
                       <option value="all">Todos Tipos</option>
                       <option value="payable">A Pagar</option>
@@ -354,15 +356,40 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                       <option value="cancelled">Cancelado</option>
                     </select>
                     <button onClick={loadFinancialAccounts} className="text-[9px] bg-surface-light hover:bg-border px-2 py-1 rounded font-bold">Filtrar</button>
+                    <button onClick={() => { setFinancialFilter({ type: 'all', status: 'all', startDate: '', endDate: '' }); }} className="text-[9px] bg-surface-light hover:bg-border px-2 py-1 rounded font-bold">Limpar</button>
                   </div>
                 </div>
+                {/* Financial Summary */}
+                {financialAccounts.length > 0 && (
+                  <div className="grid grid-cols-4 gap-3 mb-4">
+                    <div className="bg-warning/10 border border-warning/30 p-3 rounded-lg">
+                      <span className="text-[8px] text-muted font-bold uppercase block">A Pagar</span>
+                      <span className="text-lg font-bold text-warning font-mono">R$ {financialAccounts.filter(a => a.type === 'payable').reduce((s, a) => s + a.amount, 0).toFixed(2)}</span>
+                    </div>
+                    <div className="bg-success/10 border border-success/30 p-3 rounded-lg">
+                      <span className="text-[8px] text-muted font-bold uppercase block">A Receber</span>
+                      <span className="text-lg font-bold text-success font-mono">R$ {financialAccounts.filter(a => a.type === 'receivable').reduce((s, a) => s + a.amount, 0).toFixed(2)}</span>
+                    </div>
+                    <div className="bg-danger/10 border border-danger/30 p-3 rounded-lg">
+                      <span className="text-[8px] text-muted font-bold uppercase block">Pendente</span>
+                      <span className="text-lg font-bold text-danger font-mono">R$ {financialAccounts.filter(a => a.status === 'pending').reduce((s, a) => s + a.amount, 0).toFixed(2)}</span>
+                    </div>
+                    <div className="bg-success/10 border border-success/30 p-3 rounded-lg">
+                      <span className="text-[8px] text-muted font-bold uppercase block">Pago</span>
+                      <span className="text-lg font-bold text-success font-mono">R$ {financialAccounts.filter(a => a.status === 'paid').reduce((s, a) => s + a.amount, 0).toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
                 <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
+                  {financialAccounts.length === 0 && (
+                    <div className="text-center text-muted text-xs mt-10">Nenhuma conta financeira encontrada.</div>
+                  )}
                   {financialAccounts.map(acc => (
                     <div key={acc.id} className={`flex items-center justify-between bg-surface-light border p-3 rounded-lg ${acc.status === 'paid' ? 'border-success bg-success/10' : acc.status === 'cancelled' ? 'border-border opacity-60' : acc.due_date && new Date(acc.due_date) < new Date() ? 'border-danger bg-danger/10' : 'border-border'}`}>
                       <div>
                         <div className="font-bold text-xs uppercase text-primary">{acc.description}</div>
                         <div className="text-[9px] text-muted uppercase">{acc.type === 'payable' ? 'A Pagar' : 'A Receber'} • R$ {acc.amount.toFixed(2)}</div>
-                        <div className="text-[8px] text-muted">Vencimento: {acc.due_date ? new Date(acc.due_date).toLocaleDateString() : 'N/A'} • {acc.status}</div>
+                        <div className="text-[8px] text-muted">Vencimento: {acc.due_date ? new Date(acc.due_date + 'T00:00:00').toLocaleDateString() : 'N/A'} • {acc.status}</div>
                       </div>
                       <div className="flex gap-2">
                         <button onClick={() => setFinancialForm({ id: acc.id, type: acc.type, description: acc.description, amount: acc.amount.toString(), due_date: acc.due_date || '', status: acc.status, category: acc.category || '' })} className="p-2 bg-info/10 hover:bg-info/20 text-info rounded-lg transition-colors"><Pencil size={16} /></button>

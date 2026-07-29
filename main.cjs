@@ -516,7 +516,7 @@ createHandler('inventory:get-low-stock', async () => ({ data: getLowStockItems()
 // ============================================================
 // FINANCEIRO - IPC Handlers
 // ============================================================
-createHandler('financial:get-accounts', async ({ type, status }) => ({ data: getFinancialAccounts(type, status) }));
+createHandler('financial:get-accounts', async ({ type, status, startDate, endDate }) => ({ data: getFinancialAccounts(type, status, startDate, endDate) }));
 createHandler('financial:add-account', async (account) => ({ id: addFinancialAccount(account) }));
 createHandler('financial:update-account', async (data) => ({ count: updateFinancialAccount(data.id, data.account) }));
 createHandler('financial:delete-account', async (id) => ({ count: deleteFinancialAccount(id) }));

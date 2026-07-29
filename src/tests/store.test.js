@@ -28,6 +28,11 @@ describe('useStore', () => {
     expect(useStore.getState().activeTableId).toBe(2)
   })
 
+  it('setActiveTable allows setting any id', () => {
+    useStore.getState().setActiveTable(999)
+    expect(useStore.getState().activeTableId).toBe(999)
+  })
+
   it('addTable adds a new table (string)', () => {
     useStore.getState().addTable('MESA 01')
     const tables = useStore.getState().tables
@@ -53,10 +58,23 @@ describe('useStore', () => {
     expect(table.total).toBe(20)
   })
 
+  it('addItemToActiveTable adds item with notes', () => {
+    useStore.getState().addItemToActiveTable({ name: 'Açaí 500ml', price: 20, category: 'COPOS DE AÇAÍ', notes: 'Sem leite' })
+    const table = useStore.getState().tables[0]
+    expect(table.items[0].notes).toBe('Sem leite')
+  })
+
   it('addItemToActiveTable recalculates total', () => {
     useStore.getState().addItemToActiveTable({ name: 'Item 1', price: 10, category: 'CAT' })
     useStore.getState().addItemToActiveTable({ name: 'Item 2', price: 15, category: 'CAT' })
     expect(useStore.getState().tables[0].total).toBe(25)
+  })
+
+  it('addItemToActiveTable handles item without price', () => {
+    useStore.getState().addItemToActiveTable({ name: 'Grátis', category: 'CAT' })
+    const table = useStore.getState().tables[0]
+    expect(table.items).toHaveLength(1)
+    expect(table.items[0].price).toBeUndefined()
   })
 
   it('removeItemFromActiveTable removes item at index', () => {
@@ -67,6 +85,12 @@ describe('useStore', () => {
     expect(table.items).toHaveLength(1)
     expect(table.items[0].name).toBe('Item 2')
     expect(table.total).toBe(20)
+  })
+
+  it('removeItemFromActiveTable handles empty items silently', () => {
+    useStore.getState().removeItemFromActiveTable(0)
+    const table = useStore.getState().tables[0]
+    expect(table.items).toHaveLength(0)
   })
 
   it('checkoutActiveTable removes active table and switches to next', () => {
@@ -87,5 +111,14 @@ describe('useStore', () => {
     expect(state.tables).toHaveLength(1)
     expect(state.tables[0].name).toBe('BALCÃO')
     expect(state.activeTableId).toBe(1)
+  })
+
+  it('checkoutActiveTable switches to next table when removing first', () => {
+    useStore.getState().addTable('MESA 01')
+    useStore.getState().addTable('MESA 02')
+    useStore.getState().setActiveTable(useStore.getState().tables[0].id)
+    useStore.getState().checkoutActiveTable()
+    expect(useStore.getState().tables).toHaveLength(2)
+    expect(useStore.getState().activeTableId).toBe(useStore.getState().tables[0].id)
   })
 })
