@@ -92,6 +92,8 @@ jobs:
             deps-${{ matrix.os }}-
       - run: npm ci --ignore-scripts
         if: steps.cache.outputs.cache-hit != 'true'
+      - run: npm rebuild better-sqlite3
+        if: steps.cache.outputs.cache-hit != 'true'
       - run: npm test
       - run: npm run build
       - uses: actions/upload-artifact@v4
