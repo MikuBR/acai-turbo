@@ -1,6 +1,8 @@
 import { X, Trash2, ArrowUpCircle, ArrowDownCircle, DollarSign } from 'lucide-react';
+import useToastStore from '../../store/toastStore';
 
 export default function ReportsModal({ isOpen, onClose, advancedReportData, setAdvancedReportData, reportData, reportPeriod, setReportPeriod, ordersHistory, cashMove, setCashMove, loadReports, loadAdvancedReport, runWithAuth, getIPC, financialSummary }) {
+  const addToast = useToastStore(s => s.addToast);
   if (!isOpen) return null;
 
   const isPeriodView = !!advancedReportData;
@@ -177,16 +179,17 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
               <input type="text" placeholder="Motivo (Ex: Troco, Gelo...)" value={cashMove.description} onChange={e => setCashMove({...cashMove, description: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
               <button type="button" onClick={() => {
                 const ipc = getIPC();
-                if(!ipc) { alert('Sem conexão com o sistema'); return; }
-                if(!cashMove.amount) { alert('Informe o valor'); return; }
-                if(!cashMove.description) { alert('Informe o motivo'); return; }
+                if(!ipc) { addToast('Sem conexão com o sistema', 'error'); return; }
+                if(!cashMove.amount) { addToast('Informe o valor', 'warning'); return; }
+                if(!cashMove.description) { addToast('Informe o motivo', 'warning'); return; }
                 ipc.invoke('cash:register', { ...cashMove, amount: parseFloat(cashMove.amount) }).then(res => {
                   if (res.success) {
+                    addToast('Movimento registrado com sucesso!', 'success');
                     setCashMove({ type: 'SAIDA', amount: '', description: '' });
                     loadReports();
                     if (advancedReportData) loadAdvancedReport();
                   } else {
-                    alert(res.error);
+                    addToast(res.error, 'error');
                   }
                 });
               }} className="w-full bg-success hover:bg-success py-3 rounded-lg font-bold text-xs uppercase tracking-widest text-white transition-all">

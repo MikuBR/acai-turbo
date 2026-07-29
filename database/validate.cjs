@@ -16,6 +16,11 @@ const validators = {
     return { success: true, data: { ...data, id: Number(data.id), product: { ...data.product, price: Number(data.product.price) } } };
   },
 
+  'catalog:delete-product': (id) => {
+    if (id === undefined || id === null || isNaN(Number(id))) return { success: false, error: 'ID inválido' };
+    return { success: true, data: Number(id) };
+  },
+
   'catalog:add-category': (name) => {
     if (!name || typeof name !== 'string' || name.trim() === '') return { success: false, error: 'Nome da categoria inválido' };
     return { success: true, data: name.trim().toUpperCase() };
@@ -31,6 +36,58 @@ const validators = {
     if (!data.orderData || typeof data.orderData !== 'object') return { success: false, error: 'Dados do pedido inválidos' };
     if (!data.items || !Array.isArray(data.items) || data.items.length === 0) return { success: false, error: 'Itens do pedido inválidos' };
     return { success: true, data };
+  },
+
+  'orders:get-history': (params) => {
+    if (!params) return { success: true, data: null };
+    if (typeof params !== 'object') return { success: false, error: 'Parâmetros inválidos' };
+    if (params.startDate && typeof params.startDate !== 'string') return { success: false, error: 'Data inicial inválida' };
+    if (params.endDate && typeof params.endDate !== 'string') return { success: false, error: 'Data final inválida' };
+    return { success: true, data: params };
+  },
+
+  'orders:delete': (id) => {
+    if (id === undefined || id === null || isNaN(Number(id))) return { success: false, error: 'ID inválido' };
+    return { success: true, data: Number(id) };
+  },
+
+  'cash:register': (data) => {
+    if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
+    if (!data.type || !['ENTRADA', 'SAIDA'].includes(data.type)) return { success: false, error: 'Tipo de movimento inválido' };
+    if (data.amount === undefined || isNaN(Number(data.amount)) || Number(data.amount) <= 0) return { success: false, error: 'Valor inválido' };
+    if (!data.description || typeof data.description !== 'string' || data.description.trim() === '') return { success: false, error: 'Descrição é obrigatória' };
+    return { success: true, data: { ...data, amount: Number(data.amount) } };
+  },
+
+  'reports:by-period': (data) => {
+    if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
+    if (!data.startDate || typeof data.startDate !== 'string') return { success: false, error: 'Data inicial inválida' };
+    if (!data.endDate || typeof data.endDate !== 'string') return { success: false, error: 'Data final inválida' };
+    return { success: true, data: { startDate: data.startDate, endDate: data.endDate } };
+  },
+
+  'promotions:add': (data) => {
+    if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
+    if (!data.name || typeof data.name !== 'string' || data.name.trim() === '') return { success: false, error: 'Nome é obrigatório' };
+    if (!data.type || !['PERCENTAGE', 'FIXED_AMOUNT', 'BUY_X_GET_Y'].includes(data.type)) return { success: false, error: 'Tipo de promoção inválido' };
+    if (data.value === undefined || isNaN(Number(data.value)) || Number(data.value) <= 0) return { success: false, error: 'Valor inválido' };
+    if (!data.start_date || !data.end_date) return { success: false, error: 'Datas de início e fim são obrigatórias' };
+    return { success: true, data: { ...data, value: Number(data.value), min_quantity: Number(data.min_quantity) || 1 } };
+  },
+
+  'promotions:update': (data) => {
+    if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
+    if (!data.id || isNaN(Number(data.id))) return { success: false, error: 'ID inválido' };
+    if (!data.promo || typeof data.promo !== 'object') return { success: false, error: 'Promoção inválida' };
+    if (!data.promo.name || typeof data.promo.name !== 'string' || data.promo.name.trim() === '') return { success: false, error: 'Nome é obrigatório' };
+    if (!data.promo.type || !['PERCENTAGE', 'FIXED_AMOUNT', 'BUY_X_GET_Y'].includes(data.promo.type)) return { success: false, error: 'Tipo de promoção inválido' };
+    if (data.promo.value === undefined || isNaN(Number(data.promo.value)) || Number(data.promo.value) <= 0) return { success: false, error: 'Valor inválido' };
+    return { success: true, data: { ...data, id: Number(data.id), promo: { ...data.promo, value: Number(data.promo.value) } } };
+  },
+
+  'promotions:delete': (id) => {
+    if (id === undefined || id === null || isNaN(Number(id))) return { success: false, error: 'ID inválido' };
+    return { success: true, data: Number(id) };
   },
 
   'auth:login': (data) => {
@@ -67,31 +124,14 @@ const validators = {
     return { success: true, data: { ...data, id: Number(data.id) } };
   },
 
-  'cash:register': (data) => {
-    if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
-    if (!data.type || !['ENTRADA', 'SAIDA'].includes(data.type)) return { success: false, error: 'Tipo de movimento inválido' };
-    if (data.amount === undefined || isNaN(Number(data.amount)) || Number(data.amount) <= 0) return { success: false, error: 'Valor inválido' };
-    if (!data.description || typeof data.description !== 'string' || data.description.trim() === '') return { success: false, error: 'Descrição é obrigatória' };
-    return { success: true, data: { ...data, amount: Number(data.amount) } };
+  'users:delete': (id) => {
+    if (id === undefined || id === null || isNaN(Number(id))) return { success: false, error: 'ID inválido' };
+    return { success: true, data: Number(id) };
   },
 
-  'promotions:add': (data) => {
-    if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
-    if (!data.name || typeof data.name !== 'string' || data.name.trim() === '') return { success: false, error: 'Nome é obrigatório' };
-    if (!data.type || !['PERCENTAGE', 'FIXED_AMOUNT', 'BUY_X_GET_Y'].includes(data.type)) return { success: false, error: 'Tipo de promoção inválido' };
-    if (data.value === undefined || isNaN(Number(data.value)) || Number(data.value) <= 0) return { success: false, error: 'Valor inválido' };
-    if (!data.start_date || !data.end_date) return { success: false, error: 'Datas de início e fim são obrigatórias' };
-    return { success: true, data: { ...data, value: Number(data.value), min_quantity: Number(data.min_quantity) || 1 } };
-  },
-
-  'promotions:update': (data) => {
-    if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
-    if (!data.id || isNaN(Number(data.id))) return { success: false, error: 'ID inválido' };
-    if (!data.promo || typeof data.promo !== 'object') return { success: false, error: 'Promoção inválida' };
-    if (!data.promo.name || typeof data.promo.name !== 'string' || data.promo.name.trim() === '') return { success: false, error: 'Nome é obrigatório' };
-    if (!data.promo.type || !['PERCENTAGE', 'FIXED_AMOUNT', 'BUY_X_GET_Y'].includes(data.promo.type)) return { success: false, error: 'Tipo de promoção inválido' };
-    if (data.promo.value === undefined || isNaN(Number(data.promo.value)) || Number(data.promo.value) <= 0) return { success: false, error: 'Valor inválido' };
-    return { success: true, data: { ...data, id: Number(data.id), promo: { ...data.promo, value: Number(data.promo.value) } } };
+  'users:toggle-active': (id) => {
+    if (id === undefined || id === null || isNaN(Number(id))) return { success: false, error: 'ID inválido' };
+    return { success: true, data: Number(id) };
   },
 
   'inventory:add': (data) => {
@@ -106,6 +146,19 @@ const validators = {
     if (!data.inventoryId || isNaN(Number(data.inventoryId))) return { success: false, error: 'ID do estoque inválido' };
     if (data.delta === undefined || isNaN(Number(data.delta))) return { success: false, error: 'Delta inválido' };
     return { success: true, data: { ...data, inventoryId: Number(data.inventoryId), delta: Number(data.delta) } };
+  },
+
+  'inventory:update-quantity': (data) => {
+    if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
+    if (!data.inventoryId || isNaN(Number(data.inventoryId))) return { success: false, error: 'ID do estoque inválido' };
+    if (data.newQuantity === undefined || isNaN(Number(data.newQuantity)) || Number(data.newQuantity) < 0) return { success: false, error: 'Quantidade inválida' };
+    return { success: true, data: { inventoryId: Number(data.inventoryId), newQuantity: Number(data.newQuantity) } };
+  },
+
+  'inventory:get-movements': (data) => {
+    if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
+    if (!data.inventoryId || isNaN(Number(data.inventoryId))) return { success: false, error: 'ID do estoque inválido' };
+    return { success: true, data: { inventoryId: Number(data.inventoryId), limit: data.limit || 50 } };
   },
 
   'financial:add-account': (data) => {
@@ -139,6 +192,26 @@ const validators = {
     return { success: true, data: { ...data, account_id: Number(data.account_id), amount: Number(data.amount) } };
   },
 
+  'financial:get-accounts': (data) => {
+    if (!data || typeof data !== 'object') return { success: true, data: {} };
+    if (data.type && typeof data.type !== 'string') return { success: false, error: 'Tipo inválido' };
+    if (data.status && typeof data.status !== 'string') return { success: false, error: 'Status inválido' };
+    return { success: true, data };
+  },
+
+  'financial:get-summary': (data) => {
+    if (!data || typeof data !== 'object') return { success: true, data: {} };
+    return { success: true, data };
+  },
+
+  'config:update': (data) => {
+    if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
+    if (!data.key || typeof data.key !== 'string' || data.key.trim() === '') return { success: false, error: 'Chave inválida' };
+    if (data.value === undefined || data.value === null) return { success: false, error: 'Valor inválido' };
+    if (data.key === 'manager_password') return { success: false, error: 'Alteração de senha não permitida por este canal' };
+    return { success: true, data };
+  },
+
   'clients:add': (data) => {
     if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
     if (!data.name || typeof data.name !== 'string' || data.name.trim() === '') return { success: false, error: 'Nome é obrigatório' };
@@ -151,6 +224,29 @@ const validators = {
     if (!data.client || typeof data.client !== 'object') return { success: false, error: 'Cliente inválido' };
     if (!data.client.name || typeof data.client.name !== 'string' || data.client.name.trim() === '') return { success: false, error: 'Nome é obrigatório' };
     return { success: true, data: { ...data, id: Number(data.id) } };
+  },
+
+  'clients:delete': (id) => {
+    if (id === undefined || id === null || isNaN(Number(id))) return { success: false, error: 'ID inválido' };
+    return { success: true, data: Number(id) };
+  },
+
+  'clients:get-orders': (clientId) => {
+    if (clientId === undefined || clientId === null || isNaN(Number(clientId))) return { success: false, error: 'ID do cliente inválido' };
+    return { success: true, data: Number(clientId) };
+  },
+
+  'clients:add-order': (data) => {
+    if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
+    if (!data.clientId || isNaN(Number(data.clientId))) return { success: false, error: 'ID do cliente inválido' };
+    if (!data.orderId || isNaN(Number(data.orderId))) return { success: false, error: 'ID do pedido inválido' };
+    if (data.totalAmount === undefined || isNaN(Number(data.totalAmount)) || Number(data.totalAmount) < 0) return { success: false, error: 'Valor inválido' };
+    return { success: true, data: { clientId: Number(data.clientId), orderId: Number(data.orderId), totalAmount: Number(data.totalAmount) } };
+  },
+
+  'audit:get-logs': (limit) => {
+    if (limit !== undefined && limit !== null && (isNaN(Number(limit)) || Number(limit) < 1)) return { success: false, error: 'Limite inválido' };
+    return { success: true, data: limit ? Number(limit) : 100 };
   },
 };
 

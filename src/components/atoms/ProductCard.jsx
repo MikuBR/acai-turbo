@@ -1,12 +1,7 @@
+import { memo } from 'react';
 import { Plus } from 'lucide-react';
 
-/**
- * ProductCard - Card de produto no catálogo
- * 
- * @param {Object} product - { id, name, price, category }
- * @param {Function} onSelect - Callback ao clicar no produto
- */
-export function ProductCard({ product, onSelect }) {
+export const ProductCard = memo(function ProductCard({ product, onSelect }) {
   if (!product) return null;
 
   return (
@@ -32,4 +27,4 @@ export function ProductCard({ product, onSelect }) {
       </div>
     </button>
   );
-}
+});

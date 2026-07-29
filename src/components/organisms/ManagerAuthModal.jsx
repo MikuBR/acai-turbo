@@ -1,7 +1,9 @@
 import { useRef } from 'react';
 import { Lock } from 'lucide-react';
+import useToastStore from '../../store/toastStore';
 
-export default function ManagerAuthModal({ show, onCancel, ipcGet }) {
+export default function ManagerAuthModal({ show, onCancel, onSuccess, ipcGet }) {
+  const addToast = useToastStore(s => s.addToast);
   const inputRef = useRef(null);
 
   if (!show) return null;
@@ -12,10 +14,10 @@ export default function ManagerAuthModal({ show, onCancel, ipcGet }) {
       if (ipc) {
         const res = await ipc.invoke('auth:verify-password', e.target.value);
         if (res.valid) {
-          if (window.__authCallback) window.__authCallback();
+          if (onSuccess) onSuccess();
           onCancel();
         } else {
-          alert("Senha Incorreta");
+          addToast('Senha incorreta', 'error');
           e.target.value = "";
         }
       }

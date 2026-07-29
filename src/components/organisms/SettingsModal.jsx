@@ -1,4 +1,5 @@
 import { Pencil, Trash2, X, Check, FileText, ArrowUpCircle, Save } from 'lucide-react';
+import useToastStore from '../../store/toastStore';
 import SettingsTabs from '../molecules/SettingsTabs';
 import ProductForm from '../forms/ProductForm';
 import PromotionForm from '../forms/PromotionForm';
@@ -10,15 +11,25 @@ import CategoryForm from '../forms/CategoryForm';
 
 
 export default function SettingsModal({ isOpen, onClose, settingsTab, setSettingsTab, safeCatalog, categories, newCatName, setNewCatName, newProd, setNewProd, newPromo, setNewPromo, users, newUser, setNewUser, inventory, inventoryForm, setInventoryForm, selectedInventoryItem, setSelectedInventoryItem, inventoryMovements, loadInventoryMovements, financialAccounts, financialForm, setFinancialForm, financialFilter, setFinancialFilter, clients, clientForm, setClientForm, selectedClientOrders, promotions, pwdForm, setPwdForm, syncDB, loadUsers, loadInventory, loadFinancialAccounts, loadClients, loadClientOrders, runWithAuth, getIPC, printerConfig, setPrinterConfig, savePrinterConfig, currentUser }) {
+  const addToast = useToastStore(s => s.addToast);
   if (!isOpen) return null;
 
   const handleAddCategory = () => {
     const ipc = getIPC();
     if (!newCatName) return;
+    const trimmed = newCatName.trim().toUpperCase();
+    if (categories.some(c => c.name === trimmed)) {
+      addToast(`Categoria "${trimmed}" já existe`, 'warning');
+      return;
+    }
     if (ipc) {
-      ipc.invoke('catalog:add-category', newCatName.toUpperCase()).then(() => {
-        setNewCatName('');
-        syncDB();
+      ipc.invoke('catalog:add-category', trimmed).then(res => {
+        if (res && res.success) {
+          setNewCatName('');
+          syncDB();
+        } else {
+          addToast(res?.error || 'Erro ao adicionar categoria', 'error');
+        }
       });
     }
   };
@@ -120,8 +131,8 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
     const ipc = getIPC();
     if (!pwdForm.current || !pwdForm.next || !ipc) return;
     ipc.invoke('auth:update-password', { current: pwdForm.current, next: pwdForm.next }).then(res => {
-      if (res.success) { alert('Senha atualizada com sucesso!'); setPwdForm({ current: '', next: '' }); }
-      else { alert('Erro: ' + res.error); }
+      if (res.success) { addToast('Senha atualizada com sucesso!', 'success'); setPwdForm({ current: '', next: '' }); }
+      else { addToast('Erro: ' + res.error, 'error'); }
     });
   };
 
@@ -143,6 +154,7 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
               <div className="flex-1 p-6 flex flex-col overflow-hidden">
                 <h3 className="text-[10px] font-bold text-muted uppercase mb-4 tracking-widest border-b border-border pb-2">Produtos Cadastrados</h3>
                 <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
+                  {safeCatalog.length === 0 && <div className="text-center text-muted text-xs mt-10">Nenhum produto cadastrado.</div>}
                   {safeCatalog.map(p => (
                     <div key={p.id} className="flex items-center justify-between bg-surface-light border border-border p-3 rounded-lg">
                       <div>
@@ -168,6 +180,7 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
               <div className="flex-1 p-6 flex flex-col overflow-hidden">
                 <h3 className="text-[10px] font-bold text-muted uppercase mb-4 tracking-widest border-b border-border pb-2">Promoções Cadastradas</h3>
                 <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
+                  {promotions.length === 0 && <div className="text-center text-muted text-xs mt-10">Nenhuma promoção cadastrada.</div>}
                   {promotions.map(p => (
                     <div key={p.id} className={`flex items-center justify-between bg-surface-light border p-3 rounded-lg ${!p.is_active ? 'border-border opacity-60' : 'border-border'}`}>
                       <div>
@@ -212,8 +225,8 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                     <div className="bg-warning/10 border border-warning/30 p-4 rounded-lg space-y-3">
                       <div className="font-bold text-xs uppercase text-warning mb-1">Recuperação de Senhas</div>
                       <div className="text-[10px] text-muted">Administradores podem resetar senhas para evitar bloqueio do sistema.</div>
-                      <button onClick={() => { const ipc = getIPC(); if(ipc && window.confirm('Resetar a senha do gerente? Uma nova senha temporária será gerada.')) { ipc.invoke('auth:reset-manager-password').then(res => { if(res.success) alert(`Senha do gerente resetada!\nNova senha temporária: ${res.tempPassword}\n\nGuarde esta senha em local seguro.`); else alert('Erro: ' + res.error); }); } }} className="w-full bg-warning hover:bg-warning py-2 rounded-lg font-bold text-[10px] uppercase tracking-widest text-white transition-all">Resetar Senha do Gerente</button>
-                      <button onClick={() => { if(!users || users.length === 0) { alert('Nenhum usuário encontrado'); return; } const adminUser = window.prompt('ID do administrador para resetar senha:'); if(adminUser) { const newPwd = window.prompt('Nova senha (mínimo 8 caracteres):'); if(newPwd && newPwd.length >= 8) { const ipc = getIPC(); if(ipc) ipc.invoke('auth:force-reset-admin', { adminId: parseInt(adminUser), newPassword: newPwd }).then(res => { if(res.success) alert('Senha do administrador alterada com sucesso! O usuário deverá trocar a senha no próximo login.'); else alert('Erro: ' + res.error); }); } else { alert('A senha deve ter no mínimo 8 caracteres.'); } } }} className="w-full bg-info hover:bg-info py-2 rounded-lg font-bold text-[10px] uppercase tracking-widest text-white transition-all">Resetar Senha de Admin</button>
+                      <button onClick={() => { const ipc = getIPC(); if(ipc && window.confirm('Resetar a senha do gerente? Uma nova senha temporária será gerada.')) { ipc.invoke('auth:reset-manager-password').then(res => { if(res.success) addToast(`Senha do gerente resetada! Nova senha temporária: ${res.tempPassword}. Guarde esta senha em local seguro.`, 'success', 10000); else addToast('Erro: ' + res.error, 'error'); }); } }} className="w-full bg-warning hover:bg-warning py-2 rounded-lg font-bold text-[10px] uppercase tracking-widest text-white transition-all">Resetar Senha do Gerente</button>
+                      <button onClick={() => { if(!users || users.length === 0) { addToast('Nenhum usuário encontrado', 'warning'); return; } const adminUser = window.prompt('ID do administrador para resetar senha:'); if(adminUser) { const newPwd = window.prompt('Nova senha (mínimo 8 caracteres):'); if(newPwd && newPwd.length >= 8) { const ipc = getIPC(); if(ipc) ipc.invoke('auth:force-reset-admin', { adminId: parseInt(adminUser), newPassword: newPwd }).then(res => { if(res.success) addToast('Senha do administrador alterada com sucesso! O usuário deverá trocar a senha no próximo login.', 'success'); else addToast('Erro: ' + res.error, 'error'); }); } else { addToast('A senha deve ter no mínimo 8 caracteres.', 'warning'); } } }} className="w-full bg-info hover:bg-info py-2 rounded-lg font-bold text-[10px] uppercase tracking-widest text-white transition-all">Resetar Senha de Admin</button>
                     </div>
                   )}
                   <div className="bg-success/10 border border-success/30 p-4 rounded-lg">
@@ -233,6 +246,7 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
               <div className="flex-1 p-6 flex flex-col overflow-hidden">
                 <h3 className="text-[10px] font-bold text-muted uppercase mb-4 tracking-widest border-b border-border pb-2">Usuários Cadastrados</h3>
                 <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
+                  {users.length === 0 && <div className="text-center text-muted text-xs mt-10">Nenhum usuário cadastrado.</div>}
                   {users.map(u => (
                     <div key={u.id} className={`flex items-center justify-between bg-surface-light border p-3 rounded-lg ${!u.is_active ? 'border-border opacity-60' : 'border-border'}`}>
                       <div>
@@ -260,6 +274,7 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                   <div className="mt-6">
                     <h4 className="text-[9px] font-bold text-muted uppercase mb-2">Movimentações</h4>
                     <div className="space-y-1 max-h-40 overflow-y-auto">
+                      {inventoryMovements.length === 0 && <div className="text-[9px] text-muted text-center py-4">Nenhuma movimentação registrada.</div>}
                       {inventoryMovements.map((m, i) => (
                         <div key={i} className="text-[8px] text-muted bg-surface-light p-2 rounded border border-border">
                           {m.type === 'in' ? '+' : '-'}{m.quantity} {m.unit} - {m.reason || 'Ajuste'}
@@ -272,6 +287,7 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
               <div className="flex-1 p-6 flex flex-col overflow-hidden">
                 <h3 className="text-[10px] font-bold text-muted uppercase mb-4 tracking-widest border-b border-border pb-2">Estoque Atual</h3>
                 <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
+                  {inventory.length === 0 && <div className="text-center text-muted text-xs mt-10">Nenhum item em estoque.</div>}
                   {inventory.map(inv => (
                     <div key={inv.id} className={`flex items-center justify-between bg-surface-light border p-3 rounded-lg ${inv.quantity <= inv.min_quantity ? 'border-warning bg-warning/10' : 'border-border'}`}>
                       <div>
@@ -410,6 +426,7 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
               <div className="flex-1 p-6 flex flex-col overflow-hidden">
                 <h3 className="text-[10px] font-bold text-muted uppercase mb-4 tracking-widest border-b border-border pb-2">Clientes Cadastrados</h3>
                 <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
+                  {clients.length === 0 && <div className="text-center text-muted text-xs mt-10">Nenhum cliente cadastrado.</div>}
                   {clients.map(client => (
                     <div key={client.id} className="flex items-center justify-between bg-surface-light border border-border p-3 rounded-lg">
                       <div>

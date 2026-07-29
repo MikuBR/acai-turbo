@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { ShoppingCart } from 'lucide-react';
 
 /**
@@ -8,7 +9,7 @@ import { ShoppingCart } from 'lucide-react';
  * @param {Function} props.onRemoveItem - Callback ao remover item (recebe index)
  * @param {Function} props.onCheckout - Callback ao finalizar venda
  */
-export function CartPanel({ activeTable, onRemoveItem, onCheckout }) {
+export const CartPanel = memo(function CartPanel({ activeTable, onRemoveItem, onCheckout }) {
   const items = activeTable?.items || [];
   const total = activeTable?.total || 0;
 
@@ -88,4 +89,4 @@ export function CartPanel({ activeTable, onRemoveItem, onCheckout }) {
       </div>
     </div>
   );
-}
+});

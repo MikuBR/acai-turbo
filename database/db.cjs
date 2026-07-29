@@ -202,6 +202,15 @@ db.exec(`
     FOREIGN KEY (client_id) REFERENCES clients (id) ON DELETE CASCADE,
     FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE CASCADE
   );
+
+  CREATE TABLE IF NOT EXISTS product_price_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_id INTEGER NOT NULL,
+    old_price REAL NOT NULL,
+    new_price REAL NOT NULL,
+    changed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
+  );
 `);
 
 // Migration: Add address and phone columns if they don't exist
@@ -255,17 +264,32 @@ try {
 
 // Create indexes for better report performance
 try {
-  db.prepare('CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at)').run();
+  db.prepare('CREATE INDEX IF NOT EXISTS idx_cash_movements_created_at ON cash_movements(created_at)').run();
 } catch (e) {
   // Index already exists, ignore error
 }
 try {
-  db.prepare('CREATE INDEX IF NOT EXISTS idx_orders_payment_method ON orders(payment_method)').run();
+  db.prepare('CREATE INDEX IF NOT EXISTS idx_financial_accounts_due_date ON financial_accounts(due_date)').run();
 } catch (e) {
   // Index already exists, ignore error
 }
 try {
-  db.prepare('CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id)').run();
+  db.prepare('CREATE INDEX IF NOT EXISTS idx_inventory_movements_created_at ON inventory_movements(created_at)').run();
+} catch (e) {
+  // Index already exists, ignore error
+}
+try {
+  db.prepare('CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at)').run();
+} catch (e) {
+  // Index already exists, ignore error
+}
+try {
+  db.prepare('CREATE INDEX IF NOT EXISTS idx_financial_transactions_account_id ON financial_transactions(account_id)').run();
+} catch (e) {
+  // Index already exists, ignore error
+}
+try {
+  db.prepare('CREATE INDEX IF NOT EXISTS idx_client_orders_client_id ON client_orders(client_id)').run();
 } catch (e) {
   // Index already exists, ignore error
 }
@@ -319,9 +343,14 @@ if (checkProducts.count === 0) {
 const getCategories = () => db.prepare('SELECT * FROM categories ORDER BY name ASC').all();
 const addCategory = (name) => {
   if (!name || typeof name !== 'string' || name.trim() === '') {
-    throw new Error('Invalid category name');
+    throw new Error('Nome da categoria inválido');
   }
-  return db.prepare('INSERT INTO categories (name) VALUES (?)').run(name.trim()).lastInsertRowid;
+  const nameTrimmed = name.trim();
+  const existing = db.prepare('SELECT id FROM categories WHERE name = ?').get(nameTrimmed);
+  if (existing) {
+    throw new Error(`Categoria "${nameTrimmed}" já existe`);
+  }
+  return db.prepare('INSERT INTO categories (name) VALUES (?)').run(nameTrimmed).lastInsertRowid;
 };
 const deleteCategory = (id) => {
   if (!id || isNaN(id)) {
@@ -342,7 +371,15 @@ const updateProduct = (id, p) => {
   if (!id || isNaN(id) || !p || !p.name || !p.category || p.price === undefined || isNaN(p.price)) {
     throw new Error('Invalid product data');
   }
-  return db.prepare('UPDATE products SET name = ?, price = ?, category = ?, ingredients = ? WHERE id = ?').run(p.name, p.price, p.category, p.ingredients || '', id).changes > 0;
+  const transaction = db.transaction(() => {
+    const old = db.prepare('SELECT price FROM products WHERE id = ?').get(id);
+    if (old) {
+      db.prepare('INSERT INTO product_price_history (product_id, old_price, new_price) VALUES (?, ?, ?)').run(id, old.price, p.price);
+    }
+    db.prepare('UPDATE products SET name = ?, price = ?, category = ?, ingredients = ? WHERE id = ?').run(p.name, p.price, p.category, p.ingredients || '', id);
+  });
+  transaction();
+  return true;
 };
 const deleteProduct = (id) => {
   if (!id || isNaN(id)) {
@@ -378,8 +415,16 @@ function saveFullOrder(orderData, items) {
 }
 
 // --- NOVO: HISTÓRICO E CANCELAMENTO ---
-function getOrdersHistory() {
-  const orders = db.prepare("SELECT * FROM orders WHERE date(created_at, 'localtime') = date('now', 'localtime') ORDER BY id DESC").all();
+function getOrdersHistory(startDate, endDate) {
+  let query;
+  const params = [];
+  if (startDate && endDate) {
+    query = "SELECT * FROM orders WHERE datetime(created_at, 'localtime') >= datetime(?, 'localtime') AND datetime(created_at, 'localtime') <= datetime(? || ' 23:59:59', 'localtime') ORDER BY id DESC";
+    params.push(startDate, endDate);
+  } else {
+    query = "SELECT * FROM orders WHERE date(created_at, 'localtime') = date('now', 'localtime') ORDER BY id DESC";
+  }
+  const orders = db.prepare(query).all(...params);
   const getItems = db.prepare("SELECT * FROM order_items WHERE order_id = ?");
   return orders.map(o => ({ ...o, items: getItems.all(o.id) }));
 }
@@ -405,13 +450,14 @@ function getDailyReport() {
 }
 
 function getReportByPeriod(startDate, endDate) {
+  const endDateTime = `${endDate} 23:59:59`;
   const sales = db.prepare(`
     SELECT payment_method, is_delivery, SUM(total) as total_amount, COUNT(*) as order_count
     FROM orders
     WHERE datetime(created_at, 'localtime') >= datetime(?, 'localtime')
     AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
     GROUP BY payment_method, is_delivery
-  `).all(startDate, endDate);
+  `).all(startDate, endDateTime);
 
   const movements = db.prepare(`
     SELECT id, type, amount as total_amount, description, created_at
@@ -419,7 +465,7 @@ function getReportByPeriod(startDate, endDate) {
     WHERE datetime(created_at, 'localtime') >= datetime(?, 'localtime')
     AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
     ORDER BY created_at DESC
-  `).all(startDate, endDate);
+  `).all(startDate, endDateTime);
 
   const topProducts = db.prepare(`
     SELECT product_name, COUNT(*) as qty, SUM(price) as total_revenue
@@ -430,7 +476,7 @@ function getReportByPeriod(startDate, endDate) {
     GROUP BY product_name
     ORDER BY qty DESC
     LIMIT 10
-  `).all(startDate, endDate);
+  `).all(startDate, endDateTime);
 
   const peakHours = db.prepare(`
     SELECT strftime('%H', created_at) as hour, COUNT(*) as order_count, SUM(total) as total_amount
@@ -439,14 +485,14 @@ function getReportByPeriod(startDate, endDate) {
     AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
     GROUP BY hour
     ORDER BY order_count DESC
-  `).all(startDate, endDate);
+  `).all(startDate, endDateTime);
 
   const ticketAverage = db.prepare(`
     SELECT AVG(total) as avg_ticket
     FROM orders
     WHERE datetime(created_at, 'localtime') >= datetime(?, 'localtime')
     AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
-  `).get(startDate, endDate);
+  `).get(startDate, endDateTime);
 
   return { sales, movements, topProducts, peakHours, ticketAverage: ticketAverage?.avg_ticket || 0 };
 }
@@ -639,11 +685,11 @@ const adjustInventory = (inventoryId, delta, reason) => {
   if (!inventory) return false;
 
   const newQuantity = Math.max(0, inventory.quantity + delta);
-  const updateStmt = db.prepare('UPDATE inventory SET quantity = ?, last_updated = CURRENT_TIMESTAMP WHERE id = ?');
-  updateStmt.run(newQuantity, inventoryId);
-
-  const movementStmt = db.prepare('INSERT INTO inventory_movements (inventory_id, type, quantity, reason) VALUES (?, ?, ?, ?)');
-  movementStmt.run(inventoryId, delta >= 0 ? 'ENTRADA' : 'SAIDA', Math.abs(delta), reason || '');
+  const transaction = db.transaction(() => {
+    db.prepare('UPDATE inventory SET quantity = ?, last_updated = CURRENT_TIMESTAMP WHERE id = ?').run(newQuantity, inventoryId);
+    db.prepare('INSERT INTO inventory_movements (inventory_id, type, quantity, reason) VALUES (?, ?, ?, ?)').run(inventoryId, delta >= 0 ? 'ENTRADA' : 'SAIDA', Math.abs(delta), reason || '');
+  });
+  transaction();
 
   return true;
 };
@@ -837,13 +883,18 @@ const addClientOrder = (clientId, orderId, totalAmount) => {
   return stmt.run(clientId, orderId, totalAmount).lastInsertRowid;
 };
 
-const getAllConfigs = () => db.prepare('SELECT key, value FROM config ORDER BY key ASC').all();
+const getAllConfigs = () => db.prepare('SELECT key, value FROM config WHERE key != ? ORDER BY key ASC').all('manager_password');
+
+const getProductPriceHistory = (productId) => {
+  if (!productId || isNaN(productId)) throw new Error('Invalid product ID');
+  return db.prepare('SELECT * FROM product_price_history WHERE product_id = ? ORDER BY changed_at DESC LIMIT 20').all(productId);
+};
 
 module.exports = {
   db,
   getCategories, addCategory, deleteCategory,
   getProducts, addProduct, updateProduct, deleteProduct,
-  getConfig, updateConfig, getAllConfigs,
+  getConfig, updateConfig, getAllConfigs, getProductPriceHistory,
   saveFullOrder,
   getOrdersHistory, deleteOrder,
   registerCashMovement,

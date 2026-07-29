@@ -13,6 +13,7 @@ const {
   getInventory, getInventoryByProductId, addInventory, updateInventoryQuantity, adjustInventory, getInventoryMovements, getLowStockItems,
   getFinancialAccounts, addFinancialAccount, updateFinancialAccount, deleteFinancialAccount, addFinancialTransaction, getFinancialTransactions, getFinancialSummary,
   getClients, addClient, updateClient, deleteClient, getClientById, getClientOrders, addClientOrder,
+  getProductPriceHistory,
   db
 } = require('./database/db.cjs');
 const { ThermalPrinter, PrinterTypes, CharacterSet } = require('node-thermal-printer');
@@ -239,15 +240,16 @@ function resolvePrinterInterface(name, ip) {
 }
 
 async function printTickets(orderData, items) {
+  const result = { kitchen: { success: false, reason: 'Nenhum item para cozinha' }, front: { success: false, reason: 'Nenhum item para balcão' } };
   const kitchenItems = items.filter(i => !i.category.toUpperCase().includes('BEBIDA') && !i.category.toUpperCase().includes('REFRIGERANTE') && !i.category.toUpperCase().includes('CHOPP'));
   const frontItems = items.filter(i => i.category.toUpperCase().includes('BEBIDA') || i.category.toUpperCase().includes('REFRIGERANTE') || i.category.toUpperCase().includes('CHOPP'));
   const now = new Date();
   const dateStr = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth()+1).toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-  const { kitchenIp, frontName } = getPrinterConfig();
+  const { kitchenIp, frontName, frontIp } = getPrinterConfig();
 
   if (kitchenItems.length > 0) {
     try {
-      const printerKitchen = new ThermalPrinter({ type: PrinterTypes.EPSON, interface: `tcp://${kitchenIp}`, timeout: 1000, characterSet: CharacterSet.PC852_LATIN2 });
+      const printerKitchen = new ThermalPrinter({ type: PrinterTypes.EPSON, interface: `tcp://${kitchenIp}`, timeout: 5000, characterSet: CharacterSet.PC852_LATIN2 });
       if (await printerKitchen.isPrinterConnected()) {
         printerKitchen.alignCenter(); 
         printerKitchen.setTextDoubleHeight(); 
@@ -274,14 +276,20 @@ async function printTickets(orderData, items) {
           printerKitchen.println("");
         });
         printerKitchen.cut(); await printerKitchen.execute();
+        result.kitchen = { success: true };
+      } else {
+        result.kitchen = { success: false, reason: 'Impressora da cozinha não conectada' };
       }
-    } catch (e) { console.log("[print] Cozinha Offline"); }
+    } catch (e) { 
+      console.error("[print] Cozinha erro:", e.message);
+      result.kitchen = { success: false, reason: e.message };
+    }
   }
 
   if (frontItems.length > 0) {
     try {
       const frontInterface = resolvePrinterInterface(frontName, frontIp);
-      const printerFront = new ThermalPrinter({ type: PrinterTypes.EPSON, interface: frontInterface, timeout: 1000, characterSet: CharacterSet.PC852_LATIN2 });
+      const printerFront = new ThermalPrinter({ type: PrinterTypes.EPSON, interface: frontInterface, timeout: 5000, characterSet: CharacterSet.PC852_LATIN2 });
       if (await printerFront.isPrinterConnected()) {
         printerFront.alignLeft(); 
         printerFront.setTextDoubleHeight(); 
@@ -305,9 +313,16 @@ async function printTickets(orderData, items) {
           if (item.notes) printerFront.println(`*${item.notes}`);
         });
         printerFront.openCashDrawer(); printerFront.cut(); await printerFront.execute();
+        result.front = { success: true };
+      } else {
+        result.front = { success: false, reason: 'Impressora do balcão não conectada' };
       }
-    } catch (e) { console.log("[print] Balcão Offline"); }
+    } catch (e) { 
+      console.error("[print] Balcão erro:", e.message);
+      result.front = { success: false, reason: e.message };
+    }
   }
+  return result;
 }
 
 // ============================================================
@@ -321,17 +336,18 @@ createHandler('catalog:get-products', async () => ({ data: getProducts() }));
 createHandler('catalog:add-product', async (p) => ({ id: addProduct(p) }));
 createHandler('catalog:update-product', async (data) => ({ count: updateProduct(data.id, data.product) }));
 createHandler('catalog:delete-product', async (id) => ({ count: deleteProduct(id) }));
+createHandler('catalog:get-price-history', async (productId) => ({ data: getProductPriceHistory(productId) }));
 
 // ============================================================
 // PEDIDOS - IPC Handlers
 // ============================================================
 createHandler('orders:save', async (data) => {
   const id = saveFullOrder(data.orderData, data.items);
-  printTickets(data.orderData, data.items);
-  return { id };
+  const printResult = await printTickets(data.orderData, data.items).catch(e => ({ kitchen: { success: false, reason: e.message }, front: { success: false, reason: e.message } }));
+  return { id, print: printResult };
 });
 
-createHandler('orders:get-history', async () => ({ data: getOrdersHistory() }));
+createHandler('orders:get-history', async (params) => ({ data: getOrdersHistory(params?.startDate, params?.endDate) }));
 createHandler('orders:delete', async (id) => ({ count: deleteOrder(id) }));
 
 // ============================================================

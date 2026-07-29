@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { ShoppingCart, FileText, Settings, X } from 'lucide-react';
 
 /**
@@ -12,7 +13,7 @@ import { ShoppingCart, FileText, Settings, X } from 'lucide-react';
  * @param {Function} props.onOpenSettings - Callback ao abrir configurações
  * @param {Function} props.onLogout - Callback ao sair
  */
-export function OrderSidebar({
+export const OrderSidebar = memo(function OrderSidebar({
   tables = [],
   activeTableId,
   onSelectTable,
@@ -101,4 +102,4 @@ export function OrderSidebar({
       </div>
     </div>
   );
-}
+});

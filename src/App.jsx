@@ -1,9 +1,14 @@
 import { useState, useEffect, useMemo, useDeferredValue } from 'react';
 import { useStore } from './store/useStore';
+import useToastStore from './store/toastStore';
+import useLoadingStore from './store/loadingStore';
+import ToastContainer from './components/atoms/Toast';
+import LoadingOverlay from './components/atoms/LoadingOverlay';
 import { 
-  Search, ChevronRight, Plus
+  Search, ChevronRight
 } from 'lucide-react';
 
+import { ProductCard } from './components/atoms/ProductCard';
 import {
   OrderSidebar, CartPanel, SettingsModal, LoginModal,
   CheckoutModal, AcaiBuilderModal, QuickBuilderModal, PasswordModal,
@@ -11,6 +16,8 @@ import {
 } from './components/organisms';
 
 function App() {
+  const addToast = useToastStore(s => s.addToast);
+  const { setLoading, clearLoading } = useLoadingStore();
   const { 
     activeTableId, tables, catalog, setActiveTable, addItemToActiveTable, 
     removeItemFromActiveTable, addTable, checkoutActiveTable, setCatalog 
@@ -28,8 +35,9 @@ function App() {
   const [authToken, setAuthToken] = useState(null);
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [loginError, setLoginError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   
-  const [authTime] = useState(0);
+  const [authTime, setAuthTime] = useState(0);
 
   // Helper function to get IPC instance with automatic error handling
   const getIPC = () => {
@@ -101,51 +109,73 @@ function App() {
   const syncDB = () => {
     const ipc = getIPC();
     if (ipc) {
-      ipc.invoke('catalog:get-products').then(res => { if (res && res.success) setCatalog(res.data || []); });
-      ipc.invoke('catalog:get-categories').then(res => { if (res && res.success) setCategories(res.data || []); });
-      ipc.invoke('promotions:get').then(res => { if (res && res.success) setPromotions(res.data || []); });
+      setLoading('Sincronizando dados...');
+      Promise.all([
+        ipc.invoke('catalog:get-products'),
+        ipc.invoke('catalog:get-categories'),
+        ipc.invoke('promotions:get'),
+      ]).then(([products, categories, promotions]) => {
+        if (products?.success) setCatalog(products.data || []);
+        else addToast('Erro ao carregar produtos', 'error');
+        if (categories?.success) setCategories(categories.data || []);
+        else addToast('Erro ao carregar categorias', 'error');
+        if (promotions?.success) setPromotions(promotions.data || []);
+      }).finally(() => clearLoading());
     }
   };
 
   const loadUsers = () => {
     const ipc = getIPC();
     if (ipc) {
-      ipc.invoke('users:get').then(res => { if (res && res.success) setUsers(res.data || []); });
+      ipc.invoke('users:get').then(res => {
+        if (res && res.success) setUsers(res.data || []);
+        else addToast('Erro ao carregar usuários', 'error');
+      });
     }
   };
 
   const loadInventory = () => {
     const ipc = getIPC();
     if (ipc) {
+      setLoading('Carregando estoque...');
       ipc.invoke('inventory:get').then(res => {
         if (res && res.success) {
           setInventory(res.data || []);
           const lowStock = res.data.filter(i => i.quantity <= i.min_quantity);
           if (lowStock.length > 0) {
             setTimeout(() => {
-              alert(`⚠️ ATENÇÃO: ${lowStock.length} produto(s) com estoque baixo:\n${lowStock.map(i => `- ${i.product_name}: ${i.quantity} ${i.unit}`).join('\n')}`);
+              addToast(`${lowStock.length} produto(s) com estoque baixo. Verifique em Configurações > Estoque.`, 'warning', 6000);
             }, 500);
           }
+        } else {
+          addToast('Erro ao carregar estoque', 'error');
         }
-      });
+      }).finally(() => clearLoading());
     }
   };
 
   const loadInventoryMovements = (inventoryId) => {
     const ipc = getIPC();
     if (ipc) {
-      ipc.invoke('inventory:get-movements', { inventoryId, limit: 50 }).then(res => { if (res && res.success) setInventoryMovements(res.data || []); });
+      ipc.invoke('inventory:get-movements', { inventoryId, limit: 50 }).then(res => {
+        if (res && res.success) setInventoryMovements(res.data || []);
+        else addToast('Erro ao carregar movimentações', 'error');
+      });
     }
   };
 
   const loadFinancialAccounts = () => {
     const ipc = getIPC();
     if (ipc) {
+      setLoading('Carregando dados financeiros...');
       const typeFilter = financialFilter.type === 'all' ? null : financialFilter.type;
       const statusFilter = financialFilter.status === 'all' ? null : financialFilter.status;
       const startDate = financialFilter.startDate || null;
       const endDate = financialFilter.endDate || null;
-      ipc.invoke('financial:get-accounts', { type: typeFilter, status: statusFilter, startDate, endDate }).then(res => { if (res && res.success) setFinancialAccounts(res.data || []); });
+      ipc.invoke('financial:get-accounts', { type: typeFilter, status: statusFilter, startDate, endDate }).then(res => {
+        if (res && res.success) setFinancialAccounts(res.data || []);
+        else addToast('Erro ao carregar contas financeiras', 'error');
+      }).finally(() => clearLoading());
     }
   };
 
@@ -166,9 +196,15 @@ function App() {
   const loadReports = () => {
     const ipc = getIPC();
     if (ipc) {
-      ipc.invoke('reports:daily').then(res => { if (res && res.success) setReportData(res.data); });
-      ipc.invoke('orders:get-history').then(res => { if (res && res.success) setOrdersHistory(res.data); });
-      // Load financial summary for today
+      setLoading('Carregando relatórios...');
+      Promise.all([
+        ipc.invoke('reports:daily'),
+        ipc.invoke('orders:get-history'),
+      ]).then(([daily, history]) => {
+        if (daily?.success) setReportData(daily.data);
+        else addToast('Erro ao carregar relatório diário', 'error');
+        if (history?.success) setOrdersHistory(history.data);
+      }).finally(() => clearLoading());
       const today = new Date().toISOString().split('T')[0];
       loadFinancialSummary(today, today);
     }
@@ -177,9 +213,11 @@ function App() {
   const loadAdvancedReport = () => {
     const ipc = getIPC();
     if (ipc && reportPeriod.startDate && reportPeriod.endDate) {
+      setLoading('Carregando relatório...');
       ipc.invoke('reports:by-period', reportPeriod).then(res => {
         if (res && res.success) setAdvancedReportData(res.data);
-      });
+        else addToast('Erro ao carregar relatório do período', 'error');
+      }).finally(() => clearLoading());
       loadFinancialSummary(reportPeriod.startDate, reportPeriod.endDate);
     }
   };
@@ -189,6 +227,7 @@ function App() {
     if (ipc) {
       ipc.invoke('financial:get-summary', { startDate, endDate }).then(res => {
         if (res && res.success) setFinancialSummary(res.data);
+        else addToast('Erro ao carregar resumo financeiro', 'error');
       });
     }
   };
@@ -222,11 +261,17 @@ function App() {
   const savePrinterConfig = () => {
     const ipc = getIPC();
     if (ipc) {
-      ipc.invoke('config:update', { key: 'printer_kitchen_ip', value: printerConfig.kitchenIp }).then(() => {
-        ipc.invoke('config:update', { key: 'printer_front_name', value: printerConfig.frontName }).then(() => {
-          alert('Configurações de impressão salvas com sucesso!');
-        });
-      });
+      setLoading('Salvando configurações...');
+      Promise.all([
+        ipc.invoke('config:update', { key: 'printer_kitchen_ip', value: printerConfig.kitchenIp }),
+        ipc.invoke('config:update', { key: 'printer_front_name', value: printerConfig.frontName }),
+      ]).then(([kitchenRes, frontRes]) => {
+        if (kitchenRes?.success && frontRes?.success) {
+          addToast('Configurações de impressão salvas com sucesso!', 'success');
+        } else {
+          addToast('Erro ao salvar configurações de impressão', 'error');
+        }
+      }).finally(() => clearLoading());
     }
   };
 
@@ -242,21 +287,26 @@ function App() {
 
     const ipc = getIPC();
     if (ipc) {
-      const res = await ipc.invoke('auth:login', loginForm);
-      if (res.success) {
-        setCurrentUser(res.user);
-        setAuthToken(res.token);
-        localStorage.setItem('authToken', res.token);
+      setIsLoggingIn(true);
+      try {
+        const res = await ipc.invoke('auth:login', loginForm);
+        if (res.success) {
+          setCurrentUser(res.user);
+          setAuthToken(res.token);
+          localStorage.setItem('authToken', res.token);
 
-        if (res.user.must_change_password) {
-          setModals({ ...modals, login: false, changePassword: true });
+          if (res.user.must_change_password) {
+            setModals({ ...modals, login: false, changePassword: true });
+          } else {
+            setModals({ ...modals, login: false });
+          }
+
+          setLoginForm({ username: '', password: '' });
         } else {
-          setModals({ ...modals, login: false });
+          setLoginError(res.error || 'Erro ao fazer login');
         }
-
-        setLoginForm({ username: '', password: '' });
-      } else {
-        setLoginError(res.error || 'Erro ao fazer login');
+      } finally {
+        setIsLoggingIn(false);
       }
     }
   };
@@ -275,12 +325,12 @@ function App() {
   const handleChangePassword = async (e) => {
     e.preventDefault();
     if (!changePasswordForm.current || !changePasswordForm.new || !changePasswordForm.confirm) {
-      alert('Preencha todos os campos');
+      addToast('Preencha todos os campos', 'warning');
       return;
     }
 
     if (changePasswordForm.new !== changePasswordForm.confirm) {
-      alert('A nova senha e a confirmação não coincidem');
+      addToast('A nova senha e a confirmação não coincidem', 'warning');
       return;
     }
 
@@ -293,28 +343,18 @@ function App() {
       });
 
       if (res.success) {
-        alert('Senha alterada com sucesso!');
+        addToast('Senha alterada com sucesso!', 'success');
         setChangePasswordForm({ current: '', new: '', confirm: '' });
         setModals({ ...modals, changePassword: false });
       } else {
-        alert('Erro: ' + res.error);
+        addToast('Erro: ' + res.error, 'error');
       }
     }
   };
 
-  // Check for existing session on mount
+  // Clear any saved session on mount (user must login every time)
   useEffect(() => {
-    const savedToken = localStorage.getItem('authToken');
-    const ipc = getIPC();
-    if (savedToken && ipc) {
-      ipc.invoke('auth:verify-session', savedToken).then(res => {
-        if (res.success) {
-          setCurrentUser(res.user);
-          setAuthToken(savedToken);
-          setModals({ ...modals, login: false });
-        }
-      });
-    }
+    localStorage.removeItem('authToken');
   }, []);
 
   const hasPermission = (action) => {
@@ -333,7 +373,7 @@ function App() {
 
   const runWithAuth = (callback, requiredPermission = null) => {
     if (requiredPermission && !hasPermission(requiredPermission)) {
-      alert('Você não tem permissão para realizar esta ação.');
+      addToast('Você não tem permissão para realizar esta ação.', 'error');
       return;
     }
     callback();
@@ -365,7 +405,6 @@ function App() {
   const runWithManagerAuth = (action) => {
     if (isAuthValid()) action();
     else {
-      window.__authCallback = action;
       setShowPassModal({ show: true, onResult: action });
     }
   };
@@ -440,6 +479,7 @@ function App() {
     if (ipc) {
       const discount = selectedPromotion ? calculateDiscount(selectedPromotion, activeTable.total) : 0;
       const finalTotal = activeTable.total - discount;
+      setLoading('Finalizando pedido...');
 
        ipc.invoke('orders:save', {
          orderData: {
@@ -457,13 +497,16 @@ function App() {
          items: activeTable.items || []
        }).then(res => {
          if (res && res.success) {
+           addToast('Pedido finalizado com sucesso!', 'success');
            checkoutActiveTable();
            loadReports();
            setModals({ ...modals, checkout: false });
            setAmountReceived(''); setPaymentMethod('DINHEIRO');
            setSelectedPromotion(null);
+         } else {
+           addToast(res?.error || 'Erro ao finalizar pedido', 'error');
          }
-       });
+       }).finally(() => clearLoading());
     }
   };
 
@@ -507,17 +550,13 @@ function App() {
                 <ChevronRight size={24} className="text-white opacity-50"/>
               </button>
             )}
+            {filteredProducts.length === 0 && (
+              <div className="col-span-full text-center text-muted text-xs py-16">
+                {searchTerm ? 'Nenhum produto encontrado para "' + searchTerm + '"' : 'Nenhum produto disponível'}
+              </div>
+            )}
             {filteredProducts.map(p => (
-              <button key={p.id} onClick={() => handleItemSelect(p)} className="bg-surface border border-border p-4 rounded-xl hover:border-primary transition-all flex flex-col justify-between min-h-[8rem] h-full text-left shadow-sm active:scale-[0.98] group">
-                  <div className="space-y-1 pb-2">
-                    <div className="text-[8px] text-muted font-bold uppercase tracking-wider">{p.category}</div>
-                    <span className="font-bold text-xs text-primary group-hover:text-primary-dark leading-tight uppercase block">{p.name}</span>
-                  </div>
-                  <div className="flex items-center justify-between border-t border-border pt-2 mt-auto">
-                    <span className="font-mono font-bold text-sm text-primary">R${(p.price || 0).toFixed(2)}</span>
-                    <div className="p-1 bg-surface-light rounded-lg group-hover:bg-primary transition-colors text-muted group-hover:text-surface"><Plus size={14}/></div>
-                  </div>
-              </button>
+              <ProductCard key={p.id} product={p} onSelect={handleItemSelect} />
             ))}
           </div>
         </div>
@@ -532,8 +571,7 @@ function App() {
 
       {/* --- MODAIS PRINCIPAIS --- */}
 
-      {/* MODAL: NOVA COMANDA / DELIVERY */}
-      <NewTableModal
+      {modals.newTable && <NewTableModal
         isOpen={modals.newTable}
         onClose={() => setModals({...modals, newTable: false})}
         tableType={tableType}
@@ -543,11 +581,9 @@ function App() {
         delivForm={delivForm}
         setDelivForm={setDelivForm}
         handleAddTable={handleAddTable}
-       
-      />
+      />}
 
-      {/* MODAL: RELATÓRIOS E CAIXA */}
-      <ReportsModal
+      {modals.reports && <ReportsModal
         isOpen={modals.reports}
         onClose={() => setModals({...modals, reports: false})}
         advancedReportData={advancedReportData}
@@ -561,13 +597,11 @@ function App() {
         loadReports={loadReports}
         loadAdvancedReport={loadAdvancedReport}
         runWithAuth={runWithAuth}
-       
         getIPC={getIPC}
         financialSummary={financialSummary}
-      />
+      />}
 
-      {/* MODAL: BUILDER AÇAÍ */}
-      <AcaiBuilderModal
+      {builder && <AcaiBuilderModal
         builder={builder}
         onClose={() => setBuilder(null)}
         setBuilder={setBuilder}
@@ -576,20 +610,16 @@ function App() {
         toggleRemoval={toggleRemoval}
         updateExtraInBuilder={updateExtraInBuilder}
         confirmFullBuild={confirmFullBuild}
-       
-      />
+      />}
 
-      {/* MODAL: MINI CONSTRUTOR RÁPIDO */}
-      <QuickBuilderModal
+      {simpleBuilder && <QuickBuilderModal
         builder={simpleBuilder}
         onClose={() => setSimpleBuilder(null)}
         setBuilder={setSimpleBuilder}
         confirmSimpleBuild={confirmSimpleBuild}
-       
-      />
+      />}
 
-      {/* MODAL: CONFIGURAÇÕES / GESTÃO */}
-      <SettingsModal
+      {modals.settings && <SettingsModal
         isOpen={modals.settings}
         onClose={() => setModals({...modals, settings: false})}
         settingsTab={settingsTab}
@@ -636,10 +666,9 @@ function App() {
         setPrinterConfig={setPrinterConfig}
         savePrinterConfig={savePrinterConfig}
         currentUser={currentUser}
-      />
+      />}
 
-      {/* MODAL: CHECKOUT */}
-      <CheckoutModal
+      {modals.checkout && <CheckoutModal
         isOpen={modals.checkout}
         onClose={() => setModals({...modals, checkout: false})}
         activeTable={activeTable}
@@ -652,34 +681,35 @@ function App() {
         amountReceived={amountReceived}
         setAmountReceived={setAmountReceived}
         handleFinalize={handleFinalize}
-       
-      />
+      />}
 
-      {/* MODAL: LOGIN */}
-      <LoginModal
+      {modals.login && <LoginModal
         isOpen={modals.login}
         onClose={() => setModals({...modals, login: false})}
         loginForm={loginForm}
         setLoginForm={setLoginForm}
         loginError={loginError}
         handleLogin={handleLogin}
-      />
+        submitting={isLoggingIn}
+      />}
 
-      {/* MODAL: CHANGE PASSWORD */}
-      <PasswordModal
+      {modals.changePassword && <PasswordModal
         isOpen={modals.changePassword}
         onClose={() => setModals({...modals, changePassword: false})}
         changePasswordForm={changePasswordForm}
         setChangePasswordForm={setChangePasswordForm}
         handleChangePassword={handleChangePassword}
-      />
+      />}
 
-      {/* MODAL: VALIDAÇÃO DE SENHA (GERENTE) */}
-      <ManagerAuthModal
+      {showPassModal.show && <ManagerAuthModal
         show={showPassModal.show}
         onCancel={() => setShowPassModal({ show: false, onResult: null })}
+        onSuccess={() => { setAuthTime(Date.now()); showPassModal.onResult?.(); }}
         ipcGet={getIPC}
-      />
+      />}
+
+      <ToastContainer />
+      <LoadingOverlay />
 
     </div>
   );

@@ -325,4 +325,183 @@ describe('validateIPC', () => {
       expect(result.success).toBe(true)
     })
   })
+
+  describe('catalog:delete-product', () => {
+    it('accepts valid id', () => {
+      expect(validateIPC('catalog:delete-product', 1).success).toBe(true)
+    })
+    it('rejects undefined id', () => {
+      expect(validateIPC('catalog:delete-product', undefined).success).toBe(false)
+    })
+  })
+
+  describe('orders:get-history', () => {
+    it('accepts null params (today fallback)', () => {
+      expect(validateIPC('orders:get-history', null).success).toBe(true)
+    })
+    it('accepts object with dates', () => {
+      const result = validateIPC('orders:get-history', { startDate: '2025-01-01', endDate: '2025-12-31' })
+      expect(result.success).toBe(true)
+    })
+    it('rejects invalid startDate', () => {
+      const result = validateIPC('orders:get-history', { startDate: 123 })
+      expect(result.success).toBe(false)
+    })
+  })
+
+  describe('orders:delete', () => {
+    it('accepts valid id', () => {
+      expect(validateIPC('orders:delete', 1).success).toBe(true)
+    })
+    it('rejects null', () => {
+      expect(validateIPC('orders:delete', null).success).toBe(false)
+    })
+  })
+
+  describe('reports:by-period', () => {
+    it('accepts valid period', () => {
+      const result = validateIPC('reports:by-period', { startDate: '2025-01-01', endDate: '2025-12-31' })
+      expect(result.success).toBe(true)
+    })
+    it('rejects missing startDate', () => {
+      const result = validateIPC('reports:by-period', { endDate: '2025-12-31' })
+      expect(result.success).toBe(false)
+    })
+  })
+
+  describe('promotions:delete', () => {
+    it('accepts valid id', () => {
+      expect(validateIPC('promotions:delete', 1).success).toBe(true)
+    })
+    it('rejects undefined', () => {
+      expect(validateIPC('promotions:delete', undefined).success).toBe(false)
+    })
+  })
+
+  describe('users:delete', () => {
+    it('accepts valid id', () => {
+      expect(validateIPC('users:delete', 1).success).toBe(true)
+    })
+    it('rejects NaN', () => {
+      expect(validateIPC('users:delete', NaN).success).toBe(false)
+    })
+  })
+
+  describe('users:toggle-active', () => {
+    it('accepts valid id', () => {
+      expect(validateIPC('users:toggle-active', 5).success).toBe(true)
+    })
+    it('rejects undefined', () => {
+      expect(validateIPC('users:toggle-active', undefined).success).toBe(false)
+    })
+  })
+
+  describe('inventory:update-quantity', () => {
+    it('accepts valid data', () => {
+      const result = validateIPC('inventory:update-quantity', { inventoryId: 1, newQuantity: 20 })
+      expect(result.success).toBe(true)
+    })
+    it('rejects negative quantity', () => {
+      const result = validateIPC('inventory:update-quantity', { inventoryId: 1, newQuantity: -1 })
+      expect(result.success).toBe(false)
+    })
+    it('rejects missing inventoryId', () => {
+      const result = validateIPC('inventory:update-quantity', { newQuantity: 20 })
+      expect(result.success).toBe(false)
+    })
+  })
+
+  describe('inventory:get-movements', () => {
+    it('accepts valid data', () => {
+      const result = validateIPC('inventory:get-movements', { inventoryId: 1 })
+      expect(result.success).toBe(true)
+    })
+    it('rejects missing inventoryId', () => {
+      const result = validateIPC('inventory:get-movements', {})
+      expect(result.success).toBe(false)
+    })
+  })
+
+  describe('financial:get-accounts', () => {
+    it('accepts empty object', () => {
+      expect(validateIPC('financial:get-accounts', {}).success).toBe(true)
+    })
+    it('accepts valid filters', () => {
+      const result = validateIPC('financial:get-accounts', { type: 'payable' })
+      expect(result.success).toBe(true)
+    })
+  })
+
+  describe('financial:get-summary', () => {
+    it('accepts empty params', () => {
+      expect(validateIPC('financial:get-summary', {}).success).toBe(true)
+    })
+    it('accepts valid date range', () => {
+      const result = validateIPC('financial:get-summary', { startDate: '2025-01-01', endDate: '2025-12-31' })
+      expect(result.success).toBe(true)
+    })
+  })
+
+  describe('config:update', () => {
+    it('accepts valid config', () => {
+      const result = validateIPC('config:update', { key: 'printer_kitchen_ip', value: '192.168.1.200' })
+      expect(result.success).toBe(true)
+    })
+    it('rejects empty key', () => {
+      const result = validateIPC('config:update', { key: '', value: 'test' })
+      expect(result.success).toBe(false)
+    })
+    it('blocks manager_password key', () => {
+      const result = validateIPC('config:update', { key: 'manager_password', value: 'newpass' })
+      expect(result.success).toBe(false)
+    })
+  })
+
+  describe('clients:delete', () => {
+    it('accepts valid id', () => {
+      expect(validateIPC('clients:delete', 3).success).toBe(true)
+    })
+    it('rejects null', () => {
+      expect(validateIPC('clients:delete', null).success).toBe(false)
+    })
+  })
+
+  describe('clients:get-orders', () => {
+    it('accepts valid client id', () => {
+      expect(validateIPC('clients:get-orders', 1).success).toBe(true)
+    })
+    it('rejects undefined', () => {
+      expect(validateIPC('clients:get-orders', undefined).success).toBe(false)
+    })
+  })
+
+  describe('clients:add-order', () => {
+    it('accepts valid data', () => {
+      const result = validateIPC('clients:add-order', { clientId: 1, orderId: 10, totalAmount: 50 })
+      expect(result.success).toBe(true)
+    })
+    it('rejects missing clientId', () => {
+      const result = validateIPC('clients:add-order', { orderId: 10, totalAmount: 50 })
+      expect(result.success).toBe(false)
+    })
+    it('rejects negative total', () => {
+      const result = validateIPC('clients:add-order', { clientId: 1, orderId: 10, totalAmount: -5 })
+      expect(result.success).toBe(false)
+    })
+  })
+
+  describe('audit:get-logs', () => {
+    it('accepts valid limit', () => {
+      const result = validateIPC('audit:get-logs', 50)
+      expect(result.success).toBe(true)
+    })
+    it('accepts null limit (default 100)', () => {
+      const result = validateIPC('audit:get-logs', null)
+      expect(result.success).toBe(true)
+    })
+    it('rejects invalid limit', () => {
+      const result = validateIPC('audit:get-logs', -1)
+      expect(result.success).toBe(false)
+    })
+  })
 })
