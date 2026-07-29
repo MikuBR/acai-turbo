@@ -87,13 +87,12 @@ jobs:
         id: cache
         with:
           path: node_modules
-          key: deps-${{ matrix.os }}-test-${{ hashFiles('package-lock.json') }}
+          key: deps-${{ matrix.os }}-node${{ env.NODE_VERSION }}-test-${{ hashFiles('package-lock.json') }}
           restore-keys: |
-            deps-${{ matrix.os }}-
+            deps-${{ matrix.os }}-node${{ env.NODE_VERSION }}-
       - run: npm ci --ignore-scripts
         if: steps.cache.outputs.cache-hit != 'true'
       - run: npm rebuild better-sqlite3
-        if: steps.cache.outputs.cache-hit != 'true'
       - run: npm test
       - run: npm run build
       - uses: actions/upload-artifact@v4
