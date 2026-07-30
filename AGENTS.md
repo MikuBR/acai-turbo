@@ -1,59 +1,56 @@
 # Açaí Wave — AGENTS.md
 
 ## Stack
-- **Frontend**: React 19 + Vite 8 + Tailwind CSS 4 + Zustand
-- **Desktop**: Electron 28 (contextIsolation, no nodeIntegration)
-- **Database**: SQLite via better-sqlite3 (WAL mode, auto-migration on startup)
-- **Printing**: node-thermal-printer (TCP/IP)
-- **Build**: electron-builder (NSIS Windows)
-- **Node**: 20.x (`.nvmrc`)
+- Frontend: React 19 + Vite 8 + Tailwind CSS 4 + Zustand
+- Desktop: Electron 28 (contextIsolation, IPC validation)
+- Database: SQLite via better-sqlite3 (WAL mode with auto-migration)
+- Printing: node-thermal-printer (TCP/IP + Windows printer:NOME)
+- Build: electron-builder (NSIS Windows)
+- Node: 20.x
 
-## Commands
-| Command | Purpose |
-|---------|---------|
-| `npm run dev` | Vite + Electron in parallel (concurrently) |
+## Commands | Purpose
+| `npm run dev` | Vite + Electron in parallel |
 | `npm test` | Vitest (unit + integration) |
+| `npm run lint` | ESLint (`src/` + `database/`) |
+| `npm run build:win` | Vite build + electron-builder NSIS installer |
+| `npm run build` | Vite build only |
+| `npm run package:win` | electron-builder only (skip Vite) |
 | `npm run test:watch` | Vitest watch mode |
 | `npm run test:coverage` | Vitest with v8 coverage |
-| `npm run lint` | ESLint (`src/` + `database/`) |
-| `npm run build` | Vite build only |
-| `npm run build:win` | Vite build + electron-builder NSIS |
-| `npm run package:win` | electron-builder NSIS only (skip Vite build) |
 
-## Architecture & entrypoints
-- **Electron main**: `main.cjs` — window creation, all IPC handlers, session/auth, printer logic
-- **Preload**: `preload.js` — `contextBridge` with **explicit channel allowlist** + legacy `window.electron` compat
-- **Frontend entry**: `index.html` → `src/main.jsx` → `App.jsx` (single monolithic component)
-- **Database**: `database/db.cjs` — schema, queries, seed data, all as CJS (`require`)
-- **IPC validation**: `database/validate.cjs` — per-channel input validation allowlist
-- **State**: `src/store/useStore.js` — single Zustand store
+## Architecture entrypoints
+- **Electron main**: `main.cjs` — all IPC handlers, auth, printer logic
+- **Preload**: `preload.js` — `contextBridge` with explicit channel allowlist
+- **Frontend**: `src/main.jsx` → `App.jsx` (monolithic component)
+- **Database**: `database/db.cjs` (CJS schema/queries) + `validate.cjs` (IPC validation)
+- **State**: `src/store/useStore.js` (Zustand store)
 - **Components**: Atomic Design (`atoms/`, `molecules/`, `organisms/`, `forms/`)
 
-## Testing
-- **Vitest** with `jsdom` environment, globals enabled
-- Tests in `src/tests/` matching `*.test.{js,jsx}` or `*.spec.{js,jsx}`
-- Setup file: `src/tests/setup.js` (imports `@testing-library/jest-dom`)
-- Coverage targets: `src/store/`, `src/components/atoms/`, `database/validate.cjs`
-- Tests run **without Electron** — validation tests import `database/validate.cjs` directly
-- CI runs on ubuntu and windows; native addons skipped with `npm ci --ignore-scripts`
+## Development quirks | Agent would need help with this
+- Postinstall: `electron-builder install-app-deps` rebuilds better-sqlite3 native addon
+- Windows: Requires Visual Studio Build Tools + Python 3.x for better-sqlite3 compilation
+- GPU: Disabled on Linux by default (ENABLE_GPU=true / DISABLE_GPU=true)
+- Security: `ELECTRON_DISABLE_SECURITY_WARNINGS` suppresses warnings in dev
+- Fullscreen: App runs maximized (1280x800) by default
+- Port: Vite listens on `0.0.0.0:5173`, Electron tries multiple addresses
+- IPC: Validated twice — preload allowlist + validate.cjs schema
+- Sessions: Token-based with 8h expiry, rate-limited (5 failures → 15 min lock)
+- Database: `app.getPath('userData')/acai_turbo_v4.db`, falls back to temp dir
 
-## Important quirks
-- **Postinstall** runs `electron-builder install-app-deps` (rebuilds native addons for Electron). Can fail on plain Node — use `--ignore-scripts` if not targeting Electron.
-- **GPU acceleration** disabled on Linux by default (GPU driver instability). Override via `ENABLE_GPU=true` / `DISABLE_GPU=true`.
-- **Security warnings** suppressed in dev (`ELECTRON_DISABLE_SECURITY_WARNINGS`).
-- App runs **fullscreen** by default (1280x800, maximized).
-- **Vite dev server** listens on `0.0.0.0:5173` (strict port). Electron tries `localhost:5173` then `127.0.0.1:5173`.
-- **IPC channels** are validated at two levels: preload allowlist (`preload.js`) + input schema validation (`validate.cjs`). Both must be updated when adding a channel.
-- **Auth sessions**: token-based, 8h expiry. Rate-limited: 5 failed attempts → 15 min lock.
-- **Database location**: `app.getPath('userData')/acai_turbo_v4.db`. Falls back to OS temp dir.
+## Testing workflow
+- Run **without Electron** (directly import `database/validate.cjs`)
+- Database migration smoke test: `node scripts/smoke-test-db.cjs`
+- Coverage: targets `src/store/`, `src/components/atoms/`, `validate.cjs`
+- Pre-built native addon: `npm run rebuild better-sqlite3` (CI)
 
-## Commits
-- No TypeScript — plain JSX throughout
-- ESLint flat config (v10), covers `src/` and `database/`
-- Husky hooks present (no pre-commit config found — adding one may break CI if not synced)
+## Build pipeline (CI)
+1. **lint** (ubuntu, `npx eslint src/ database/`)
+2. **audit** (ubuntu, `npm audit --audit-level=high`, continue-on-error)
+3. **test** (ubuntu + windows, depends on lint+audit)
+4. **build-windows** (windows, push to main, publishes installer)
 
-## CI pipeline (`.github/workflows/ci.yml`)
-1. lint (ubuntu)
-2. audit (ubuntu, `--audit-level=high`, continue-on-error)
-3. test (ubuntu + windows, dependent on lint+audit)
-4. build-windows (windows, push to main only, publishes to GitHub Releases)
+## Windows setup (if you use Windows)
+- Install Visual Studio Build Tools + Python 3.x (required for better-sqlite3)
+- Use Git Bash or WSL for husky hooks (shell scripts need POSIX)
+- Printer driver required for `printer:NOME` connections
+- Electron hardware acceleration may cause flickering (disable if needed)

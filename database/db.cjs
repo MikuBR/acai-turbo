@@ -28,6 +28,28 @@ function initializeDatabase() {
   try {
     console.log('[db] Initializing database at:', dbPath);
 
+    const fs = require('fs');
+    
+    if (fs.existsSync(dbPath)) {
+      const tempDb = new Database(dbPath, { verbose: () => {} });
+      const tables = tempDb.prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name != '_migrations'"
+      ).all().map(r => r.name);
+      
+      const requiredTables = ['categories', 'products', 'users', 'config'];
+      const hasAllRequiredTables = requiredTables.every(table => tables.includes(table));
+      
+      tempDb.close();
+      
+      if (hasAllRequiredTables) {
+        console.log('[db] Database already has minimal required tables, skipping migration for speed');
+        db = new Database(dbPath);
+        db.pragma('journal_mode = WAL');
+        db.pragma('foreign_keys = ON');
+        return;
+      }
+    }
+
     db = new Database(dbPath);
     db.pragma('journal_mode = WAL');
     db.pragma('foreign_keys = ON');

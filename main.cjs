@@ -60,7 +60,6 @@ function recordVerifyPasswordAttempt() {
   verifyPasswordAttempts.count++;
   if (verifyPasswordAttempts.count >= 5) {
     verifyPasswordAttempts.lockUntil = Date.now() + 15 * 60 * 1000;
-    verifyPasswordAttempts.count = 0;
   }
 }
 
