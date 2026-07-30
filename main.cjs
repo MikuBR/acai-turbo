@@ -1044,18 +1044,17 @@ ipcMain.handle('auth:reset-manager-password', async (e, data) => {
 
 ipcMain.handle('auth:force-reset-admin', async (e, { adminId, newPassword }) => {
   try {
-    requireRole('admin');
-    const admin = currentSession ? currentSession.user : null;
-    if (!admin) {
-      return { success: false, error: 'Sessão inválida' };
+    const adminUser = currentSession?.user;
+    if (!adminUser || adminUser.role !== 'admin') {
+      throw new Error('A1 entrada inválida. Permissão necessária');
     }
-    checkResetRateLimit(admin.id);
+    checkResetRateLimit(adminUser.id);
 
     const target = getUserById(adminId);
     if (!target || target.role !== 'admin') {
       return { success: false, error: 'Administrador não encontrado' };
     }
-    if (target.id === admin.id) {
+    if (target.id === adminUser.id) {
       return { success: false, error: 'Use a opção de trocar sua própria senha' };
     }
     if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 8) {
@@ -1063,8 +1062,8 @@ ipcMain.handle('auth:force-reset-admin', async (e, { adminId, newPassword }) => 
     }
     const newHash = bcrypt.hashSync(newPassword, 10);
     db.prepare('UPDATE users SET password_hash = ?, must_change_password = 1 WHERE id = ?').run(newHash, adminId);
-    createAuditLog(admin.id, 'ADMIN_PASSWORD_RESET', 'users', adminId, `Admin password reset by ${admin.username}`);
-    recordResetAttempt(admin.id);
+    createAuditLog(adminUser.id, 'ADMIN_PASSWORD_RESET', 'users', adminId, `Admin password reset by ${adminUser.username}`);
+    recordResetAttempt(adminUser.id);
     return { success: true };
   } catch (e) {
     console.error('[auth:force-reset-admin] Error:', e.message);

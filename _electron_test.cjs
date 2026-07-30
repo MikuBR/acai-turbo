@@ -1,0 +1,11 @@
+const Database = require('better-sqlite3');
+const db = new Database(':memory:');
+db.pragma('journal_mode = WAL');
+db.exec('CREATE TABLE test (id INTEGER PRIMARY KEY, v TEXT)');
+db.prepare('INSERT INTO test (v) VALUES (?)').run('electron_ok');
+const row = db.prepare('SELECT * FROM test').get();
+console.log(JSON.stringify(row));
+console.log('NODE_MODULE_VERSION:', process.versions.modules);
+console.log('runtime:', process.versions.node);
+db.close();
+process.exit(0);
