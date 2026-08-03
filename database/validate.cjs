@@ -35,7 +35,72 @@ const validators = {
     if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
     if (!data.orderData || typeof data.orderData !== 'object') return { success: false, error: 'Dados do pedido inválidos' };
     if (!data.items || !Array.isArray(data.items) || data.items.length === 0) return { success: false, error: 'Itens do pedido inválidos' };
-    return { success: true, data };
+
+    const od = data.orderData;
+    const paymentMethods = ['DINHEIRO', 'PIX', 'DÉBITO', 'CRÉDITO', 'PERMUTA'];
+
+    if (od.payments !== undefined) {
+      // --- FORMATO NOVO (pagamentos mistos) ---
+      if (!Array.isArray(od.payments) || od.payments.length === 0) {
+        return { success: false, error: 'Adicione pelo menos uma forma de pagamento' };
+      }
+
+      let hasPermuta = false;
+      let sum = 0;
+      for (const p of od.payments) {
+        if (!p || typeof p !== 'object') return { success: false, error: 'Pagamento inválido' };
+        const method = (p.method || '').trim().toUpperCase();
+        if (!method || !paymentMethods.includes(method)) {
+          return { success: false, error: `Forma de pagamento inválida: ${p.method || ''}` };
+        }
+        if (p.amount === undefined || isNaN(Number(p.amount)) || Number(p.amount) <= 0) {
+          return { success: false, error: 'Valor de pagamento inválido' };
+        }
+        p.method = method;
+        p.amount = Number(p.amount);
+
+        if (method === 'PERMUTA') {
+          hasPermuta = true;
+          if (!p.exchangeFor || typeof p.exchangeFor !== 'string' || p.exchangeFor.trim() === '') {
+            return { success: false, error: 'Para permutas, descreva o que foi recebido em troca' };
+          }
+        }
+        sum += p.amount;
+      }
+
+      // PERMUTA exclusivo: não pode combinar com outros métodos
+      if (hasPermuta && od.payments.length > 1) {
+        return { success: false, error: 'Permuta não pode ser combinada com outros métodos de pagamento' };
+      }
+
+      // Soma dos pagamentos deve cobrir o total (tolerância de centavos)
+      if (od.total === undefined || isNaN(Number(od.total))) {
+        return { success: false, error: 'Total do pedido inválido' };
+      }
+      const total = Number(od.total);
+      if (Math.round(sum * 100) < Math.round(total * 100)) {
+        return { success: false, error: `Valor dos pagamentos (R$ ${sum.toFixed(2)}) é menor que o total (R$ ${total.toFixed(2)})` };
+      }
+
+      // amountReceived é opcional (só usado se houver DINHEIRO)
+      if (od.amountReceived !== undefined && od.amountReceived !== null && od.amountReceived !== '') {
+        od.amountReceived = Number(od.amountReceived) || 0;
+      }
+
+      return { success: true, data };
+    } else {
+      // --- FORMATO LEGADO (paymentMethod string, ex: iFood) ---
+      const paymentMethod = od.paymentMethod?.trim().toUpperCase();
+      if (!paymentMethod || !paymentMethods.includes(paymentMethod)) {
+        return { success: false, error: 'Método de pagamento inválido' };
+      }
+      if (paymentMethod === 'PERMUTA') {
+        if (!od.exchangeFor || typeof od.exchangeFor !== 'string' || od.exchangeFor.trim() === '') {
+          return { success: false, error: 'Para permutas, é obrigatório descrever o que foi recebido em troca' };
+        }
+      }
+      return { success: true, data };
+    }
   },
 
   'orders:get-history': (params) => {

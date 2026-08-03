@@ -28,28 +28,6 @@ function initializeDatabase() {
   try {
     console.log('[db] Initializing database at:', dbPath);
 
-    const fs = require('fs');
-    
-    if (fs.existsSync(dbPath)) {
-      const tempDb = new Database(dbPath, { verbose: () => {} });
-      const tables = tempDb.prepare(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name != '_migrations'"
-      ).all().map(r => r.name);
-      
-      const requiredTables = ['categories', 'products', 'users', 'config'];
-      const hasAllRequiredTables = requiredTables.every(table => tables.includes(table));
-      
-      tempDb.close();
-      
-      if (hasAllRequiredTables) {
-        console.log('[db] Database already has minimal required tables, skipping migration for speed');
-        db = new Database(dbPath);
-        db.pragma('journal_mode = WAL');
-        db.pragma('foreign_keys = ON');
-        return;
-      }
-    }
-
     db = new Database(dbPath);
     db.pragma('journal_mode = WAL');
     db.pragma('foreign_keys = ON');
@@ -87,13 +65,15 @@ initializeDatabase();
 // --- SEED DE DADOS PADRÃO ---
 // Only run seed if migration succeeded
 if (!_migrationError) {
-// Reset login counters on startup to prevent persistent lockout after reinstall
 try {
   db.prepare('UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE failed_login_attempts > 0 OR locked_until IS NOT NULL').run();
 } catch (e) {
   // Table might not exist yet during first init, ignore
 }
 
+const tableExists = (name) => !!db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(name);
+
+if (tableExists('config')) {
 const seedDefaults = db.transaction(() => {
   const configCount = db.prepare('SELECT COUNT(*) as count FROM config').get();
   if (configCount.count === 0) {
@@ -129,6 +109,7 @@ if (checkProducts.count === 0) {
   
   const adicionais = ['Banana', 'Morango', 'Leite em Pó', 'Leite Condensado', 'Nutella', 'Granola', 'Uva Verde s/ Semente', 'Ovomaltine', 'Paçoca', 'Kiwi', 'Confete', 'Chantilly', 'Salada de Frutas', 'Mel'];
   adicionais.forEach(add => insertProd.run(add, 0.0, 'ADICIONAIS DOCES', ''));
+}
 }
 }
 
@@ -182,8 +163,21 @@ const deleteProduct = (id) => {
 };
 
 // --- EXPORTAÇÕES GERAIS E CAIXA ---
-const getConfig = (key) => db.prepare('SELECT value FROM config WHERE key = ?').get(key);
-const updateConfig = (key, value) => db.prepare('INSERT INTO config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, value);
+const { encrypt, decrypt, isSensitiveKey } = require('./crypto.cjs');
+
+const getConfig = (key) => {
+  const row = db.prepare('SELECT value FROM config WHERE key = ?').get(key);
+  if (!row) return null;
+  if (isSensitiveKey(key) && row.value) {
+    try { return { ...row, value: decrypt(row.value) }; } catch { return row; }
+  }
+  return row;
+};
+
+const updateConfig = (key, value) => {
+  const storeValue = isSensitiveKey(key) && value ? encrypt(value) : value;
+  return db.prepare('INSERT INTO config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, storeValue);
+};
 
 function saveFullOrder(orderData, items) {
   if (!orderData || !items || !Array.isArray(items)) {
@@ -192,10 +186,75 @@ function saveFullOrder(orderData, items) {
   if (!orderData.tableName || orderData.total === undefined || isNaN(orderData.total)) {
     throw new Error('Invalid order data');
   }
+
+  const INSERT_ORDER_SQL = 'INSERT INTO orders (customer_name, total, original_total, discount, promotion_id, promotion_name, payment_method, is_delivery, address, phone, is_exchange, exchange_for, total_paid, payment_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+  const INSERT_PAYMENT_SQL = 'INSERT INTO order_payments (order_id, payment_method, amount) VALUES (?, ?, ?)';
+  const INSERT_ITEM_SQL = 'INSERT INTO order_items (order_id, product_name, price, notes, category) VALUES (?, ?, ?, ?, ?)';
+
   const transaction = db.transaction((order, orderItems) => {
-    const info = db.prepare('INSERT INTO orders (customer_name, total, original_total, discount, promotion_id, promotion_name, payment_method, is_delivery, address, phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(order.tableName, order.total, order.originalTotal || 0, order.discount || 0, order.promotionId || null, order.promotionName || null, order.paymentMethod || '', order.isDelivery ? 1 : 0, order.address || "", order.phone || "");
+    let paymentMethod;
+    let isExchange = 0;
+    let exchangeFor = null;
+    let totalPaid = 0;
+    let paymentStatus = 'PAID';
+    let customerName = order.customerName || order.tableName || '';
+
+    if (order.payments && Array.isArray(order.payments) && order.payments.length > 0) {
+      // --- FORMATO NOVO (pagamentos mistos) ---
+      totalPaid = order.payments.reduce((s, p) => s + Number(p.amount), 0);
+
+      const permutaPayment = order.payments.find(p => p.method === 'PERMUTA');
+      if (permutaPayment) {
+        isExchange = 1;
+        exchangeFor = permutaPayment.exchangeFor || null;
+        customerName = customerName || 'Permuta';
+        paymentMethod = 'PERMUTA';
+      } else {
+        paymentMethod = order.payments.length === 1 ? order.payments[0].method : 'MISTO';
+      }
+    } else {
+      // --- FORMATO LEGADO (paymentMethod string, ex: iFood) ---
+      paymentMethod = order.paymentMethod || '';
+      totalPaid = Number(order.total) || 0;
+      if (paymentMethod === 'PERMUTA') {
+        isExchange = 1;
+        exchangeFor = order.exchangeFor || null;
+        customerName = customerName || 'Permuta';
+      }
+    }
+
+    const info = db.prepare(INSERT_ORDER_SQL).run(
+      customerName,
+      order.total,
+      order.originalTotal || 0,
+      order.discount || 0,
+      order.promotionId || null,
+      order.promotionName || null,
+      paymentMethod,
+      order.isDelivery ? 1 : 0,
+      order.address || "",
+      order.phone || "",
+      isExchange,
+      exchangeFor,
+      totalPaid,
+      paymentStatus
+    );
     const orderId = info.lastInsertRowid;
-    const insertItem = db.prepare('INSERT INTO order_items (order_id, product_name, price, notes, category) VALUES (?, ?, ?, ?, ?)');
+
+    // Inserir em order_payments
+    if (order.payments && Array.isArray(order.payments) && order.payments.length > 0) {
+      for (const p of order.payments) {
+        db.prepare(INSERT_PAYMENT_SQL).run(orderId, p.method, p.amount);
+      }
+    } else {
+      // Backfill legado: inserir um registro único em order_payments
+      if (paymentMethod) {
+        db.prepare(INSERT_PAYMENT_SQL).run(orderId, paymentMethod, totalPaid);
+      }
+    }
+
+    // Inserir itens
+    const insertItem = db.prepare(INSERT_ITEM_SQL);
     for (const item of orderItems) {
       if (!item.name || item.price === undefined || isNaN(item.price)) {
         throw new Error('Invalid item data');
@@ -270,10 +329,21 @@ function registerCashMovement(data) {
 }
 
 function getDailyReport() {
-  const sales = db.prepare(`SELECT payment_method, is_delivery, SUM(total) as total_amount FROM orders WHERE date(created_at, 'localtime') = date('now', 'localtime') GROUP BY payment_method, is_delivery`).all();
+  const sales = db.prepare(`SELECT payment_method, is_delivery, SUM(total) as total_amount FROM orders WHERE date(created_at, 'localtime') = date('now', 'localtime') AND is_exchange = 0 GROUP BY payment_method, is_delivery`).all();
+  const exchanges = db.prepare(`
+    SELECT id, customer_name, exchange_for, total, created_at
+    FROM orders
+    WHERE is_exchange = 1 AND date(created_at, 'localtime') = date('now', 'localtime')
+    ORDER BY created_at DESC
+  `).all();
+
+  // Carregar itens para cada permuta
+  const getItems = db.prepare("SELECT * FROM order_items WHERE order_id = ?");
+  const exchangesWithItems = exchanges.map(e => ({ ...e, items: getItems.all(e.id) }));
+
   const movements = db.prepare(`SELECT id, type, amount as total_amount, description, created_at FROM cash_movements WHERE date(created_at, 'localtime') = date('now', 'localtime') ORDER BY created_at DESC`).all();
-  const topProducts = db.prepare(`SELECT product_name, COUNT(*) as qty FROM order_items JOIN orders ON order_items.order_id = orders.id WHERE date(orders.created_at, 'localtime') = date('now', 'localtime') GROUP BY product_name ORDER BY qty DESC LIMIT 5`).all();
-  return { sales, movements, topProducts };
+  const topProducts = db.prepare(`SELECT product_name, COUNT(*) as qty FROM order_items JOIN orders ON order_items.order_id = orders.id WHERE date(orders.created_at, 'localtime') = date('now', 'localtime') AND orders.is_exchange = 0 GROUP BY product_name ORDER BY qty DESC LIMIT 5`).all();
+  return { sales, exchanges: exchangesWithItems, movements, topProducts };
 }
 
 function getReportByPeriod(startDate, endDate) {
@@ -283,8 +353,22 @@ function getReportByPeriod(startDate, endDate) {
     FROM orders
     WHERE datetime(created_at, 'localtime') >= datetime(?, 'localtime')
     AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
+    AND is_exchange = 0
     GROUP BY payment_method, is_delivery
   `).all(startDate, endDateTime);
+
+  const exchanges = db.prepare(`
+    SELECT id, customer_name, exchange_for, total, created_at
+    FROM orders
+    WHERE is_exchange = 1
+    AND datetime(created_at, 'localtime') >= datetime(?, 'localtime')
+    AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
+    ORDER BY created_at DESC
+  `).all(startDate, endDateTime);
+
+  // Carregar itens para cada permuta
+  const getItems = db.prepare("SELECT * FROM order_items WHERE order_id = ?");
+  const exchangesWithItems = exchanges.map(e => ({ ...e, items: getItems.all(e.id) }));
 
   const movements = db.prepare(`
     SELECT id, type, amount as total_amount, description, created_at
@@ -300,6 +384,7 @@ function getReportByPeriod(startDate, endDate) {
     JOIN orders ON order_items.order_id = orders.id
     WHERE datetime(orders.created_at, 'localtime') >= datetime(?, 'localtime')
     AND datetime(orders.created_at, 'localtime') <= datetime(?, 'localtime')
+    AND orders.is_exchange = 0
     GROUP BY product_name
     ORDER BY qty DESC
     LIMIT 10
@@ -310,6 +395,7 @@ function getReportByPeriod(startDate, endDate) {
     FROM orders
     WHERE datetime(created_at, 'localtime') >= datetime(?, 'localtime')
     AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
+    AND is_exchange = 0
     GROUP BY hour
     ORDER BY order_count DESC
   `).all(startDate, endDateTime);
@@ -319,9 +405,10 @@ function getReportByPeriod(startDate, endDate) {
     FROM orders
     WHERE datetime(created_at, 'localtime') >= datetime(?, 'localtime')
     AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
+    AND is_exchange = 0
   `).get(startDate, endDateTime);
 
-  return { sales, movements, topProducts, peakHours, ticketAverage: ticketAverage?.avg_ticket || 0 };
+  return { sales, exchanges: exchangesWithItems, movements, topProducts, peakHours, ticketAverage: ticketAverage?.avg_ticket || 0 };
 }
 
 // --- EXPORTAÇÕES DE PROMOÇÕES ---
@@ -710,7 +797,15 @@ const addClientOrder = (clientId, orderId, totalAmount) => {
   return stmt.run(clientId, orderId, totalAmount).lastInsertRowid;
 };
 
-const getAllConfigs = () => db.prepare('SELECT key, value FROM config WHERE key != ? ORDER BY key ASC').all('manager_password');
+const getAllConfigs = () => {
+  const rows = db.prepare('SELECT key, value FROM config WHERE key != ? ORDER BY key ASC').all('manager_password');
+  return rows.map(row => {
+    if (isSensitiveKey(row.key) && row.value) {
+      try { return { ...row, value: decrypt(row.value) }; } catch { return row; }
+    }
+    return row;
+  });
+};
 
 const getProductPriceHistory = (productId) => {
   if (!productId || isNaN(productId)) throw new Error('Invalid product ID');

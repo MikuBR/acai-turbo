@@ -133,6 +133,37 @@ function generatePDF(data, isPeriodView, financialSummary, reportPeriod) {
     });
   }
 
+  if (data?.exchanges && data.exchanges.length > 0) {
+    const exchangeTotal = data.exchanges.reduce((a, e) => a + Number(e.total || 0), 0);
+    const exchangeRows = data.exchanges.map(ex => [
+      { text: ex.customer_name || 'Permuta', fontSize: 8 },
+      { text: ex.exchange_for || '(nao informado)', fontSize: 8 },
+      { text: `R$ ${Number(ex.total).toFixed(2)}`, alignment: 'right', fontSize: 8 },
+    ]);
+    content.push({ text: 'PERMUTAS (NAO INCLUI EM VENDAS)', style: 'sectionTitle', margin: [0, 20, 0, 5], color: '#d97706' });
+    content.push({
+      style: 'table',
+      table: {
+        headerRows: 1,
+        widths: ['auto', '*', 'auto'],
+        body: [
+          [
+            { text: 'Cliente', style: 'tableHeader' },
+            { text: 'Trocado Por', style: 'tableHeader' },
+            { text: 'Valor', style: 'tableHeader', alignment: 'right' },
+          ],
+          ...exchangeRows,
+          [
+            { text: 'TOTAL', style: 'totalRow' },
+            { text: '', style: 'totalRow' },
+            { text: `R$ ${exchangeTotal.toFixed(2)}`, style: 'totalRow', alignment: 'right' },
+          ],
+        ],
+      },
+      layout: 'lightHorizontalLines',
+    });
+  }
+
   if (isPeriodView && data) {
     content.push({ text: '5. METRICAS DO PERIODO', style: 'sectionTitle', margin: [0, 20, 0, 5] });
 
@@ -269,13 +300,21 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
       const pdfMake = pdfMakeModule.default;
       pdfMake.vfs = pdfFontsModule.default;
 
-      pdfMake.createPdf(docDef).getBase64((base64) => {
+      pdfMake.createPdf(docDef).getBase64((base64, err) => {
+        if (err) {
+          addToast('Erro ao gerar PDF', 'error');
+          console.error('[pdf] Erro ao gerar PDF:', err);
+          return;
+        }
         ipc.invoke('dialog:save-pdf', { data: base64, defaultName }).then(res => {
           if (res.success) {
             addToast(`PDF salvo em: ${res.path}`, 'success');
           } else if (res.error) {
             addToast(`Erro ao salvar PDF: ${res.error}`, 'error');
           }
+        }).catch(err => {
+          addToast('Erro inesperado ao exportar PDF', 'error');
+          console.error('[pdf] Erro na invocação IPC:', err);
         });
       });
     } catch (e) {
@@ -436,12 +475,51 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                   <div className="bg-info/10 border border-info/30 p-3 rounded-lg">
                     <span className="text-[9px] text-muted font-bold uppercase block">A Receber (Pendente)</span>
                     <span className="text-lg font-bold text-info font-mono">R$ {financialSummary.receivable?.pending?.toFixed(2) || '0.00'}</span>
-</div>
+                  </div>
                 </div>
               </div>
             )}
 
-              <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-4 border-b border-border pb-2">Lançamento Manual (Gaveta)</h3>
+            {(data?.exchanges && data.exchanges.length > 0) && (
+              <div className="mb-8">
+                <h3 className="text-[10px] font-bold text-warning uppercase tracking-widest mb-4 border-b border-border pb-2 flex items-center gap-2">
+                  <DollarSign size={12} className="text-warning" />
+                  Permutas
+                </h3>
+                <div className="space-y-2">
+                  {data.exchanges.map((ex, i) => (
+                    <div key={ex.id || i} className="bg-warning/5 border border-warning/20 p-3 rounded-lg">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold text-primary">{ex.customer_name || 'Permuta'}</span>
+                          <span className="text-[10px] text-muted">{ex.created_at ? new Date(ex.created_at + 'Z').toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                        </div>
+                        <span className="font-mono font-bold text-warning">R$ {Number(ex.total).toFixed(2)}</span>
+                      </div>
+                      <div className="text-[10px] text-muted bg-surface-light p-2 rounded border border-border">
+                        <span className="font-bold uppercase">Trocado por:</span> <span className="text-primary">{ex.exchange_for || '(não informado)'}</span>
+                      </div>
+                      {ex.items && ex.items.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {ex.items.map((it, j) => (
+                            <div key={it.id || j} className="flex justify-between text-[10px] text-muted">
+                              <span>1x {it.product_name}</span>
+                              <span className="font-mono">R$ {Number(it.price).toFixed(2)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  <div className="flex justify-between items-center bg-warning/10 border border-warning/30 p-3 rounded-lg mt-2">
+                    <span className="text-xs font-bold text-primary uppercase tracking-widest">Total Permutas</span>
+                    <span className="font-mono font-bold text-warning text-lg">R$ {data.exchanges.reduce((a, e) => a + Number(e.total || 0), 0).toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-4 border-b border-border pb-2">Lançamento Manual (Gaveta)</h3>
             <div className="bg-surface-light p-4 rounded-xl border border-border space-y-4">
               <div className="grid grid-cols-2 gap-2">
                 <button type="button" onClick={() => setCashMove({...cashMove, type: 'ENTRADA'})}

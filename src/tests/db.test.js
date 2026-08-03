@@ -26,6 +26,10 @@ const SCHEMA = `
     is_delivery BOOLEAN DEFAULT 0,
     address TEXT,
     phone TEXT,
+    is_exchange BOOLEAN DEFAULT 0,
+    exchange_for TEXT DEFAULT NULL,
+    total_paid REAL DEFAULT 0,
+    payment_status TEXT DEFAULT 'PAID',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
   CREATE TABLE IF NOT EXISTS order_items (
@@ -35,6 +39,14 @@ const SCHEMA = `
     price REAL,
     notes TEXT,
     category TEXT,
+    FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE CASCADE
+  );
+  CREATE TABLE IF NOT EXISTS order_payments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER NOT NULL,
+    payment_method TEXT NOT NULL,
+    amount REAL NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE CASCADE
   );
   CREATE TABLE IF NOT EXISTS cash_movements (
@@ -169,6 +181,10 @@ function seedOrder (total, paymentMethod) {
   return d.prepare('INSERT INTO orders (customer_name, total, payment_method) VALUES (?, ?, ?)').run('Cliente Teste', total, paymentMethod).lastInsertRowid
 }
 
+function seedPermuta (total, exchangeFor) {
+  return d.prepare('INSERT INTO orders (customer_name, total, payment_method, is_exchange, exchange_for) VALUES (?, ?, ?, 1, ?)').run('Permuta', total, 'PERMUTA', exchangeFor || 'mercadoria').lastInsertRowid
+}
+
 function seedCashMovement (type, amount, description) {
   return d.prepare('INSERT INTO cash_movements (type, amount, description) VALUES (?, ?, ?)').run(type, amount, description).lastInsertRowid
 }
@@ -252,6 +268,14 @@ describe('orders', () => {
     expect(items[0].product_name).toBe('Açaí 500ml')
   })
 
+  it('saves a permuta with exchange_for and is_exchange flag', () => {
+    const orderId = seedPermuta(25, '2 litros de leite')
+    const order = d.prepare('SELECT * FROM orders WHERE id = ?').get(orderId)
+    expect(order.payment_method).toBe('PERMUTA')
+    expect(order.is_exchange).toBe(1)
+    expect(order.exchange_for).toBe('2 litros de leite')
+  })
+
   it('retrieves order history (today)', () => {
     const orders = d.prepare("SELECT * FROM orders WHERE date(created_at, 'localtime') = date('now', 'localtime') ORDER BY id DESC").all()
     expect(orders.length).toBeGreaterThanOrEqual(1)
@@ -264,18 +288,54 @@ describe('orders', () => {
     const items = d.prepare('SELECT * FROM order_items WHERE order_id = ?').all(orderId)
     expect(items).toHaveLength(0)
   })
+
+  it('saves mixed payments in order_payments and updates total_paid', () => {
+    const orderId = seedOrder(100, 'MISTO')
+    d.prepare('UPDATE orders SET total_paid = 100, payment_status = ? WHERE id = ?').run('PAID', orderId)
+    d.prepare('INSERT INTO order_payments (order_id, payment_method, amount) VALUES (?, ?, ?)').run(orderId, 'DINHEIRO', 80)
+    d.prepare('INSERT INTO order_payments (order_id, payment_method, amount) VALUES (?, ?, ?)').run(orderId, 'CRÉDITO', 20)
+
+    const payments = d.prepare('SELECT * FROM order_payments WHERE order_id = ? ORDER BY id').all(orderId)
+    expect(payments).toHaveLength(2)
+    expect(payments[0].payment_method).toBe('DINHEIRO')
+    expect(payments[0].amount).toBe(80)
+    expect(payments[1].payment_method).toBe('CRÉDITO')
+    expect(payments[1].amount).toBe(20)
+
+    const order = d.prepare('SELECT * FROM orders WHERE id = ?').get(orderId)
+    expect(order.total_paid).toBe(100)
+    expect(order.payment_status).toBe('PAID')
+  })
+
+  it('cascades delete from orders to order_payments', () => {
+    const orderId = seedOrder(40, 'PIX')
+    d.prepare('INSERT INTO order_payments (order_id, payment_method, amount) VALUES (?, ?, ?)').run(orderId, 'PIX', 40)
+    d.prepare('DELETE FROM orders WHERE id = ?').run(orderId)
+    const payments = d.prepare('SELECT * FROM order_payments WHERE order_id = ?').all(orderId)
+    expect(payments).toHaveLength(0)
+  })
 })
 
 // ─── Daily Report ─────────────────────────────────────────────────────────────
 
 describe('daily report', () => {
-  it('aggregates sales by payment method', () => {
+  it('aggregates sales by payment method (excluding permutas)', () => {
     seedOrder(100, 'DINHEIRO')
     seedOrder(50, 'CRÉDITO')
     seedOrder(30, 'DINHEIRO')
-    const sales = d.prepare("SELECT payment_method, SUM(total) as total_amount FROM orders WHERE date(created_at, 'localtime') = date('now', 'localtime') GROUP BY payment_method").all()
+    seedPermuta(40, 'mercadoria')
+    const sales = d.prepare("SELECT payment_method, SUM(total) as total_amount FROM orders WHERE date(created_at, 'localtime') = date('now', 'localtime') AND is_exchange = 0 GROUP BY payment_method").all()
     const dinheiro = sales.find(s => s.payment_method === 'DINHEIRO')
     expect(dinheiro.total_amount).toBeGreaterThanOrEqual(130)
+    const permutaInSales = sales.find(s => s.payment_method === 'PERMUTA')
+    expect(permutaInSales).toBeUndefined()
+  })
+
+  it('lists permutas separately from sales', () => {
+    seedPermuta(40, 'leite')
+    const exchanges = d.prepare("SELECT id, customer_name, exchange_for, total FROM orders WHERE is_exchange = 1 AND date(created_at, 'localtime') = date('now', 'localtime') ORDER BY created_at DESC").all()
+    expect(exchanges.length).toBeGreaterThanOrEqual(1)
+    expect(exchanges.some(e => e.exchange_for === 'leite')).toBe(true)
   })
 
   it('includes cash movements', () => {
@@ -288,8 +348,8 @@ describe('daily report', () => {
     expect(movements[0].description).toBeDefined()
   })
 
-  it('returns top products', () => {
-    const top = d.prepare("SELECT product_name, COUNT(*) as qty FROM order_items JOIN orders ON order_items.order_id = orders.id WHERE date(orders.created_at, 'localtime') = date('now', 'localtime') GROUP BY product_name ORDER BY qty DESC LIMIT 5").all()
+  it('returns top products (excluding permuta items)', () => {
+    const top = d.prepare("SELECT product_name, COUNT(*) as qty FROM order_items JOIN orders ON order_items.order_id = orders.id WHERE date(orders.created_at, 'localtime') = date('now', 'localtime') AND orders.is_exchange = 0 GROUP BY product_name ORDER BY qty DESC LIMIT 5").all()
     expect(Array.isArray(top)).toBe(true)
   })
 })

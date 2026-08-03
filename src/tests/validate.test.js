@@ -349,6 +349,162 @@ describe('validateIPC', () => {
     })
   })
 
+  describe('orders:save', () => {
+    it('accepts valid order with DINHEIRO payment', () => {
+      const result = validateIPC('orders:save', {
+        orderData: { tableName: 'MESA 01', total: 50, paymentMethod: 'DINHEIRO' },
+        items: [{ name: 'Açaí 500ml', price: 20 }]
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('accepts PERMUTA with exchangeFor description', () => {
+      const result = validateIPC('orders:save', {
+        orderData: { tableName: 'MESA 02', total: 30, paymentMethod: 'PERMUTA', exchangeFor: '2 litros de leite' },
+        items: [{ name: 'Açaí 500ml', price: 30 }]
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('rejects PERMUTA without exchangeFor', () => {
+      const result = validateIPC('orders:save', {
+        orderData: { tableName: 'MESA 02', total: 30, paymentMethod: 'PERMUTA' },
+        items: [{ name: 'Açaí 500ml', price: 30 }]
+      })
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('permuta')
+    })
+
+    it('rejects PERMUTA with empty exchangeFor', () => {
+      const result = validateIPC('orders:save', {
+        orderData: { tableName: 'MESA 02', total: 30, paymentMethod: 'PERMUTA', exchangeFor: '   ' },
+        items: [{ name: 'Açaí 500ml', price: 30 }]
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects invalid payment method', () => {
+      const result = validateIPC('orders:save', {
+        orderData: { tableName: 'MESA 01', total: 50, paymentMethod: 'BITCOIN' },
+        items: [{ name: 'Açaí 500ml', price: 50 }]
+      })
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('pagamento')
+    })
+
+    it('rejects empty items array', () => {
+      const result = validateIPC('orders:save', {
+        orderData: { tableName: 'MESA 01', total: 50, paymentMethod: 'DINHEIRO' },
+        items: []
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects missing orderData', () => {
+      const result = validateIPC('orders:save', { items: [{ name: 'x', price: 10 }] })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects non-object data', () => {
+      expect(validateIPC('orders:save', null).success).toBe(false)
+      expect(validateIPC('orders:save', 'string').success).toBe(false)
+    })
+
+    it('accepts mixed payments (DINHEIRO + CRÉDITO)', () => {
+      const result = validateIPC('orders:save', {
+        orderData: { tableName: 'MESA 01', total: 100, payments: [
+          { method: 'DINHEIRO', amount: 80 },
+          { method: 'CRÉDITO', amount: 20 }
+        ]},
+        items: [{ name: 'Açaí', price: 100 }]
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('accepts PERMUTA as single payment in payments format', () => {
+      const result = validateIPC('orders:save', {
+        orderData: { tableName: 'MESA 01', total: 50, payments: [
+          { method: 'PERMUTA', amount: 50, exchangeFor: 'mercadoria' }
+        ]},
+        items: [{ name: 'Açaí', price: 50 }]
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('rejects PERMUTA mixed with other methods', () => {
+      const result = validateIPC('orders:save', {
+        orderData: { tableName: 'MESA 01', total: 50, payments: [
+          { method: 'PERMUTA', amount: 25, exchangeFor: 'leite' },
+          { method: 'DINHEIRO', amount: 25 }
+        ]},
+        items: [{ name: 'Açaí', price: 50 }]
+      })
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Permuta')
+    })
+
+    it('rejects PERMUTA in payments without exchangeFor', () => {
+      const result = validateIPC('orders:save', {
+        orderData: { tableName: 'MESA 01', total: 50, payments: [
+          { method: 'PERMUTA', amount: 50 }
+        ]},
+        items: [{ name: 'Açaí', price: 50 }]
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects payments sum less than total', () => {
+      const result = validateIPC('orders:save', {
+        orderData: { tableName: 'MESA 01', total: 100, payments: [
+          { method: 'DINHEIRO', amount: 50 }
+        ]},
+        items: [{ name: 'Açaí', price: 100 }]
+      })
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('menor')
+    })
+
+    it('rejects empty payments array', () => {
+      const result = validateIPC('orders:save', {
+        orderData: { tableName: 'MESA 01', total: 100, payments: [] },
+        items: [{ name: 'Açaí', price: 100 }]
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects payments with invalid method', () => {
+      const result = validateIPC('orders:save', {
+        orderData: { tableName: 'X', total: 10, payments: [
+          { method: 'BITCOIN', amount: 10 }
+        ]},
+        items: [{ name: 'Açaí', price: 10 }]
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects payments with zero or negative amount', () => {
+      const result = validateIPC('orders:save', {
+        orderData: { tableName: 'X', total: 10, payments: [
+          { method: 'DINHEIRO', amount: 0 }
+        ]},
+        items: [{ name: 'Açaí', price: 10 }]
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('accepts exact total with mixed payments', () => {
+      const result = validateIPC('orders:save', {
+        orderData: { tableName: 'X', total: 30, payments: [
+          { method: 'PIX', amount: 10 },
+          { method: 'DINHEIRO', amount: 10 },
+          { method: 'CRÉDITO', amount: 10 }
+        ]},
+        items: [{ name: 'Açaí', price: 30 }]
+      })
+      expect(result.success).toBe(true)
+    })
+  })
+
   describe('orders:delete', () => {
     it('accepts valid id', () => {
       expect(validateIPC('orders:delete', 1).success).toBe(true)

@@ -57,7 +57,6 @@ function App() {
     return null;
   }; 
   const [showPassModal, setShowPassModal] = useState({ show: false, onResult: null });
-  const [paymentMethod, setPaymentMethod] = useState('DINHEIRO');
 
   const [categories, setCategories] = useState([]);
   const [newCatName, setNewCatName] = useState('');
@@ -68,7 +67,6 @@ function App() {
   const [newTableName, setNewTableName] = useState('');
   const [delivForm, setDelivForm] = useState({ name: '', phone: '', address: '', fee: '' });
   
-  const [amountReceived, setAmountReceived] = useState('');
   const [pwdForm, setPwdForm] = useState({ current: '', next: '' });
   const [reportData, setReportData] = useState({ sales: [], movements: [], topProducts: [] });
   const [ordersHistory, setOrdersHistory] = useState([]);
@@ -652,12 +650,13 @@ function App() {
     setSimpleBuilder(null);
   };
 
-  const handleFinalize = () => {
+  const handleFinalize = ({ payments, amountReceived }) => {
     const ipc = getIPC();
-    if (ipc) {
-      const discount = selectedPromotion ? calculateDiscount(selectedPromotion, activeTable.total) : 0;
-      const finalTotal = activeTable.total - discount;
-      setLoading('Finalizando pedido...');
+    if (!ipc) return;
+
+    const discount = selectedPromotion ? calculateDiscount(selectedPromotion, activeTable.total) : 0;
+    const finalTotal = activeTable.total - discount;
+    setLoading('Finalizando pedido...');
 
        ipc.invoke('orders:save', {
          orderData: {
@@ -667,26 +666,25 @@ function App() {
            discount: discount,
            promotionId: selectedPromotion?.id || null,
            promotionName: selectedPromotion?.name || null,
-           paymentMethod: paymentMethod,
+           payments,
+           amountReceived: Number(amountReceived) || 0,
            isDelivery: activeTable.isDelivery,
            address: activeTable.address,
            phone: activeTable.phone
          },
          items: activeTable.items || []
        }).then(res => {
-         if (res && res.success) {
-           addToast('Pedido finalizado com sucesso!', 'success');
-           checkoutActiveTable();
-           loadReports();
-           setModals({ ...modals, checkout: false });
-           setAmountReceived(''); setPaymentMethod('DINHEIRO');
-           setSelectedPromotion(null);
-         } else {
-           addToast(res?.error || 'Erro ao finalizar pedido', 'error');
-         }
-       }).finally(() => clearLoading());
-    }
-  };
+          if (res && res.success) {
+            addToast('Pedido finalizado com sucesso!', 'success');
+            checkoutActiveTable();
+            loadReports();
+            setModals({ ...modals, checkout: false });
+            setSelectedPromotion(null);
+          } else {
+            addToast(res?.error || 'Erro ao finalizar pedido', 'error');
+          }
+        }).finally(() => clearLoading());
+    };
 
 
   return (
@@ -864,11 +862,7 @@ function App() {
         selectedPromotion={selectedPromotion}
         setSelectedPromotion={setSelectedPromotion}
         calculateDiscount={calculateDiscount}
-        paymentMethod={paymentMethod}
-        setPaymentMethod={setPaymentMethod}
-        amountReceived={amountReceived}
-        setAmountReceived={setAmountReceived}
-        handleFinalize={handleFinalize}
+        onFinalize={handleFinalize}
       />}
 
       {modals.login && <LoginModal

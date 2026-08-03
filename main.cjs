@@ -195,6 +195,23 @@ async function loadFrontend() {
 }
 
 function createWindow() {
+  const { session } = require('electron');
+
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          process.env.NODE_ENV === 'development'
+            ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:5173; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' http://localhost:5173 ws://localhost:5173"
+            : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'"
+        ],
+        'X-Content-Type-Options': ['nosniff'],
+        'X-Frame-Options': ['DENY'],
+      },
+    });
+  });
+
   if (mainWindow && !mainWindow.isDestroyed()) {
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.focus();
@@ -321,7 +338,57 @@ async function printTickets(orderData, items) {
           printerFront.println(item.name.toUpperCase());
           if (item.notes) printerFront.println(`*${item.notes}`);
         });
-        printerFront.openCashDrawer(); printerFront.cut(); await printerFront.execute();
+
+        // Imprimir formas de pagamento
+        if (orderData.payments && Array.isArray(orderData.payments) && orderData.payments.length > 0) {
+          printerFront.drawLine();
+          printerFront.alignCenter();
+          printerFront.setTextDoubleHeight();
+          printerFront.println("RESUMO PAGAMENTOS");
+          printerFront.setTextNormal();
+          printerFront.alignLeft();
+          printerFront.drawLine();
+          for (const p of orderData.payments) {
+            printerFront.println(`${p.method.padEnd(12)} R$ ${Number(p.amount).toFixed(2)}`);
+          }
+          printerFront.drawLine();
+          const sumP = orderData.payments.reduce((s, p) => s + Number(p.amount), 0);
+          printerFront.println(`TOTAL PAGO: R$ ${sumP.toFixed(2)}`);
+          if (orderData.amountReceived && Number(orderData.amountReceived) > 0) {
+            const cashSumP = orderData.payments.filter(p => p.method === 'DINHEIRO').reduce((s, p) => s + Number(p.amount), 0);
+            printerFront.println(`Recebido:   R$ ${Number(orderData.amountReceived).toFixed(2)}`);
+            printerFront.println(`Troco:      R$ ${(Number(orderData.amountReceived) - cashSumP).toFixed(2)}`);
+          }
+          printerFront.drawLine();
+
+          const permutaPayment = orderData.payments.find(p => p.method === 'PERMUTA');
+          if (permutaPayment) {
+            printerFront.alignCenter();
+            printerFront.setTextDoubleHeight();
+            printerFront.println("** PERMUTA **");
+            printerFront.setTextNormal();
+            printerFront.alignLeft();
+            printerFront.println(`TROCADO POR: ${permutaPayment.exchangeFor || '(não informado)'}`);
+            printerFront.drawLine();
+          } else {
+            printerFront.openCashDrawer();
+          }
+        } else if (orderData.paymentMethod?.toUpperCase() === 'PERMUTA') {
+          // Formato legado PERMUTA
+          printerFront.drawLine();
+          printerFront.alignCenter();
+          printerFront.setTextDoubleHeight();
+          printerFront.println("** PERMUTA **");
+          printerFront.setTextNormal();
+          printerFront.alignLeft();
+          printerFront.println(`TROCADO POR: ${orderData.exchangeFor || '(não informado)'}`);
+          printerFront.drawLine();
+        } else {
+          // Formato legado normal
+          printerFront.openCashDrawer();
+        }
+
+        printerFront.cut(); await printerFront.execute();
         result.front = { success: true };
       } else {
         result.front = { success: false, reason: 'Impressora do balcão não conectada' };
@@ -331,6 +398,7 @@ async function printTickets(orderData, items) {
       result.front = { success: false, reason: e.message };
     }
   }
+
   return result;
 }
 
@@ -1081,6 +1149,11 @@ createHandler('config:update', async ({ key, value }) => {
 });
 
 app.whenReady().then(() => {
+  // Initialize encryption master key via Electron safeStorage
+  const { initMasterKey } = require('./database/crypto.cjs');
+  const { safeStorage } = require('electron');
+  initMasterKey(safeStorage);
+
   const migrationError = getMigrationError();
   if (migrationError) {
     console.error('[main] Migration error detected:', migrationError);
