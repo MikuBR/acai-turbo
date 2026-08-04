@@ -22,7 +22,7 @@ export default function QuickBuilderModal({ builder, onClose, setBuilder, confir
             <div className="flex items-center gap-4">
               <button onClick={() => setBuilder({...builder, quantity: Math.max(1, builder.quantity - 1)})} className="w-10 h-10 bg-surface-light rounded-lg font-bold text-xl hover:bg-border text-primary">-</button>
               <span className="text-2xl font-bold text-primary w-6 text-center">{builder.quantity}</span>
-              <button onClick={() => setBuilder({...builder, quantity: builder.quantity + 1})} className="w-10 h-10 bg-surface-light rounded-lg font-bold text-xl hover:bg-border text-primary">+</button>
+              <button onClick={() => setBuilder({...builder, quantity: Math.min(99, builder.quantity + 1)})} className="w-10 h-10 bg-surface-light rounded-lg font-bold text-xl hover:bg-border text-primary">+</button>
             </div>
           </div>
           <div className="bg-surface-light p-4 rounded-xl border border-warning/30 flex flex-col items-center">
@@ -34,7 +34,7 @@ export default function QuickBuilderModal({ builder, onClose, setBuilder, confir
         <input type="text" placeholder="Observações..." value={builder.obs} onChange={e => setBuilder({...builder, obs: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm mb-6" />
         <button onClick={confirmSimpleBuild} className="w-full bg-success hover:bg-success py-4 rounded-xl font-bold text-lg flex justify-between px-6 items-center transition-all text-white">
           <span>LANÇAR</span>
-          <span className="font-mono">R${(Math.max(0, product.price + parseFloat(builder.adjustment || 0)) * builder.quantity).toFixed(2)}</span>
+          <span className="font-mono">R${(Math.max(0, product.price + (isNaN(parseFloat(builder.adjustment)) ? 0 : parseFloat(builder.adjustment))) * builder.quantity).toFixed(2)}</span>
         </button>
       </div>
     </div>

@@ -1,3 +1,8 @@
+// @ts-check
+
+/** @typedef {{ success: boolean; data?: any; error?: string }} ValidationResult */
+
+/** @type {Record<string, (data?: any) => ValidationResult>} */
 const validators = {
   'catalog:add-product': (data) => {
     if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
@@ -356,6 +361,11 @@ const validators = {
   },
 };
 
+/**
+ * @param {string} channel - IPC channel name
+ * @param {any} data - IPC payload data
+ * @returns {ValidationResult} Validation result object
+ */
 function validateIPC(channel, data) {
   const validator = validators[channel];
   if (!validator) return { success: true, data };

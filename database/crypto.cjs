@@ -25,7 +25,8 @@ function initMasterKey(safeStorage) {
   } else {
     _masterKey = generateKey();
     if (safeStorage.isEncryptionAvailable()) {
-      persistKey(safeStorage.encryptString(_masterKey).toString('base64'));
+      const keyString = _masterKey.toString('utf8');
+      persistKey(safeStorage.encryptString(keyString).toString('base64'));
     }
   }
 }

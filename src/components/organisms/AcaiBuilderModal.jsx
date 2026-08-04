@@ -75,14 +75,14 @@ export default function AcaiBuilderModal({ builder, onClose, setBuilder, acaiBas
             <div className="flex items-center gap-4">
               <button onClick={() => setBuilder({...builder, quantity: Math.max(1, builder.quantity - 1)})} className="w-8 h-8 bg-surface-light rounded-lg flex items-center justify-center hover:bg-border">-</button>
               <span className="text-xl font-bold text-success w-6 text-center">{builder.quantity}</span>
-              <button onClick={() => setBuilder({...builder, quantity: builder.quantity + 1})} className="w-8 h-8 bg-surface-light rounded-lg flex items-center justify-center hover:bg-border">+</button>
+              <button onClick={() => setBuilder({...builder, quantity: Math.min(99, builder.quantity + 1)})} className="w-8 h-8 bg-surface-light rounded-lg flex items-center justify-center hover:bg-border">+</button>
             </div>
           </div>
           <div className="flex items-center gap-8">
             <div className="text-right">
               <span className="text-[9px] font-bold text-muted uppercase mb-0.5 block">Total Montagem</span>
               <span className="text-3xl font-mono font-black text-success italic">
-                R${(((builder.base?.price || 0) + builder.extras.reduce((s,e) => s+(e.price*e.qty), 0) + parseFloat(builder.adjustment || 0)) * builder.quantity).toFixed(2)}
+                R${(((builder.base?.price || 0) + builder.extras.reduce((s,e) => s+(e.price*e.qty), 0) + (isNaN(parseFloat(builder.adjustment)) ? 0 : parseFloat(builder.adjustment))) * builder.quantity).toFixed(2)}
               </span>
             </div>
             <button disabled={!builder.base} onClick={confirmFullBuild}

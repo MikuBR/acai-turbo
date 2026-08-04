@@ -53,7 +53,7 @@
 - Single-phase: lint → audit → test (ubuntu + windows) → package:win (Windows-only, full npm ci for native rebuild)
 - Version strategy: Official releases on tags use first-party LTS standard; CI jobs automatically increment patch for pre-releases
 - Safe guards: paths-ignore blocks .md/.gitignore changes; minimal permissions; cache strategy per OS includes lockfile hash key
-- Note: No typecheck step present (type checking is minimal; use `npm run lint` only)
+- Note: `npm run typecheck` runs TypeScript type checking (tsc --noEmit).
 
 ## Key IPC channels (validate.cjs)
 - catalog:* (product/category CRUD operations)

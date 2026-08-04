@@ -631,12 +631,14 @@ function App() {
   const confirmFullBuild = () => {
     if (!builder?.base) return;
     const extrasPrice = builder.extras.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
-    const unitPrice = Math.max(0, builder.base.price + extrasPrice + parseFloat(builder.adjustment || 0));
+    const rawAdjustment = parseFloat(builder.adjustment);
+    const safeAdjustment = isNaN(rawAdjustment) ? 0 : rawAdjustment;
+    const unitPrice = Math.max(0, builder.base.price + extrasPrice + safeAdjustment);
     const notes = [
       builder.removals.length > 0 ? `SEM: ${builder.removals.join(', ')}` : '',
       builder.extras.length > 0 ? `ADD: ${builder.extras.map(e => `${e.qty}x ${e.name}`).join(', ')}` : '',
       builder.obs ? `OBS: ${builder.obs}` : '',
-      builder.adjustment != 0 ? `ADJ: R$ ${builder.adjustment}` : ''
+      safeAdjustment != 0 ? `ADJ: R$ ${safeAdjustment}` : ''
     ].filter(Boolean).join(' | ');
 
     addItemToActiveTable({ ...builder.base, name: `${builder.quantity > 1 ? builder.quantity + 'x ' : ''}${builder.base.name}`, price: unitPrice * builder.quantity, notes, category: builder.base.category });
@@ -645,8 +647,10 @@ function App() {
 
   const confirmSimpleBuild = () => {
     if (!simpleBuilder?.product) return;
-    const unitPrice = Math.max(0, simpleBuilder.product.price + parseFloat(simpleBuilder.adjustment || 0));
-    addItemToActiveTable({ ...simpleBuilder.product, name: `${simpleBuilder.quantity > 1 ? simpleBuilder.quantity + 'x ' : ''}${simpleBuilder.product.name}`, price: unitPrice * simpleBuilder.quantity, notes: simpleBuilder.obs + (simpleBuilder.adjustment != 0 ? ` | ADJ: R$ ${simpleBuilder.adjustment}` : ''), category: simpleBuilder.product.category });
+    const rawAdjustment = parseFloat(simpleBuilder.adjustment);
+    const safeAdjustment = isNaN(rawAdjustment) ? 0 : rawAdjustment;
+    const unitPrice = Math.max(0, simpleBuilder.product.price + safeAdjustment);
+    addItemToActiveTable({ ...simpleBuilder.product, name: `${simpleBuilder.quantity > 1 ? simpleBuilder.quantity + 'x ' : ''}${simpleBuilder.product.name}`, price: unitPrice * simpleBuilder.quantity, notes: simpleBuilder.obs + (safeAdjustment != 0 ? ` | ADJ: R$ ${safeAdjustment}` : ''), category: simpleBuilder.product.category });
     setSimpleBuilder(null);
   };
 

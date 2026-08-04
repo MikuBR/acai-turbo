@@ -43,6 +43,7 @@ jobs:
       - run: npm ci
         if: steps.cache.outputs.cache-hit != 'true'
       - run: npx eslint src/ database/
+      - run: npm run typecheck
 
   audit:
     runs-on: ubuntu-latest

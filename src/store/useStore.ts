@@ -37,7 +37,7 @@ export const useStore = create<StoreState>((set) => ({
   tables: [{ id: 1, name: 'BALCÃO', isDelivery: false, address: '', phone: '', items: [], total: 0 }],
   catalog: [],
 
-  setCatalog: (catalog: MenuItem[]) => set({ catalog }),
+  setCatalog: (catalog: MenuItem[]) => set({ catalog: catalog || [] }),
   setActiveTable: (id: number) => set({ activeTableId: id }),
   
   addTable: (payload: string | { name: string; isDelivery: boolean; address: string; phone: string; fee: number }) => set((state: StoreState) => {
@@ -59,8 +59,12 @@ export const useStore = create<StoreState>((set) => ({
   addItemToActiveTable: (product: MenuItem) => set((state: StoreState) => ({
     tables: state.tables.map((t: Table) => {
       if (t.id === state.activeTableId) {
-        const newItems = [...t.items, product];
-        const newTotal = newItems.reduce((acc: number, curr: MenuItem) => acc + curr.price, 0);
+        const safeProduct: MenuItem = {
+          ...product,
+          price: Number(product.price) || 0,
+        } as MenuItem;
+        const newItems = [...t.items, safeProduct];
+        const newTotal = newItems.reduce((acc: number, curr: MenuItem) => acc + (Number(curr.price) || 0), 0);
         return { ...t, items: newItems, total: newTotal };
       }
       return t;
@@ -71,7 +75,7 @@ export const useStore = create<StoreState>((set) => ({
     tables: state.tables.map((t: Table) => {
       if (t.id === state.activeTableId) {
         const newItems = t.items.filter((_: MenuItem, i: number) => i !== index);
-        const newTotal = newItems.reduce((acc: number, curr: MenuItem) => acc + curr.price, 0);
+        const newTotal = newItems.reduce((acc: number, curr: MenuItem) => acc + (Number(curr.price) || 0), 0);
         return { ...t, items: newItems, total: newTotal };
       }
       return t;

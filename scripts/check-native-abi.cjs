@@ -21,7 +21,7 @@ console.log('[check-abi] Binary size:', (stats.size / 1024).toFixed(0), 'KB');
 console.log('[check-abi] Modified at:', stats.mtime.toISOString());
 
 try {
-  const output = execSync(`npx electron -e "console.log(process.versions.modules)"`, { encoding: 'utf8' }).trim();
+  const output = execSync('ELECTRON_RUN_AS_NODE=1 npx electron -e "console.log(process.versions.modules)"', { encoding: 'utf8', cwd: path.join(__dirname, '..') }).trim();
   console.log('[check-abi] Electron ABI:', output);
 } catch (e) {
   console.error('[check-abi] FAIL: Could not get Electron ABI:', e.message);
@@ -29,7 +29,7 @@ try {
 }
 
 try {
-  execSync(`npx electron -e "require('better-sqlite3')"`, {
+  execSync('ELECTRON_RUN_AS_NODE=1 npx electron -e "require(\'better-sqlite3\')"', {
     cwd: path.join(__dirname, '..'),
     stdio: 'pipe',
   });

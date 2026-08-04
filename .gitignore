@@ -27,6 +27,7 @@ vite.log
 .agents/
 .cline/
 .clinerules/
+.opencode/
 
 # SQLite runtime files (WAL mode cria arquivos auxiliares)
 *.db-shm

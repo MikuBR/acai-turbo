@@ -70,11 +70,12 @@ describe('useStore', () => {
     expect(useStore.getState().tables[0].total).toBe(25)
   })
 
-  it('addItemToActiveTable handles item without price', () => {
+  it('addItemToActiveTable handles item without price (coerces to 0)', () => {
     useStore.getState().addItemToActiveTable({ name: 'Grátis', category: 'CAT' })
     const table = useStore.getState().tables[0]
     expect(table.items).toHaveLength(1)
-    expect(table.items[0].price).toBeUndefined()
+    expect(table.items[0].price).toBe(0)
+    expect(table.total).toBe(0)
   })
 
   it('removeItemFromActiveTable removes item at index', () => {
