@@ -17,7 +17,8 @@
     "postinstall": "electron-builder install-app-deps && npm run rebuild:native",
     "build:win": "vite build && electron-builder --win --x64 --publish never",
     "package:win": "electron-builder --win --x64 --publish never",
-    "check:native": "node scripts/check-native-abi.cjs"
+    "check:native": "node scripts/check-native-abi.cjs",
+    "typecheck": "tsc --noEmit"
   },
     "dependencies": {
       "bcryptjs": "^3.0.3",
@@ -50,7 +51,9 @@
     "jsdom": "^25.0.1",
     "postcss": "^8.5.15",
     "tailwindcss": "^4.3.1",
-    "vite": "^8.0.12",
+    "typescript": "^5.8.3",
+    "vite-plugin-mkcert": "^1.2.1",
+    "vite-tsconfig-paths": "^4.5.1",
     "vitest": "^4.1.10",
     "wait-on": "^9.0.10"
   },

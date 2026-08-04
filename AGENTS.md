@@ -1,12 +1,12 @@
 # Açaí Wave — AGENTS.md
 
 ## Stack
+- Desktop POS application for açaí shop
 - Frontend: React 19 + Vite 8 + Tailwind CSS 4 + Zustand
 - Desktop: Electron 28 (contextIsolation, validated IPC)
 - Database: SQLite via better-sqlite3 (WAL with auto-migration)
 - Printing: node-thermal-printer (TCP/IP + Windows printer:NOME)
 - Build: electron-builder (NSIS Windows)
-- Node: 20.x (managed by `.nvmrc`)
 
 ## Entrypoints & Core Tools
 - **Electron main**: `main.cjs` — IPC handlers, auth, printer logic
@@ -15,25 +15,23 @@
 - **Database**: `database/db.cjs` (schema/queries) + `validate.cjs` (IPC allowlist)
 - **State**: `src/store/useStore.js` (Zustand)
 - **Components**: Atomic Design (`atoms/`, `molecules/`, `organisms/`, `forms/`)
-- **PDF**: `src/components/organisms/ReportsModal.jsx` (pdfmake → main.cjs:dialog:save-pdf → preload.js:reports:exportPdf)
-- **iFood**: Integration subsystem spanning `main.cjs`, `validate.cjs`, `db.cjs`
 
 ## Commands | Purpose
-| `npm run dev` | Vite + Electron in parallel |
-| `npm test` | Vitest (unit + integration) |
-| `npm run lint` | ESLint (`src/` + `database/`) |
-| `npm run rebuild:native` | Recompile better-sqlite3 native addon |
-| `npm run check:native` | Verify native module ABI |
-| `npm run build:win` | Vite build + NSIS installer |
-| `npm run build` | Vite build only |
-| `npm run package:win` | electron-builder only (skip Vite) |
-| `npm run test:watch` | Vitest watch |
-| `npm run test:coverage` | Vitest with v8 coverage |
+- `npm run dev` | Vite + Electron in parallel
+- `npm run build` | Vite build only
+- `npm run build:win` | Vite build + NSIS installer
+- `npm run test` | Vitest (unit + integration)
+- `npm run test:watch` | Vitest watch
+- `npm run test:coverage` | Vitest with v8 coverage
+- `npm run lint` | ESLint (`src/` + `database/`)
+- `npm run rebuild:native` | Recompile better-sqlite3 native addon
+- `npm run check:native` | Verify native module ABI
+- `npm run package:win` | electron-builder only (skip Vite)
 
-## Development quirks | Agent would need help with this
+## Development quirks
 - Postinstall: `electron-builder install-app-deps` + `npm run rebuild:native`
-- Native addon build: Requires Visual Studio Build Tools + Python for Windows CI
-- GPU: Linux default is disabled; set `ENABLE_GPU=true` (or `DISABLE_GPU=true`) per platform
+- Windows native addon build requires Visual Studio Build Tools + Python
+- GPU: Linux default disabled; set `ENABLE_GPU=true` (or `DISABLE_GPU=true`) per platform
 - Security: Set `ELECTRON_DISABLE_SECURITY_WARNINGS` in `main.cjs:104` for dev
 - Fullscreen: Maximized (1280x800) by default
 - Vite: `host: '0.0.0.0:5173'` (strict port)
@@ -56,3 +54,18 @@
 - Version strategy: Official releases on tags use first-party LTS standard; CI jobs automatically increment patch for pre-releases
 - Safe guards: paths-ignore blocks .md/.gitignore changes; minimal permissions; cache strategy per OS includes lockfile hash key
 - Note: No typecheck step present (type checking is minimal; use `npm run lint` only)
+
+## Key IPC channels (validate.cjs)
+- catalog:* (product/category CRUD operations)
+- orders:* (order management, payments, history)
+- cash:* (cash movements)
+- reports:* (financial reports)
+- promotions:* (discount/promotion management)
+- auth:* (login, sessions, user management)
+- users:* (user CRUD and permissions)
+- inventory:* (stock management)
+- financial:* (accounts, transactions)
+- clients:* (client management)
+- audit:* (log tracking)
+- dialog:* (PDF export)
+- ifood:* (iFood integration)
