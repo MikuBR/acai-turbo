@@ -4,6 +4,7 @@ import useToastStore from './store/toastStore';
 import useLoadingStore from './store/loadingStore';
 import ToastContainer from './components/atoms/Toast';
 import LoadingOverlay from './components/atoms/LoadingOverlay';
+import logger from './services/logger.js';
 import { 
   Search, ChevronRight
 } from 'lucide-react';
@@ -22,6 +23,18 @@ function App() {
     activeTableId, tables, catalog, setActiveTable, addItemToActiveTable, 
     removeItemFromActiveTable, addTable, checkoutActiveTable, setCatalog 
   } = useStore();
+
+  const orderLog = logger.withScope('orders');
+  const catalogLog = logger.withScope('catalog');
+  const settingsLog = logger.withScope('settings');
+  const authLog = logger.withScope('auth');
+  const inventoryLog = logger.withScope('inventory');
+  const financialLog = logger.withScope('financial');
+  const clientsLog = logger.withScope('clients');
+  const ifoodLog = logger.withScope('ifood');
+  const reportsLog = logger.withScope('reports');
+  const cashLog = logger.withScope('cash');
+  const usersLog = logger.withScope('users');
 
   const [builder, setBuilder] = useState(null);
   const [simpleBuilder, setSimpleBuilder] = useState(null);
@@ -135,7 +148,7 @@ function App() {
         ipc.invoke('catalog:get-categories'),
         ipc.invoke('promotions:get'),
       ]).then(([products, categories, promotions]) => {
-        if (products?.success) setCatalog(products.data || []);
+        if (products?.success) { setCatalog(products.data || []); catalogLog.info('products loaded'); }
         else addToast('Erro ao carregar produtos', 'error');
         if (categories?.success) setCategories(categories.data || []);
         else addToast('Erro ao carregar categorias', 'error');
@@ -148,7 +161,7 @@ function App() {
     const ipc = getIPC();
     if (ipc) {
       ipc.invoke('users:get').then(res => {
-        if (res && res.success) setUsers(res.data || []);
+        if (res && res.success) { setUsers(res.data || []); usersLog.info('users loaded'); }
         else addToast('Erro ao carregar usuários', 'error');
       });
     }
@@ -161,6 +174,7 @@ function App() {
       ipc.invoke('inventory:get').then(res => {
         if (res && res.success) {
           setInventory(res.data || []);
+          inventoryLog.info('inventory loaded');
           const lowStock = res.data.filter(i => i.quantity <= i.min_quantity);
           if (lowStock.length > 0) {
             setTimeout(() => {
@@ -193,7 +207,7 @@ function App() {
       const startDate = financialFilter.startDate || null;
       const endDate = financialFilter.endDate || null;
       ipc.invoke('financial:get-accounts', { type: typeFilter, status: statusFilter, startDate, endDate }).then(res => {
-        if (res && res.success) setFinancialAccounts(res.data || []);
+        if (res && res.success) { setFinancialAccounts(res.data || []); financialLog.info('financial accounts loaded'); }
         else addToast('Erro ao carregar contas financeiras', 'error');
       }).finally(() => clearLoading());
     }
@@ -202,7 +216,7 @@ function App() {
   const loadClients = () => {
     const ipc = getIPC();
     if (ipc) {
-      ipc.invoke('clients:get').then(res => { if (res && res.success) setClients(res.data || []); });
+      ipc.invoke('clients:get').then(res => { if (res && res.success) { setClients(res.data || []); clientsLog.info('clients loaded'); } });
     }
   };
 
@@ -220,8 +234,8 @@ function App() {
       Promise.all([
         ipc.invoke('reports:daily'),
         ipc.invoke('orders:get-history'),
-      ]).then(([daily, history]) => {
-        if (daily?.success) setReportData(daily.data);
+      ]      ).then(([daily, history]) => {
+        if (daily?.success) { setReportData(daily.data); reportsLog.info('reports loaded'); }
         else addToast('Erro ao carregar relatório diário', 'error');
         if (history?.success) setOrdersHistory(history.data);
       }).finally(() => clearLoading());
@@ -288,6 +302,7 @@ function App() {
       ]).then(([kitchenRes, frontRes]) => {
         if (kitchenRes?.success && frontRes?.success) {
           addToast('Configurações de impressão salvas com sucesso!', 'success');
+          settingsLog.info('printer config saved');
         } else {
           addToast('Erro ao salvar configurações de impressão', 'error');
         }
@@ -333,6 +348,7 @@ function App() {
         }).then(res => {
           if (res?.success) {
             addToast('Configurações iFood salvas com sucesso!', 'success');
+            ifoodLog.info('ifood config saved');
           } else {
             addToast(res?.error || 'Erro ao ativar polling iFood', 'error');
           }
@@ -361,6 +377,7 @@ function App() {
       if (res?.success) {
         setIfoodConnectionStatus('✅ Conectado ao iFood com sucesso');
         addToast('✅ Conexão iFood estabelecida!', 'success');
+        ifoodLog.info('ifood connection tested');
       } else {
         setIfoodConnectionStatus(`❌ ${res?.error || 'Falha na conexão'}`);
         addToast(`❌ ${res?.error || 'Falha na conexão'}`, 'error');
@@ -382,6 +399,7 @@ function App() {
       if (res?.success) {
         const label = { startPreparation: 'Preparo iniciado', readyToPickup: 'Pronto para retirada', dispatch: 'Saiu para entrega' };
         addToast(`✅ Pedido iFood: ${label[action] || action}`, 'success');
+        ifoodLog.info('ifood action', { action });
       } else {
         addToast(`❌ ${res?.error || `Erro ao executar ${action}`}`, 'error');
       }
@@ -470,6 +488,7 @@ function App() {
           setCurrentUser(res.user);
           setAuthToken(res.token);
           localStorage.setItem('authToken', res.token);
+          authLog.info('user logged in', { username: loginForm.username });
 
           if (res.user.must_change_password) {
             setModals({ ...modals, login: false, changePassword: true });
@@ -520,6 +539,7 @@ function App() {
 
       if (res.success) {
         addToast('Senha alterada com sucesso!', 'success');
+        authLog.info('password changed');
         setChangePasswordForm({ current: '', new: '', confirm: '' });
         setModals({ ...modals, changePassword: false });
       } else {
@@ -680,6 +700,8 @@ function App() {
        }).then(res => {
           if (res && res.success) {
             addToast('Pedido finalizado com sucesso!', 'success');
+            orderLog.info('order checked out', { table: activeTable.name, total: finalTotal });
+            cashLog.info('payment registered', { payments });
             checkoutActiveTable();
             loadReports();
             setModals({ ...modals, checkout: false });

@@ -359,6 +359,15 @@ const validators = {
     if (typeof data.enabled !== 'boolean') return { success: false, error: 'Enabled deve ser booleano' };
     return { success: true, data };
   },
+
+  'logging:write': (data) => {
+    if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
+    const validLevels = ['error', 'warn', 'info', 'debug'];
+    if (!data.level || !validLevels.includes(data.level)) return { success: false, error: 'Nível de log inválido' };
+    if (!data.message || typeof data.message !== 'string' || data.message.trim() === '') return { success: false, error: 'Mensagem de log inválida' };
+    if (data.meta !== undefined && data.meta !== null && typeof data.meta !== 'object') return { success: false, error: 'Metadados inválidos' };
+    return { success: true, data: { level: data.level, message: data.message, meta: data.meta || {} } };
+  },
 };
 
 /**

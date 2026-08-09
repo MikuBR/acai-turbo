@@ -18,16 +18,18 @@
     "build:win": "vite build && electron-builder --win --x64 --publish never",
     "package:win": "electron-builder --win --x64 --publish never",
     "check:native": "node scripts/check-native-abi.cjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "log": "node scripts/log-viewer.cjs"
   },
-    "dependencies": {
-      "bcryptjs": "^3.0.3",
-      "better-sqlite3": "^12.11.1",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^12.11.1",
     "lucide-react": "^1.21.0",
     "node-thermal-printer": "^4.6.0",
     "pdfmake": "^0.3.11",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
+    "winston": "^3.19.0",
     "zustand": "^5.0.14"
   },
   "devDependencies": {

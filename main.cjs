@@ -22,6 +22,9 @@ const {
 } = require('./database/db.cjs');
 const { ThermalPrinter, PrinterTypes, CharacterSet } = require('node-thermal-printer');
 const { validateIPC } = require('./database/validate.cjs');
+const { initLogger: initMainLogger, logger: getLogger } = require('./database/logger.cjs');
+// database/logger.cjs exports logger as a getter function; materialize the winston instance once at load
+const logger = getLogger();
 
 console.log('[main] Database module loaded successfully');
 
@@ -81,9 +84,11 @@ function createHandler(channel, handler, options = {}) {
       if (options.minRole) {
         requireRole(options.minRole);
       }
-      return { success: true, ...await handler(valid.data) };
+      const result = { success: true, ...await handler(valid.data) };
+      logger.info(`[${channel}] success`, { channel, userId: currentSession?.user?.id });
+      return result;
     } catch (e) {
-      console.error(`[${channel}] Error:`, e.message);
+      logger.error(`[${channel}] Error:`, { message: e.message, channel, userId: currentSession?.user?.id });
       const message = e.message || 'Erro interno. Tente novamente.';
       return { success: false, error: message };
     }
@@ -111,6 +116,7 @@ app.commandLine.appendSwitch('log-level', '3');
 // para não deixar processos filho (GPU, utility) órfãos.
 // ============================================================
 process.on('uncaughtException', (error) => {
+  logger.error('main: uncaughtException', { error: error.message, stack: error.stack });
   console.error('[main] UNCAUGHT EXCEPTION:', error);
   dialog.showErrorBox('Erro Fatal', `Ocorreu um erro inesperado:\n\n${error.message}\n\nO aplicativo será encerrado.`);
   app.quit();
@@ -120,6 +126,7 @@ process.on('uncaughtException', (error) => {
 });
 
 process.on('unhandledRejection', (reason) => {
+  logger.error('main: unhandledRejection', { reason: String(reason) });
   console.error('[main] UNHANDLED REJECTION:', reason);
 });
 
@@ -1148,11 +1155,22 @@ createHandler('config:update', async ({ key, value }) => {
   return { success: true };
 });
 
+// Logging IPC handler (renderer -> main)
+createHandler('logging:write', async ({ level, message, meta }) => {
+  const fn = logger[level] || logger.info;
+  fn(`[renderer] ${message}`, meta || {});
+  return { success: true };
+});
+
 app.whenReady().then(() => {
   // Initialize encryption master key via Electron safeStorage
   const { initMasterKey } = require('./database/crypto.cjs');
   const { safeStorage } = require('electron');
   initMasterKey(safeStorage);
+
+  // Initialize structured logger
+  const path = require('path');
+  initMainLogger(path.join(app.getPath('userData'), 'logs'));
 
   const migrationError = getMigrationError();
   if (migrationError) {
