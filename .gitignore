@@ -29,6 +29,9 @@ vite.log
 .clinerules/
 .opencode/
 
+# Local agent instruction files (never commit — stays on this machine only)
+AGENTS.md
+
 # SQLite runtime files (WAL mode cria arquivos auxiliares)
 *.db-shm
 *.db-wal
