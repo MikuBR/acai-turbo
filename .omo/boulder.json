@@ -1,0 +1,87 @@
+{
+  "schema_version": 2,
+  "active_work_id": "issue-12-app-decomposition-be6cec39",
+  "works": {
+    "issue-12-app-decomposition-2d222b26": {
+      "work_id": "issue-12-app-decomposition-2d222b26",
+      "active_plan": "/home/caue/Documentos/VSCODE/acai-turbo/.omo/plans/issue-12-app-decomposition.md",
+      "plan_name": "issue-12-app-decomposition",
+      "status": "active",
+      "started_at": "2026-08-12T13:27:50.695Z",
+      "updated_at": "2026-08-12T13:27:50.695Z",
+      "session_ids": [
+        "opencode:ses_009f190beffebVi86PG5rp8RU3"
+      ],
+      "session_origins": {
+        "opencode:ses_009f190beffebVi86PG5rp8RU3": "direct"
+      },
+      "agent": "atlas",
+      "task_sessions": {}
+    },
+    "issue-12-app-decomposition-0a4b5221": {
+      "work_id": "issue-12-app-decomposition-0a4b5221",
+      "active_plan": "/home/caue/Documentos/VSCODE/acai-turbo/.omo/plans/issue-12-app-decomposition.md",
+      "plan_name": "issue-12-app-decomposition",
+      "status": "active",
+      "started_at": "2026-08-12T13:34:07.398Z",
+      "updated_at": "2026-08-12T13:34:07.398Z",
+      "session_ids": [
+        "opencode:ses_009d41381ffeCARgil0EOF60Vf"
+      ],
+      "session_origins": {
+        "opencode:ses_009d41381ffeCARgil0EOF60Vf": "direct"
+      },
+      "agent": "atlas",
+      "task_sessions": {}
+    },
+    "issue-12-app-decomposition-459e1e1a": {
+      "work_id": "issue-12-app-decomposition-459e1e1a",
+      "active_plan": "/home/caue/Documentos/VSCODE/acai-turbo/.omo/plans/issue-12-app-decomposition.md",
+      "plan_name": "issue-12-app-decomposition",
+      "status": "active",
+      "started_at": "2026-08-12T13:34:07.422Z",
+      "updated_at": "2026-08-12T13:34:07.422Z",
+      "session_ids": [
+        "opencode:ses_009d41381ffeCARgil0EOF60Vf"
+      ],
+      "session_origins": {
+        "opencode:ses_009d41381ffeCARgil0EOF60Vf": "direct"
+      },
+      "agent": "atlas",
+      "task_sessions": {}
+    },
+    "issue-12-app-decomposition-be6cec39": {
+      "work_id": "issue-12-app-decomposition-be6cec39",
+      "active_plan": "/home/caue/Documentos/VSCODE/acai-turbo/.omo/plans/issue-12-app-decomposition.md",
+      "plan_name": "issue-12-app-decomposition",
+      "status": "completed",
+      "started_at": "2026-08-12T13:35:25.486Z",
+      "updated_at": "2026-08-12T16:57:00.816Z",
+      "session_ids": [
+        "opencode:ses_009d41381ffeCARgil0EOF60Vf"
+      ],
+      "session_origins": {
+        "opencode:ses_009d41381ffeCARgil0EOF60Vf": "direct"
+      },
+      "agent": "atlas",
+      "task_sessions": {},
+      "ended_at": "2026-08-12T16:57:00.816Z",
+      "elapsed_ms": 12095330
+    }
+  },
+  "active_plan": "/home/caue/Documentos/VSCODE/acai-turbo/.omo/plans/issue-12-app-decomposition.md",
+  "started_at": "2026-08-12T13:35:25.486Z",
+  "status": "completed",
+  "updated_at": "2026-08-12T16:57:00.816Z",
+  "session_ids": [
+    "opencode:ses_009d41381ffeCARgil0EOF60Vf"
+  ],
+  "session_origins": {
+    "opencode:ses_009d41381ffeCARgil0EOF60Vf": "direct"
+  },
+  "plan_name": "issue-12-app-decomposition",
+  "task_sessions": {},
+  "agent": "atlas",
+  "ended_at": "2026-08-12T16:57:00.816Z",
+  "elapsed_ms": 12095330
+}
