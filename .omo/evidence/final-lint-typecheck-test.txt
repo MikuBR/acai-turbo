@@ -1,0 +1,35 @@
+
+> acai-wave@1.0.0 lint
+> eslint src/ database/
+
+
+/home/caue/Documentos/VSCODE/acai-turbo/src/features/pdv/AcaiBuilderScreen.jsx
+  13:9  warning  The 'safeCatalog' logical expression could make the dependencies of useMemo Hook (at line 14) change on every render. To fix this, wrap the initialization of 'safeCatalog' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  13:9  warning  The 'safeCatalog' logical expression could make the dependencies of useMemo Hook (at line 15) change on every render. To fix this, wrap the initialization of 'safeCatalog' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+/home/caue/Documentos/VSCODE/acai-turbo/src/features/pdv/CheckoutScreen.jsx
+  22:9  warning  The 'safeTables' logical expression could make the dependencies of useMemo Hook (at line 23) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'safeTables' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+/home/caue/Documentos/VSCODE/acai-turbo/src/features/pdv/PdvScreen.jsx
+  39:9  warning  The 'safeCatalog' logical expression could make the dependencies of useMemo Hook (at line 53) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'safeCatalog' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+/home/caue/Documentos/VSCODE/acai-turbo/src/layouts/AppLayout.jsx
+   87:6  warning  React Hook useEffect has missing dependencies: 'addToast', 'catalogLog', 'clearLoading', 'setCatalog', and 'setLoading'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  144:6  warning  React Hook useEffect has missing dependencies: 'addItemToActiveTable', 'addTable', and 'addToast'. Either include them or remove the dependency array                        react-hooks/exhaustive-deps
+
+✖ 6 problems (0 errors, 6 warnings)
+
+
+> acai-wave@1.0.0 typecheck
+> tsc --noEmit
+
+
+ RUN  v4.1.10 /home/caue/Documentos/VSCODE/acai-turbo
+
+ ❯ src/tests/db.test.js (0 test)
+
+ Test Files  1 failed | 17 passed (18)
+      Tests  220 passed (220)
+   Start at  13:50:10
+   Duration  23.20s (transform 2.43s, setup 4.97s, import 13.40s, tests 5.04s, environment 34.31s)
+
