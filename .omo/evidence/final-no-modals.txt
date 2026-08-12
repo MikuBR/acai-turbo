@@ -1,0 +1,24 @@
+=== F4: App.jsx demolished + no modals ===
+
+--- src/App.jsx content (4-line comment stub, no code) ---
+// App.jsx has been decomposed into feature-based components.
+// See src/router/routes.jsx for the route configuration and
+// src/features/{auth,pdv,reports,settings}/* for the extracted screens.
+// main.jsx now imports the router directly from src/router/index.jsx.
+
+--- src/main.jsx imports (imports router, NOT App) ---
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import { RouterProvider } from 'react-router'
+import './index.css'
+import router from './router/index.jsx'
+import ErrorBoundary from './components/ErrorBoundary.jsx'
+
+--- grep -rln "modals" src/ (should be empty) ---
+(empty)
+
+--- grep -rn "from.*App.jsx" src/ (only comments, no imports) ---
+src/features/settings/SettingsScreen.jsx:26:  // Local settings state (migrated from App.jsx)
+src/features/settings/SettingsScreen.jsx:65:  // ---- Handlers (migrated from App.jsx) ----
+
+=== F4 PASS ===
