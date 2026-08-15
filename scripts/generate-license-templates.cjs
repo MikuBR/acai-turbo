@@ -22,6 +22,7 @@ const buildDir = path.join(__dirname, '..', 'build');
 // Dados pessoais vindos do .env.local (ou placeholders seguros)
 const OWNER = process.env.BUILD_LICENSE_OWNER || '{{NOME_COMPLETO}}';
 const DOCUMENT = process.env.BUILD_LICENSE_DOCUMENT || '{{CNPJ_OU_CPF}}';
+const YEAR = new Date().getFullYear();
 const hasRealData = !OWNER.startsWith('{{') && !DOCUMENT.startsWith('{{');
 
 const LICENSE = `AÇAÍ WAVE - LICENÇA PROPRIETÁRIA
@@ -105,7 +106,7 @@ Versão: 1.1.1
 
 ---
 Açaí Wave v1.1.1 - Licença Proprietária
-© 2024 ${OWNER}. Todos os direitos reservados.
+© ${YEAR} ${OWNER}. Todos os direitos reservados.
 `;
 
 const EULA = `AÇAÍ WAVE - CONTRATO DE LICENÇA DE USUÁRIO FINAL (EULA)
@@ -149,7 +150,7 @@ concorda com os seguintes termos:
 
 ---
 Açaí Wave v1.1.1 - EULA
-© 2024 ${OWNER}. Todos os direitos reservados.
+© ${YEAR} ${OWNER}. Todos os direitos reservados.
 `;
 
 const CUSTOM_NSH = `; custom.nsh — Strings PT-BR do instalador Açaí Wave

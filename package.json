@@ -10,7 +10,7 @@
     "dev:electron": "wait-on http://localhost:5173/ && npx electron .",
     "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
     "build": "vite build",
-    "lint": "eslint src/ database/",
+    "lint": "eslint src/ database/ scripts/",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

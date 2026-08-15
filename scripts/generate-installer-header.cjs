@@ -21,19 +21,29 @@ function fail(msg) {
   process.exit(1);
 }
 
-if (!fs.existsSync(srcIco)) {
-  fail(`Fonte não encontrada: ${srcIco}`);
-}
+/**
+ * Obtém o PNG base: extrai o maior PNG do ICO fornecido pelo usuário.
+ * Se o ICO não existir (ex: runner limpo do CI — build/ é gitignored),
+ * retorna null e o header é gerado apenas com o fundo (sem logo).
+ */
+async function getBasePng() {
+  if (fs.existsSync(srcIco)) {
+    const decoded = decode(fs.readFileSync(srcIco));
+    let best = null;
+    for (const key of Object.keys(decoded)) {
+      const img = decoded[key];
+      if (!best || img._width > best._width) best = img;
+    }
+    if (!best || !best._imageData) {
+      fail('Não foi possível extrair PNG do ICO base.');
+    }
+    console.log(`[generate-header] PNG base extraído do ICO: ${best._width}x${best._height}`);
+    return best._imageData;
+  }
 
-// 1. Extrair o maior PNG do ICO base
-const decoded = decode(fs.readFileSync(srcIco));
-let best = null;
-for (const key of Object.keys(decoded)) {
-  const img = decoded[key];
-  if (!best || img._width > best._width) best = img;
-}
-if (!best || !best._imageData) {
-  fail('Não foi possível extrair PNG do ICO base.');
+  console.warn(`[generate-header] AVISO: ${srcIco} não encontrado.`);
+  console.warn('[generate-header] Header gerado sem logo (apenas fundo) — seguro para o CI.');
+  return null;
 }
 
 // 2. Logo branco (36x36) — forçar branco mantendo o alpha original
@@ -56,17 +66,20 @@ async function makeWhiteLogo(png) {
     .toBuffer();
 }
 
-// 3. Compor canvas 150x57 roxo + logo centralizado, e obter RGBA final
+// 3. Compor canvas 150x57 roxo + logo centralizado (se houver), e obter RGBA final
 async function composeCanvas(whiteLogo) {
-  const { data, info } = await sharp({
+  let pipeline = sharp({
     create: {
       width: 150,
       height: 57,
       channels: 4,
       background: { r: 134, g: 59, b: 255, alpha: 1 }, // #863BFF
     },
-  })
-    .composite([{ input: whiteLogo, gravity: 'center' }])
+  });
+  if (whiteLogo) {
+    pipeline = pipeline.composite([{ input: whiteLogo, gravity: 'center' }]);
+  }
+  const { data, info } = await pipeline
     .removeAlpha() // 24bpp para o BMP (sem canal alpha)
     .raw()
     .toBuffer({ resolveWithObject: true });
@@ -118,7 +131,8 @@ function writeBmp(filePath, { data, width, height }) {
 
 (async () => {
   try {
-    const whiteLogo = await makeWhiteLogo(best._imageData);
+    const basePng = await getBasePng();
+    const whiteLogo = basePng ? await makeWhiteLogo(basePng) : null;
     const canvas = await composeCanvas(whiteLogo);
     writeBmp(path.join(buildDir, 'installer-header.bmp'), canvas);
     console.log(`[generate-header] OK  build/installer-header.bmp (${canvas.width}x${canvas.height})`);
