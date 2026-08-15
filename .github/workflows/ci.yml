@@ -135,6 +135,14 @@ jobs:
           name: frontend-build
           path: dist/
 
+      - name: Generate build assets (icons, installer header, license)
+        run: npm run prepare:assets
+        env:
+          # Dados do licenciante vindos de GitHub Secrets (opcional).
+          # Se não configurados, o instalador usa placeholders.
+          BUILD_LICENSE_OWNER: ${{ secrets.BUILD_LICENSE_OWNER }}
+          BUILD_LICENSE_DOCUMENT: ${{ secrets.BUILD_LICENSE_DOCUMENT }}
+
       - name: Package Electron installer
         run: npm run package:win
 

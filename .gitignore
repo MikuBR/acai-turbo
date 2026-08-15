@@ -14,6 +14,14 @@ release
 *.local
 vite.log
 
+# Dados pessoais do licenciante (NUNCA commitados)
+# BUILD_LICENSE_OWNER / BUILD_LICENSE_DOCUMENT ficam só aqui
+.env.local
+
+# Build assets (ícones/instalador) — gerados localmente, não versionar
+# Os arquivos podem conter dados pessoais preenchidos nos templates (LICENSE/EULA)
+build/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
