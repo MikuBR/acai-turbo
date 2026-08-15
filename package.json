@@ -104,7 +104,7 @@
       "installerIcon": "build/installer-icon.ico",
       "uninstallerIcon": "build/installer-icon.ico",
       "installerHeader": "build/installer-header.bmp",
-      "customLanguage": "build/custom.nsh",
+      "include": "build/custom.nsh",
       "license": "build/EULA.txt",
       "artifactName": "Açaí Wave Setup ${version}.exe"
     }

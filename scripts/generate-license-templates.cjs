@@ -154,7 +154,7 @@ Açaí Wave v1.1.1 - EULA
 `;
 
 const CUSTOM_NSH = `; custom.nsh — Strings PT-BR do instalador Açaí Wave
-; Referenciado em package.json > build.nsis.customLanguage
+; Referenciado em package.json > build.nsis.include
 
 !define MUI_WELCOMEPAGE_TITLE "Bem-vindo ao Assistente de Instalação do Açaí Wave"
 !define MUI_WELCOMEPAGE_TEXT "Este assistente instalará o Açaí Wave \${PRODUCT_VERSION} no seu computador.$\r$\n$\r$\nRecomenda-se fechar outros programas antes de continuar.$\r$\n$\r$\nClique em Avançar para continuar."
