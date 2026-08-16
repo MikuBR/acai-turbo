@@ -11,10 +11,16 @@
     "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
     "build": "vite build",
     "lint": "eslint src/ database/ scripts/",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "rebuild:native": "node scripts/rebuild-native.cjs",
+    "test": "npm run rebuild:node && vitest run",
+    "test:ci": "vitest run --reporter=verbose",
+    "test:watch": "npm run rebuild:node && vitest",
+    "test:coverage": "npm run rebuild:node && vitest run --coverage",
+    "rebuild:node": "npm rebuild better-sqlite3",
+    "rebuild:native": "electron-rebuild -f -w better-sqlite3",
+    "rebuild:all": "npm run rebuild:node && npm run rebuild:native",
+    "swap:electron": "node scripts/swap-native-abi.cjs electron",
+    "swap:node": "node scripts/swap-native-abi.cjs node",
+    "swap:status": "node scripts/swap-native-abi.cjs status",
     "postinstall": "electron-builder install-app-deps && npm run rebuild:native",
     "build:win": "vite build && electron-builder --win --x64 --publish never",
     "package:win": "electron-builder --win --x64 --publish never",
@@ -23,8 +29,10 @@
     "generate:license": "node scripts/generate-license-templates.cjs",
     "prepare:assets": "node scripts/prepare-assets.cjs",
     "check:native": "node scripts/check-native-abi.cjs",
+    "check:node": "node -e \"require('better-sqlite3'); console.log('Node ABI OK:', process.versions.modules)\"",
     "typecheck": "tsc --noEmit",
-    "log": "node scripts/log-viewer.cjs"
+    "log": "node scripts/log-viewer.cjs",
+    "ci": "npm run lint && npm run typecheck && npm run rebuild:node && npm run check:node && npm run test:ci && npm run rebuild:native && npm run check:native"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -39,6 +47,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.2.0",
     "@eslint/js": "^10.0.1",
     "@tailwindcss/postcss": "^4.3.1",
     "@testing-library/jest-dom": "^6.9.1",

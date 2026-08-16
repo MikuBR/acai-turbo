@@ -1,0 +1,41 @@
+# Dependency Review Configuration
+# https://github.com/actions/dependency-review-action#configuration-options
+
+# Severity thresholds
+fail-on-severity: high
+
+# Allow specific vulnerable packages with justification
+allow:
+  # bcryptjs - used for password hashing, no known exploitable vulns in our usage
+  # GHSA-xxxx: Medium severity, not exploitable without specific conditions
+  # - GHSA-xxxx
+
+# Ignore specific scopes
+ignore:
+  - devDependencies  # Dev deps don't ship to production
+
+# Licenses that are not allowed
+deny-licenses:
+  - GPL-3.0-only
+  - AGPL-3.0-only
+  - SSPL-1.0
+
+# Allow these licenses explicitly
+allow-licenses:
+  - MIT
+  - Apache-2.0
+  - BSD-2-Clause
+  - BSD-3-Clause
+  - ISC
+  - Unicode-DFS-2016
+  - CC0-1.0
+  - Zlib
+  - Python-2.0
+  - MPL-2.0
+  - LGPL-2.1-only
+  - LGPL-2.1-or-later
+  - BlueOak-1.0.0
+
+# Private packages configuration (if using private registry)
+# private-packages:
+#   - @your-org/*

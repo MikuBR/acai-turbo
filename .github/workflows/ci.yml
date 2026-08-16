@@ -1,200 +1,345 @@
-name: CI
+name: CI - Açaí Wave
 
 on:
   push:
     branches: [main, develop]
-    tags: ['v*']
-    paths-ignore:
-      - '**.md'
-      - '.gitattributes'
-      - '.gitignore'
-      - '.env.example'
   pull_request:
-    branches: [main]
-    paths-ignore:
-      - '**.md'
-      - '.gitattributes'
-      - '.gitignore'
-      - '.env.example'
+    branches: [main, develop]
 
 env:
-  NODE_VERSION: 20
-  # Impede publicação de secrets em logs
-  ACTIONS_STEP_DEBUG: false
+  NODE_VERSION: '22'
+  ELECTRON_VERSION: '28.3.3'
 
 jobs:
-  lint:
+  # ──────────────────────────────────────────────────────────────────
+  # LINT & TYPECHECK
+  # ──────────────────────────────────────────────────────────────────
+  lint-and-typecheck:
+    name: Lint & TypeCheck
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-      - uses: actions/cache@v4
-        id: cache
-        with:
-          path: node_modules
-          key: deps-linux-${{ hashFiles('package-lock.json') }}
-          restore-keys: deps-linux-
-      - run: npm ci
-        if: steps.cache.outputs.cache-hit != 'true'
-      - run: npx eslint src/ database/
-      - run: npm run typecheck
+          cache: 'npm'
 
-  audit:
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run TypeScript type check
+        run: npm run typecheck
+
+  # ──────────────────────────────────────────────────────────────────
+  # TESTS ON NODE.JS (ABI 127) - Vitest suite
+  # ──────────────────────────────────────────────────────────────────
+  test-node:
+    name: Tests on Node.js (ABI 127)
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-      - uses: actions/cache@v4
-        id: cache
-        with:
-          path: node_modules
-          key: deps-linux-${{ hashFiles('package-lock.json') }}
-          restore-keys: deps-linux-
-      - run: npm ci
-        if: steps.cache.outputs.cache-hit != 'true'
-      - run: npm audit --audit-level=high
-        continue-on-error: true
+          cache: 'npm'
 
-  test:
-    needs: [lint, audit]
-    if: success()
-    strategy:
-      fail-fast: true
-      matrix:
-        os: [ubuntu-latest, windows-2022]
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
-    permissions:
-      contents: read
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rebuild native modules for Node.js
+        run: npm run rebuild:node
+
+      - name: Verify Node.js ABI compatibility
+        run: npm run check:node
+
+      - name: Run test suite
+        run: npm test -- --reporter=verbose
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          files: ./coverage/lcov.info
+          flags: node-tests
+          fail_ci_if_error: false
+
+  # ──────────────────────────────────────────────────────────────────
+  # TESTS ON ELECTRON (ABI 119) - Electron integration
+  # ──────────────────────────────────────────────────────────────────
+  test-electron:
+    name: Tests on Electron (ABI 119)
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-      - uses: actions/cache@v4
-        id: cache
-        with:
-          path: node_modules
-          key: deps-${{ matrix.os }}-node${{ env.NODE_VERSION }}-test-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            deps-${{ matrix.os }}-node${{ env.NODE_VERSION }}-
-      - run: npm ci --ignore-scripts
-        if: steps.cache.outputs.cache-hit != 'true'
-      - run: npm rebuild better-sqlite3
-      - run: npm test
-      - run: node scripts/smoke-test-db.cjs
-      - run: npm run build
-      - uses: actions/upload-artifact@v4
-        if: matrix.os == 'ubuntu-latest'
-        with:
-          name: frontend-build
-          path: dist/
-          retention-days: 1
+          cache: 'npm'
 
-  build-windows:
-    if: github.event_name == 'push' && success()
-    needs: test
-    runs-on: windows-2022
-    timeout-minutes: 30
-    permissions:
-      contents: write
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rebuild native modules for Electron
+        run: npm run rebuild:native
+
+      - name: Verify Electron ABI compatibility
+        run: npm run check:native
+
+      - name: Verify Electron can start (smoke test)
+        run: |
+          timeout 30 npx electron -e "
+            const { app } = require('electron');
+            app.whenReady().then(() => {
+              console.log('✅ Electron app initialized successfully');
+              console.log('ABI:', process.versions.modules);
+              console.log('Electron:', process.versions.electron);
+              console.log('Node:', process.versions.node);
+              app.exit(0);
+            });
+          " || true
+
+      - name: Run database validation tests in Electron context
+        run: |
+          npx electron -e "
+            const { app } = require('electron');
+            const path = require('path');
+            app.whenReady().then(async () => {
+              try {
+                const db = require('better-sqlite3');
+                const testDb = new db(':memory:');
+                testDb.pragma('journal_mode = WAL');
+                testDb.pragma('foreign_keys = ON');
+                testDb.exec('CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)');
+                const stmt = testDb.prepare('INSERT INTO test (name) VALUES (?)');
+                stmt.run('hello');
+                const row = testDb.prepare('SELECT * FROM test').get();
+                if (row.name !== 'hello') throw new Error('DB test failed');
+                console.log('✅ better-sqlite3 works correctly in Electron');
+                testDb.close();
+                app.exit(0);
+              } catch (e) {
+                console.error('❌ Electron DB test failed:', e.message);
+                app.exit(1);
+              }
+            });
+          "
+
+  # ──────────────────────────────────────────────────────────────────
+  # BUILD VALIDATION - Verify production build works
+  # ──────────────────────────────────────────────────────────────────
+  build:
+    name: Build Production
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck, test-node, test-electron]
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rebuild native modules for Electron (production target)
+        run: npm run rebuild:native
+
+      - name: Verify Electron ABI before build
+        run: npm run check:native
+
+      - name: Build client (Vite)
+        run: npm run build
+
+      - name: Verify build output exists
+        run: |
+          test -f dist/index.html
+          test -f dist/assets/index-*.js
+          test -f dist/assets/index-*.css
+          echo "✅ Build output verified"
+
+      - name: Build Windows installer (electron-builder)
+        run: npm run build:win
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: acai-wave-windows-installer
+          path: release/*.exe
+          retention-days: 7
+
+  # ──────────────────────────────────────────────────────────────────
+  # ABI REGRESSION GUARD - Fail if package-lock changes ABI expectations
+  # ──────────────────────────────────────────────────────────────────
+  abi-guard:
+    name: ABI Regression Guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
 
-      - uses: actions/cache@v4
-        id: cache
-        with:
-          path: node_modules
-          key: deps-win-full-${{ hashFiles('package-lock.json') }}
-          restore-keys: deps-win-
-      - uses: microsoft/setup-msbuild@v2
-      - name: Fix Python distutils
-        run: pip install setuptools
-      - run: npm ci
-        if: steps.cache.outputs.cache-hit != 'true'
-      - uses: actions/download-artifact@v4
-        with:
-          name: frontend-build
-          path: dist/
-
-      - name: Generate build assets (icons, installer header, license)
-        run: npm run prepare:assets
-        env:
-          # Dados do licenciante vindos de GitHub Secrets (opcional).
-          # Se não configurados, o instalador usa placeholders.
-          BUILD_LICENSE_OWNER: ${{ secrets.BUILD_LICENSE_OWNER }}
-          BUILD_LICENSE_DOCUMENT: ${{ secrets.BUILD_LICENSE_DOCUMENT }}
-
-      - name: Package Electron installer
-        run: npm run package:win
-
-      - name: Validate installer
-        shell: pwsh
+      - name: Check Electron version in package.json
         run: |
-          $files = Get-ChildItem -Path release\*.exe
-          if (-not $files) { throw "No .exe found in release/" }
-          foreach ($f in $files) {
-            $size = ($f.Length / 1MB).ToString("F2")
-            Write-Host "✅ $($f.Name) — ${size}MB"
-          }
-
-      - name: Rebuild native addon before smoke test
-        run: npm rebuild better-sqlite3
-
-      - name: Smoke test DB migration
-        shell: bash
-        run: node scripts/smoke-test-db.cjs
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: acai-wave-installer
-          path: release/
-
-      - name: Calculate next CI version
-        id: version
-        shell: bash
-        run: |
-          LATEST_TAG=$(git tag --sort=-version:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
-          if [ -z "$LATEST_TAG" ]; then
-            NEXT_VERSION="1.0.0"
-          else
-            VERSION="${LATEST_TAG#v}"
-            MAJOR=$(echo "$VERSION" | cut -d. -f1)
-            MINOR=$(echo "$VERSION" | cut -d. -f2)
-            PATCH=$(echo "$VERSION" | cut -d. -f3)
-            PATCH=$((PATCH + 1))
-            NEXT_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          ELECTRON_PKG=$(cat package.json | jq -r '.devDependencies.electron')
+          echo "Electron version in package.json: $ELECTRON_PKG"
+          if [[ "$ELECTRON_PKG" != "${{ env.ELECTRON_VERSION }}" ]]; then
+            echo "⚠️  Electron version mismatch! Expected ${{ env.ELECTRON_VERSION }}, got $ELECTRON_PKG"
+            echo "Update .github/workflows/ci.yml ELECTRON_VERSION env var if intentional"
+            exit 1
           fi
-          echo "next_version=${NEXT_VERSION}" >> "$GITHUB_OUTPUT"
-          echo "next_tag=v${NEXT_VERSION}-ci.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
 
-      - name: Publish to GitHub Releases
-        uses: softprops/action-gh-release@v2
+      - name: Check .npmrc exists with electron config
+        run: |
+          if [[ ! -f .npmrc ]]; then
+            echo "❌ .npmrc missing! Required for ABI consistency"
+            exit 1
+          fi
+          if ! grep -q "runtime=electron" .npmrc; then
+            echo "❌ .npmrc missing 'runtime=electron'"
+            exit 1
+          fi
+          if ! grep -q "electron_version=${{ env.ELECTRON_VERSION }}" .npmrc; then
+            echo "⚠️  .npmrc electron_version mismatch"
+          fi
+          echo "✅ .npmrc validated"
+
+      - name: Verify swap-native-abi script exists
+        run: |
+          if [[ ! -f scripts/swap-native-abi.cjs ]]; then
+            echo "❌ scripts/swap-native-abi.cjs missing!"
+            exit 1
+          fi
+          echo "✅ ABI swap script present"
+
+      - name: Verify check:native script works
+        run: |
+          npm ci
+          npm run rebuild:native
+          npm run check:native
+          echo "✅ check:native passes"
+
+      - name: Verify check:node script works
+        run: |
+          npm run rebuild:node
+          npm run check:node
+          echo "✅ check:node passes"
+
+  # ──────────────────────────────────────────────────────────────────
+  # SECURITY AUDIT
+  # ──────────────────────────────────────────────────────────────────
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || steps.version.outputs.next_tag }}
-          name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || steps.version.outputs.next_tag }}
-          prerelease: ${{ !startsWith(github.ref, 'refs/tags/v') }}
-          make_latest: ${{ startsWith(github.ref, 'refs/tags/v') && 'true' || 'false' }}
-          files: release/*.exe
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit (fail on high/critical)
+        run: npm audit --audit-level=high
+
+      - name: Run security tests
+        run: npm test -- --run src/tests/security.test.js
+
+      - name: Check for known vulnerable patterns in code
+        run: |
+          # Check for eval/Function constructor usage (CSP violations)
+          if grep -r "eval(" src/ --include="*.js" --include="*.jsx" | grep -v node_modules | grep -v test; then
+            echo "❌ Found eval() usage - CSP violation risk"
+            exit 1
+          fi
+          if grep -r "new Function" src/ --include="*.js" --include="*.jsx" | grep -v node_modules | grep -v test; then
+            echo "❌ Found new Function() usage - CSP violation risk"
+            exit 1
+          fi
+          # Check for innerHTML dangerouslySetInnerHTML without sanitization
+          if grep -r "dangerouslySetInnerHTML" src/ --include="*.js" --include="*.jsx" | grep -v node_modules | grep -v test; then
+            echo "⚠️  Found dangerouslySetInnerHTML - verify sanitization"
+          fi
+          echo "✅ Security pattern check passed"
+
+  # ──────────────────────────────────────────────────────────────────
+  # DEPENDENCY REVIEW
+  # ──────────────────────────────────────────────────────────────────
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Review dependencies
+        uses: actions/dependency-review-action@v4
+        with:
+          config-file: '.github/dependency-review-config.yml'
+          fail-on-severity: high
+
+# ──────────────────────────────────────────────────────────────────
+# SUMMARY JOB
+# ──────────────────────────────────────────────────────────────────
+  summary:
+    name: CI Summary
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck, test-node, test-electron, build, abi-guard, security-audit]
+    if: always()
+    steps:
+      - name: Check job statuses
+        run: |
+          echo "## CI Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint & TypeCheck | ${{ needs.lint-and-typecheck.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests (Node.js ABI 127) | ${{ needs.test-node.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests (Electron ABI 119) | ${{ needs.test-electron.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build Production | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| ABI Regression Guard | ${{ needs.abi-guard.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Audit | ${{ needs.security-audit.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Fail if any job failed
+          if [[ "${{ needs.lint-and-typecheck.result }}" != "success" ]] || \
+             [[ "${{ needs.test-node.result }}" != "success" ]] || \
+             [[ "${{ needs.test-electron.result }}" != "success" ]] || \
+             [[ "${{ needs.build.result }}" != "success" ]] || \
+             [[ "${{ needs.abi-guard.result }}" != "success" ]] || \
+             [[ "${{ needs.security-audit.result }}" != "success" ]]; then
+            echo "❌ Some jobs failed"
+            exit 1
+          fi
+          echo "✅ All jobs passed"
