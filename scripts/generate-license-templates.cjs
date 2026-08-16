@@ -15,6 +15,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const iconv = require('iconv-lite');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env.local') });
 
 const buildDir = path.join(__dirname, '..', 'build');
@@ -195,18 +196,45 @@ const customNshPath = path.join(buildDir, 'custom.nsh');
 // Sempre escreve LICENSE/EULA: se há dados reais no .env.local, aplica-os;
 // caso contrário, usa placeholders. Não há risco de "vazar" dados para o git
 // porque build/ é ignorado (.gitignore) e o .env.local nunca é commitado.
-fs.writeFileSync(licensePath, LICENSE);
+//
+// ENCODING: o NSIS (instalador Windows) exibe a página de licença como
+// Windows-1252/ANSI. Se o arquivo for gravado em UTF-8, caracteres
+// acentuados (Ã, Ç, É, Ó...) viram símbolos estranhos (mojibake) no
+// instalador. Por isso convertemos para win1252 antes de gravar.
+const LICENSE_ANSI = iconv.encode(LICENSE, 'win1252');
+const EULA_ANSI = iconv.encode(EULA, 'win1252');
+
+fs.writeFileSync(licensePath, LICENSE_ANSI);
 console.log(`[generate-license] OK  build/LICENSE.txt (${hasRealData ? 'dados do licenciante (env/.env.local)' : 'placeholders'})`);
 
-fs.writeFileSync(eulaPath, EULA);
+fs.writeFileSync(eulaPath, EULA_ANSI);
 console.log(`[generate-license] OK  build/EULA.txt (${hasRealData ? 'dados do licenciante (env/.env.local)' : 'placeholders'})`);
 
-if (!fs.existsSync(customNshPath)) {
-  fs.writeFileSync(customNshPath, CUSTOM_NSH);
-  console.log('[generate-license] OK  criado build/custom.nsh (strings PT-BR)');
-} else {
-  console.log('[generate-license] Já existe build/custom.nsh — mantido');
+// custom.nsh é incluído no script NSIS e contém strings PT-BR exibidas na UI
+// do instalador (ex.: título da página de licença). O makensis interpreta
+// arquivos sem BOM como ANSI do sistema — no CI (locale en-US) os acentos
+// virariam mojibake. Por isso gravamos UTF-8 com BOM, que o NSIS Unicode
+// reconhece como UTF-8 independente do locale da máquina.
+const CUSTOM_NSH_BOM = '\uFEFF' + CUSTOM_NSH;
+
+function writeCustomNshIfNeeded() {
+  if (!fs.existsSync(customNshPath)) {
+    fs.writeFileSync(customNshPath, CUSTOM_NSH_BOM);
+    console.log('[generate-license] OK  criado build/custom.nsh (strings PT-BR, UTF-8 BOM)');
+    return;
+  }
+  const existing = fs.readFileSync(customNshPath);
+  const hasBom = existing.length >= 3 && existing[0] === 0xef && existing[1] === 0xbb && existing[2] === 0xbf;
+  if (!hasBom) {
+    // Arquivo antigo (UTF-8 sem BOM): reescreve com BOM para evitar mojibake.
+    fs.writeFileSync(customNshPath, CUSTOM_NSH_BOM);
+    console.log('[generate-license] OK  build/custom.nsh reescrito com UTF-8 BOM');
+  } else {
+    console.log('[generate-license] Já existe build/custom.nsh — mantido');
+  }
 }
+
+writeCustomNshIfNeeded();
 
 if (!hasRealData) {
   console.log('\n[generate-license] AVISO: nenhum dado pessoal configurado.');
