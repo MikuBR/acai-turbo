@@ -1,13 +1,13 @@
-name: Release - Windows Installer
+name: Release - Build Windows Installer
 
 on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: write  # needed for creating releases
+  packages: write  # optional, for npm packages if needed
 
 env:
   NODE_VERSION: '22'
@@ -29,58 +29,75 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
         run: npm install --ignore-scripts --legacy-peer-deps
+        shell: pwsh
 
       - name: Rebuild native modules for Electron
         run: npm run rebuild:native
+        shell: pwsh
 
       - name: Verify Electron ABI compatibility
         run: npm run check:native
+        shell: pwsh
 
       - name: Build client (Vite)
         run: npm run build
+        shell: pwsh
 
-      - name: Verify build output
+      - name: Verify build output exists
         run: |
-          if (Test-Path dist/index.html) { Write-Host "✅ Build output verified" } else { exit 1 }
+          Test-Path dist/index.html
+          Test-Path dist/assets/index-*.js
+          Test-Path dist/assets/index-*.css
+          Write-Host "✅ Build output verified"
+        shell: pwsh
 
       - name: Build Windows installer (electron-builder)
         run: npm run build:win
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
+        shell: pwsh
 
       - name: Get version from tag
         id: version
-        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $version = $tag.TrimStart('v')
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+        shell: pwsh
 
-      - name: Create GitHub Release
+      - name: Upload installer as release asset
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/v')
         with:
+          files: release/*.exe
           tag_name: ${{ github.ref_name }}
-          name: Açaí Wave ${{ steps.version.outputs.VERSION }}
+          name: "Açaí Wave v${{ steps.version.outputs.VERSION }}"
           body: |
-            ## Açaí Wave ${{ steps.version.outputs.VERSION }}
-            
-            ### Instalação
-            1. Baixe `acai-wave Setup ${{ steps.version.outputs.VERSION }}.exe`
-            2. Execute o instalador
-            3. Siga o assistente de instalação
-            
-            ### Notas
-            - Electron ${{ env.ELECTRON_VERSION }}
-            - Node.js ${{ env.NODE_VERSION }}
-            - ABI 128 (Electron) / 127 (Node.js)
-          files: |
-            release/*.exe
+            ## Açaí Wave v${{ steps.version.outputs.VERSION }}
+
+            ### 📥 Download
+            - **Windows Installer (NSIS):** `acai-wave Setup ${{ steps.version.outputs.VERSION }}.exe`
+
+            ### 🔧 Changes
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
+
+            ### 📦 Installation
+            1. Download the `.exe` above
+            2. Run the installer
+            3. Launch Açaí Wave from Start Menu
+
+            ---
+            *Built from commit ${{ github.sha }}*
           draft: false
-          prerelease: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload installer as artifact (backup)
+      - name: Upload installer as workflow artifact (backup)
         uses: actions/upload-artifact@v4
         with:
           name: acai-wave-windows-installer
