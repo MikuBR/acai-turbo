@@ -101,8 +101,7 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y xvfb
           cat > smoke-test.cjs << 'EOF'
-          // Quick Electron ABI verification without app lifecycle
-          console.log('✅ Electron module loads');
+          console.log('✅ Electron loads');
           console.log('ABI:', process.versions.modules);
           console.log('Electron:', process.versions.electron);
           console.log('Node:', process.versions.node);
