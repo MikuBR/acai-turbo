@@ -18,6 +18,9 @@ jobs:
     name: Build Windows Installer (NSIS)
     runs-on: windows-latest
     timeout-minutes: 30
+    env:
+      NODE_VERSION: '22'
+      ELECTRON_VERSION: '32.3.3'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -30,6 +33,9 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           registry-url: 'https://registry.npmjs.org'
+
+      - name: Setup MSBuild (for native modules)
+        uses: microsoft/setup-msbuild@v2
 
       - name: Install dependencies
         run: npm install --ignore-scripts --legacy-peer-deps
@@ -56,9 +62,24 @@ jobs:
         shell: pwsh
 
       - name: Build Windows installer (electron-builder)
-        run: npm run build:win
+        run: |
+          Write-Host "Building Windows installer..."
+          npm run build:win
+          Write-Host "Build completed successfully"
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
+        shell: pwsh
+
+      - name: Verify installer was created
+        run: |
+          $files = Get-ChildItem release/*.exe
+          if ($files.Count -eq 0) {
+            Write-Error "No .exe files found in release/"
+            exit 1
+          }
+          foreach ($file in $files) {
+            Write-Host "Found: $($file.Name) ($($file.Length) bytes)"
+          }
         shell: pwsh
 
       - name: Get version from tag
