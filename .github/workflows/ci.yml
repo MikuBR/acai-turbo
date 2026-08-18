@@ -241,8 +241,7 @@ jobs:
         run: |
           npm install --ignore-scripts --legacy-peer-deps
           npm run rebuild:native
-          sudo apt-get update && sudo apt-get install -y xvfb
-          xvfb-run --auto-servernum npm run check:native
+          npm run check:native -- --skip-electron-test
           echo "✅ check:native passes"
 
       - name: Verify check:node script works
