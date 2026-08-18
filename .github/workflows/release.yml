@@ -67,9 +67,17 @@ jobs:
           Write-Host "Current directory: $(Get-Location)"
           Write-Host "Release directory contents before build:"
           if (Test-Path release) { Get-ChildItem release } else { Write-Host "release/ does not exist" }
+          Write-Host "Build assets directory contents:"
+          Get-ChildItem build/
           $env:DEBUG = "electron-builder"
-          npm run build:win
-          Write-Host "Build completed successfully"
+          try {
+            npx electron-builder --win --x64 --publish never
+            Write-Host "Build completed successfully"
+          } catch {
+            Write-Host "Build FAILED with error: $_"
+            Write-Host "Error details: $($_.Exception.Message)"
+            throw $_
+          }
           Write-Host "Release directory contents after build:"
           if (Test-Path release) { Get-ChildItem release } else { Write-Host "release/ does not exist" }
         env:
