@@ -110,7 +110,7 @@ jobs:
             app.exit(0);
           });
           EOF
-          xvfb-run --auto-servernum timeout 30 npx electron smoke-test.cjs || true
+          xvfb-run --auto-servernum timeout 30 npx electron --no-sandbox --disable-gpu --disable-software-rasterizer smoke-test.cjs || true
           rm -f smoke-test.cjs
 
       - name: Run database validation tests in Electron context
@@ -139,7 +139,7 @@ jobs:
             }
           });
           EOF
-          xvfb-run --auto-servernum npx electron electron-db-test.cjs
+          xvfb-run --auto-servernum npx electron --no-sandbox --disable-gpu --disable-software-rasterizer electron-db-test.cjs
           rm -f electron-db-test.cjs
 
   # ──────────────────────────────────────────────────────────────────
