@@ -64,8 +64,14 @@ jobs:
       - name: Build Windows installer (electron-builder)
         run: |
           Write-Host "Building Windows installer..."
+          Write-Host "Current directory: $(Get-Location)"
+          Write-Host "Release directory contents before build:"
+          if (Test-Path release) { Get-ChildItem release } else { Write-Host "release/ does not exist" }
+          $env:DEBUG = "electron-builder"
           npm run build:win
           Write-Host "Build completed successfully"
+          Write-Host "Release directory contents after build:"
+          if (Test-Path release) { Get-ChildItem release } else { Write-Host "release/ does not exist" }
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
         shell: pwsh
