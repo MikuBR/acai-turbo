@@ -224,11 +224,7 @@ jobs:
             echo "❌ .npmrc missing! Required for ABI consistency"
             exit 1
           fi
-          if ! grep -q "runtime=electron" .npmrc; then
-            echo "❌ .npmrc missing 'runtime=electron'"
-            exit 1
-          fi
-          # electron_version is now auto-detected from package.json
+          # electron_version and runtime are now auto-detected from package.json
           echo "✅ .npmrc validated"
 
       - name: Verify swap-native-abi script exists
