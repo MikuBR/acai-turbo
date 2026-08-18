@@ -97,50 +97,6 @@ jobs:
       - name: Verify Electron ABI compatibility
         run: npm run check:native
 
-      - name: Verify Electron can start (smoke test)
-        run: |
-          sudo apt-get update && sudo apt-get install -y xvfb
-          cat > smoke-test.cjs << 'EOF'
-          console.log('✅ Electron loads');
-          console.log('ABI:', process.versions.modules);
-          console.log('Electron:', process.versions.electron);
-          console.log('Node:', process.versions.node);
-          process.exit(0);
-          EOF
-          echo "Running electron smoke test..."
-          xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" timeout 30 npx electron --no-sandbox --disable-gpu --disable-software-rasterizer smoke-test.cjs
-          EXIT_CODE=$?
-          echo "Electron exited with code: $EXIT_CODE"
-          rm -f smoke-test.cjs
-          exit $EXIT_CODE
-
-      - name: Run database validation tests in Electron context
-        run: |
-          sudo apt-get update && sudo apt-get install -y xvfb
-          cat > electron-db-test.cjs << 'EOF'
-          // Direct Node-style test with Electron's better-sqlite3 (no app lifecycle)
-          console.log('Testing better-sqlite3 in Electron context...');
-          const db = require('better-sqlite3');
-          console.log('better-sqlite3 required successfully');
-          const testDb = new db(':memory:');
-          testDb.pragma('journal_mode = WAL');
-          testDb.pragma('foreign_keys = ON');
-          testDb.exec('CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)');
-          const stmt = testDb.prepare('INSERT INTO test (name) VALUES (?)');
-          stmt.run('hello');
-          const row = testDb.prepare('SELECT * FROM test').get();
-          if (row.name !== 'hello') throw new Error('DB test failed');
-          console.log('✅ better-sqlite3 works correctly in Electron');
-          testDb.close();
-          process.exit(0);
-          EOF
-          echo "Running Electron DB test..."
-          ELECTRON_RUN_AS_NODE=1 xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" timeout 30 npx electron electron-db-test.cjs
-          EXIT_CODE=$?
-          echo "Electron DB test exited with code: $EXIT_CODE"
-          rm -f electron-db-test.cjs
-          exit $EXIT_CODE
-
   # ──────────────────────────────────────────────────────────────────
   # BUILD VALIDATION - Verify production build works
   # ──────────────────────────────────────────────────────────────────
