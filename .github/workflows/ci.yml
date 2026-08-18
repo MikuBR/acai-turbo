@@ -28,7 +28,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --legacy-peer-deps
 
       - name: Run ESLint
         run: npm run lint
@@ -53,7 +53,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --legacy-peer-deps
 
       - name: Rebuild native modules for Node.js
         run: npm run rebuild:node
@@ -89,7 +89,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --legacy-peer-deps
 
       - name: Rebuild native modules for Electron
         run: npm run rebuild:native
@@ -154,7 +154,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --legacy-peer-deps
 
       - name: Rebuild native modules for Electron (production target)
         run: npm run rebuild:native
@@ -239,9 +239,10 @@ jobs:
 
       - name: Verify check:native script works
         run: |
-          npm ci
+          npm install --legacy-peer-deps
           npm run rebuild:native
-          npm run check:native
+          sudo apt-get update && sudo apt-get install -y xvfb
+          xvfb-run --auto-servernum npm run check:native
           echo "✅ check:native passes"
 
       - name: Verify check:node script works
@@ -267,7 +268,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --legacy-peer-deps
 
       - name: Run npm audit (fail on high/critical)
         run: npm audit --audit-level=high
