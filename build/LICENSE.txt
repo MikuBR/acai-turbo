@@ -1,0 +1,82 @@
+AÇAÍ WAVE - LICENÇA PROPRIETÁRIA
+=================================
+
+Titular: Cauê Tavares ("Licenciante")
+CNPJ/CPF: 096.332.429-24
+Software: Açaí Wave ("Software")
+Versão: 1.1.1
+
+1. CONCESSÃO DE LICENÇA
+   1.1 O Licenciante concede ao Licenciado uma licença NÃO EXCLUSIVA,
+       INTRANSFERÍVEL, REVOGÁVEL e LIMITADA para usar o Software
+       exclusivamente para fins internos de operação do estabelecimento
+       licenciado.
+
+   1.2 É EXPRESSAMENTE VEDADO ao Licenciado:
+       a) Copiar, modificar, adaptar, traduzir ou criar obras derivadas
+          do Software, no todo ou em parte;
+       b) Distribuir, sublicenciar, alugar, arrendar, emprestar ou
+          disponibilizar o Software a terceiros;
+       c) Realizar engenharia reversa, descompilar, desmontar, deobfuscar
+          ou tentar obter o código-fonte do Software, exceto onde a lei
+          brasileira (Lei 9.609/98, art. 6º) proíba expressamente tal
+          restrição;
+       d) Remover, alterar ou ocultar avisos de copyright, marcas d'água,
+          identificadores de versão ou quaisquer mecanismos de proteção;
+       e) UTILIZAR O SOFTWARE PARA PRESTAÇÃO DE SERVIÇOS A TERCEIROS,
+          MODELO SAAS, BUREAU, FRANQUIA OU QUALQUER FORMA DE
+          COMERCIALIZAÇÃO EXTERNA DO SOFTWARE OU DE SUAS FUNCIONALIDADES;
+       f) Competir com o Licenciante utilizando o Software como base
+          tecnológica, direta ou indiretamente.
+
+2. PROPRIEDADE INTELECTUAL
+   2.1 Todos os direitos de propriedade intelectual sobre o Software,
+       incluindo mas não se limitando a: copyright (Lei 9.610/98),
+       segredos de negócio, know-how, algoritmos, estrutura de banco
+       de dados, interface de usuário, marcas e nomes comerciais,
+       pertencem EXCLUSIVAMENTE ao Licenciante.
+
+   2.2 O Licenciado não adquire nenhum direito de propriedade sobre o
+       Software, apenas o direito de uso limitado aqui concedido.
+
+3. DADOS E PRIVACIDADE
+   3.1 Todos os dados inseridos no Software (clientes, produtos, vendas,
+       financeiro) são de propriedade exclusiva do Licenciado.
+   3.2 O Licenciante não tem acesso, não coleta e não transmite quaisquer
+       dados do Licenciado para servidores externos.
+
+4. VIGÊNCIA E RESCISÃO
+   4.1 Esta licença vigorará por prazo indeterminado a partir da
+       instalação do Software.
+   4.2 Violação de qualquer cláusula desta licença encerra
+       AUTOMATICAMENTE a concessão, devendo o Licenciado cessar
+       imediatamente o uso e destruir todas as cópias.
+
+5. LIMITAÇÃO DE RESPONSABILIDADE
+   5.1 O Software é fornecido "NO ESTADO EM QUE SE ENCONTRA" (AS IS),
+       sem garantias de qualquer natureza, expressas ou implícitas.
+   5.2 O Licenciante não se responsabiliza por lucros cessantes, danos
+       emergentes, perda de dados ou interrupção de negócio decorrentes
+       do uso ou incapacidade de uso do Software.
+
+6. INDENIZAÇÃO
+   O Licenciado indenizará e isentará o Licenciante de quaisquer
+   reclamações, perdas, danos, honorários advocatícios e custas
+   processuais decorrentes de uso do Software em violação a esta licença.
+
+7. LEI APLICÁVEL E FORO
+   7.1 Esta licença é regida pelas leis da República Federativa do Brasil.
+   7.2 Fica eleito o foro da Comarca de Cornélio Procópio, Estado do
+       Paraná, para dirimir quaisquer controvérsias oriundas desta
+       licença, com renúncia a qualquer outro, por mais privilegiado
+       que seja.
+
+8. DISPOSIÇÕES GERAIS
+   8.1 A nulidade de qualquer cláusula não invalida as demais.
+   8.2 A tolerância a eventual descumprimento não constitui novação
+       ou renúncia de direito.
+   8.3 Esta licença constitui o acordo integral entre as partes.
+
+---
+Açaí Wave v1.1.1 - Licença Proprietária
+© 2026 Cauê Tavares. Todos os direitos reservados.
