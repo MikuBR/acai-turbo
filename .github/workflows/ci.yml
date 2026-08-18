@@ -73,10 +73,10 @@ jobs:
           fail_ci_if_error: false
 
   # ──────────────────────────────────────────────────────────────────
-  # TESTS ON ELECTRON (ABI 119) - Electron integration
+  # TESTS ON ELECTRON (ABI 128) - Electron integration
   # ──────────────────────────────────────────────────────────────────
   test-electron:
-    name: Tests on Electron (ABI 119)
+    name: Tests on Electron (ABI 128)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -100,43 +100,45 @@ jobs:
       - name: Verify Electron can start (smoke test)
         run: |
           sudo apt-get update && sudo apt-get install -y xvfb
-          xvfb-run --auto-servernum timeout 30 npx electron -e "
-            const { app } = require('electron');
-            app.whenReady().then(() => {
-              console.log('✅ Electron app initialized successfully');
-              console.log('ABI:', process.versions.modules);
-              console.log('Electron:', process.versions.electron);
-              console.log('Node:', process.versions.node);
-              app.exit(0);
-            });
-          " || true
+          cat > /tmp/smoke-test.cjs << 'EOF'
+          const { app } = require('electron');
+          app.whenReady().then(() => {
+            console.log('✅ Electron app initialized successfully');
+            console.log('ABI:', process.versions.modules);
+            console.log('Electron:', process.versions.electron);
+            console.log('Node:', process.versions.node);
+            app.exit(0);
+          });
+          EOF
+          xvfb-run --auto-servernum timeout 30 npx electron /tmp/smoke-test.cjs || true
 
       - name: Run database validation tests in Electron context
         run: |
           sudo apt-get update && sudo apt-get install -y xvfb
-          xvfb-run --auto-servernum npx electron -e "
-            const { app } = require('electron');
-            const path = require('path');
-            app.whenReady().then(async () => {
-              try {
-                const db = require('better-sqlite3');
-                const testDb = new db(':memory:');
-                testDb.pragma('journal_mode = WAL');
-                testDb.pragma('foreign_keys = ON');
-                testDb.exec('CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)');
-                const stmt = testDb.prepare('INSERT INTO test (name) VALUES (?)');
-                stmt.run('hello');
-                const row = testDb.prepare('SELECT * FROM test').get();
-                if (row.name !== 'hello') throw new Error('DB test failed');
-                console.log('✅ better-sqlite3 works correctly in Electron');
-                testDb.close();
-                app.exit(0);
-              } catch (e) {
-                console.error('❌ Electron DB test failed:', e.message);
-                app.exit(1);
-              }
-            });
-          "
+          cat > /tmp/electron-db-test.cjs << 'EOF'
+          const { app } = require('electron');
+          const path = require('path');
+          app.whenReady().then(async () => {
+            try {
+              const db = require('better-sqlite3');
+              const testDb = new db(':memory:');
+              testDb.pragma('journal_mode = WAL');
+              testDb.pragma('foreign_keys = ON');
+              testDb.exec('CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)');
+              const stmt = testDb.prepare('INSERT INTO test (name) VALUES (?)');
+              stmt.run('hello');
+              const row = testDb.prepare('SELECT * FROM test').get();
+              if (row.name !== 'hello') throw new Error('DB test failed');
+              console.log('✅ better-sqlite3 works correctly in Electron');
+              testDb.close();
+              app.exit(0);
+            } catch (e) {
+              console.error('❌ Electron DB test failed:', e.message);
+              app.exit(1);
+            }
+          });
+          EOF
+          xvfb-run --auto-servernum npx electron /tmp/electron-db-test.cjs
 
   # ──────────────────────────────────────────────────────────────────
   # BUILD VALIDATION - Verify production build works
