@@ -20,7 +20,7 @@ vite.log
 
 # Build assets (ícones/instalador) — gerados localmente, não versionar
 # Os arquivos podem conter dados pessoais preenchidos nos templates (LICENSE/EULA)
-build/
+# build/  <-- REMOVIDO: necessário para electron-builder no CI
 
 # Editor directories and files
 .vscode/*

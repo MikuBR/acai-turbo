@@ -1,0 +1,42 @@
+ACAI WAVE - END USER LICENSE AGREEMENT (EULA)
+============================================
+
+By installing and using Acai Wave ("Software"), you ("Licensee")
+agree to the following terms:
+
+1. LICENSE
+   - Non-exclusive, non-transferable, revocable, limited license
+   - Internal use only for operation of YOUR establishment
+
+2. ABSOLUTE PROHIBITIONS
+   - Copy, modify, create derivative works
+   - Distribute, sublicense, rent, lend
+   - Reverse engineer, decompile, deobfuscate
+   - Remove copyright/protection notices
+   - USE TO PROVIDE SERVICES TO THIRD PARTIES (SAAS, BUREAU, etc.)
+   - Commercialize the Software in any way
+
+3. OWNERSHIP
+   All rights (copyright, trade secrets, trademarks)
+   belong EXCLUSIVELY to the Licensor:
+
+   Caue Tavares
+   CNPJ/CPF: 096.332.429-24
+
+4. YOUR DATA
+   Your data (clients, sales, financial) is YOURS.
+   We do not access, collect, or transmit it.
+
+5. AUTOMATIC TERMINATION
+   Any violation terminates the license immediately.
+
+6. NO WARRANTIES
+   Software provided "AS IS".
+   No warranties of uninterrupted or error-free operation.
+
+7. JURISDICTION
+   Cornélio Procópio, Parana.
+
+---
+Acai Wave v1.1.1 - EULA
+(C) 2026 Caue Tavares. All rights reserved.
