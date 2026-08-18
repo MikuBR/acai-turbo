@@ -100,8 +100,11 @@ jobs:
       - name: Verify Electron can start (smoke test)
         run: |
           sudo apt-get update && sudo apt-get install -y xvfb
+          pwd
           cat > smoke-test.cjs << 'EOF'
           const { app } = require('electron');
+          console.log('__dirname:', __dirname);
+          console.log('process.cwd():', process.cwd());
           app.whenReady().then(() => {
             console.log('✅ Electron app initialized successfully');
             console.log('ABI:', process.versions.modules);
@@ -110,15 +113,20 @@ jobs:
             app.exit(0);
           });
           EOF
+          ls -la smoke-test.cjs
           xvfb-run --auto-servernum timeout 30 npx electron --no-sandbox --disable-gpu --disable-software-rasterizer smoke-test.cjs || true
           rm -f smoke-test.cjs
 
       - name: Run database validation tests in Electron context
         run: |
           sudo apt-get update && sudo apt-get install -y xvfb
+          pwd
+          ls -la node_modules/better-sqlite3/build/Release/
           cat > electron-db-test.cjs << 'EOF'
           const { app } = require('electron');
           const path = require('path');
+          console.log('__dirname:', __dirname);
+          console.log('process.cwd():', process.cwd());
           app.whenReady().then(async () => {
             try {
               const db = require('better-sqlite3');
@@ -135,10 +143,12 @@ jobs:
               app.exit(0);
             } catch (e) {
               console.error('❌ Electron DB test failed:', e.message);
+              console.error('Stack:', e.stack);
               app.exit(1);
             }
           });
           EOF
+          ls -la electron-db-test.cjs
           xvfb-run --auto-servernum npx electron --no-sandbox --disable-gpu --disable-software-rasterizer electron-db-test.cjs
           rm -f electron-db-test.cjs
 
