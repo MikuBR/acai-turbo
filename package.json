@@ -87,7 +87,7 @@
   "build": {
     "appId": "com.acaiwave.app",
     "productName": "Açaí Wave",
-    "icon": "build/icon",
+    "icon": "build/icon.ico",
     "asarUnpack": [
       "node_modules/better-sqlite3",
       "database/migrations/**/*"
