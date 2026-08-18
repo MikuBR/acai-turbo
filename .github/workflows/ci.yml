@@ -7,8 +7,8 @@ on:
     branches: [main, develop]
 
 env:
-  NODE_VERSION: '22'
-  ELECTRON_VERSION: '28.3.3'
+  NODE_VERSION: '20'
+  ELECTRON_VERSION: '32.0.0'
 
 jobs:
   # ──────────────────────────────────────────────────────────────────

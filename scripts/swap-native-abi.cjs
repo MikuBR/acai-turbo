@@ -33,7 +33,7 @@ function getCurrentAbi() {
     test.close();
     return 'node';
   } catch (e) {
-    if (e.message.includes('NODE_MODULE_VERSION 119')) return 'electron';
+    if (e.message.includes('NODE_MODULE_VERSION 121')) return 'electron';
     if (e.message.includes('NODE_MODULE_VERSION 127')) return 'node-broken';
     return 'unknown';
   }
@@ -80,7 +80,7 @@ switch (mode) {
   case 'electron':
     cache('electron');
     restore('electron');
-    console.log('[swap] ✅ Ready for Electron (ABI 119)');
+    console.log('[swap] ✅ Ready for Electron (ABI 121+)');
     break;
 
   case 'node':
@@ -92,7 +92,7 @@ switch (mode) {
   case 'status': {
     const current = getCurrentAbi();
     console.log('[swap] Current build:', current);
-    console.log('[swap] Run `node scripts/swap-native-abi.cjs electron` to swap to Electron');
+    console.log('[swap] Run `node scripts/swap-native-abi.cjs electron` to swap to Electron (ABI 121+)');
     console.log('[swap] Run `node scripts/swap-native-abi.cjs node` to swap to Node.js');
     break;
   }
