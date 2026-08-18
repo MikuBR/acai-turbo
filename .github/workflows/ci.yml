@@ -226,7 +226,11 @@ jobs:
             echo "❌ .npmrc missing! Required for ABI consistency"
             exit 1
           fi
-          # electron_version and runtime are now auto-detected from package.json
+          # Verify disturl points to Electron headers for native module compilation
+          if ! grep -q "disturl=https://electronjs.org/headers" .npmrc; then
+            echo "❌ .npmrc missing Electron disturl!"
+            exit 1
+          fi
           echo "✅ .npmrc validated"
 
       - name: Verify swap-native-abi script exists
@@ -331,7 +335,7 @@ jobs:
           echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| Lint & TypeCheck | ${{ needs.lint-and-typecheck.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Tests (Node.js ABI 127) | ${{ needs.test-node.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Tests (Electron ABI 119) | ${{ needs.test-electron.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests (Electron ABI 128) | ${{ needs.test-electron.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Build Production | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| ABI Regression Guard | ${{ needs.abi-guard.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Security Audit | ${{ needs.security-audit.result }} |" >> $GITHUB_STEP_SUMMARY
