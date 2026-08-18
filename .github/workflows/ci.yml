@@ -108,7 +108,7 @@ jobs:
           process.exit(0);
           EOF
           echo "Running electron smoke test..."
-          xvfb-run --auto-servernum timeout 30 npx electron smoke-test.cjs
+          xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" timeout 30 npx electron --no-sandbox --disable-gpu --disable-software-rasterizer smoke-test.cjs
           EXIT_CODE=$?
           echo "Electron exited with code: $EXIT_CODE"
           rm -f smoke-test.cjs
@@ -135,7 +135,7 @@ jobs:
           process.exit(0);
           EOF
           echo "Running Electron DB test..."
-          ELECTRON_RUN_AS_NODE=1 xvfb-run --auto-servernum timeout 30 npx electron electron-db-test.cjs
+          ELECTRON_RUN_AS_NODE=1 xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" timeout 30 npx electron electron-db-test.cjs
           EXIT_CODE=$?
           echo "Electron DB test exited with code: $EXIT_CODE"
           rm -f electron-db-test.cjs
