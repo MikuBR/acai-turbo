@@ -205,9 +205,11 @@ jobs:
       - name: Check Electron version in package.json
         run: |
           ELECTRON_PKG=$(cat package.json | jq -r '.devDependencies.electron')
-          echo "Electron version in package.json: $ELECTRON_PKG"
-          if [[ "$ELECTRON_PKG" != "${{ env.ELECTRON_VERSION }}" ]]; then
-            echo "⚠️  Electron version mismatch! Expected ${{ env.ELECTRON_VERSION }}, got $ELECTRON_PKG"
+          # Remove semver prefix (^, ~, >=, etc.) for comparison
+          ELECTRON_PKG_CLEAN=${ELECTRON_PKG#[\^~>=<]*}
+          echo "Electron version in package.json: $ELECTRON_PKG (clean: $ELECTRON_PKG_CLEAN)"
+          if [[ "$ELECTRON_PKG_CLEAN" != "${{ env.ELECTRON_VERSION }}" ]]; then
+            echo "⚠️  Electron version mismatch! Expected ${{ env.ELECTRON_VERSION }}, got $ELECTRON_PKG_CLEAN"
             echo "Update .github/workflows/ci.yml ELECTRON_VERSION env var if intentional"
             exit 1
           fi
