@@ -100,7 +100,7 @@ jobs:
       - name: Verify Electron can start (smoke test)
         run: |
           sudo apt-get update && sudo apt-get install -y xvfb
-          cat > /tmp/smoke-test.cjs << 'EOF'
+          cat > smoke-test.cjs << 'EOF'
           const { app } = require('electron');
           app.whenReady().then(() => {
             console.log('✅ Electron app initialized successfully');
@@ -110,12 +110,13 @@ jobs:
             app.exit(0);
           });
           EOF
-          xvfb-run --auto-servernum timeout 30 npx electron /tmp/smoke-test.cjs || true
+          xvfb-run --auto-servernum timeout 30 npx electron smoke-test.cjs || true
+          rm -f smoke-test.cjs
 
       - name: Run database validation tests in Electron context
         run: |
           sudo apt-get update && sudo apt-get install -y xvfb
-          cat > /tmp/electron-db-test.cjs << 'EOF'
+          cat > electron-db-test.cjs << 'EOF'
           const { app } = require('electron');
           const path = require('path');
           app.whenReady().then(async () => {
@@ -138,7 +139,8 @@ jobs:
             }
           });
           EOF
-          xvfb-run --auto-servernum npx electron /tmp/electron-db-test.cjs
+          xvfb-run --auto-servernum npx electron electron-db-test.cjs
+          rm -f electron-db-test.cjs
 
   # ──────────────────────────────────────────────────────────────────
   # BUILD VALIDATION - Verify production build works
