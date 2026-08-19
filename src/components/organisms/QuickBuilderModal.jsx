@@ -7,7 +7,7 @@ export default function QuickBuilderModal({ builder, onClose, setBuilder, confir
 
   return (
     <div className="fixed inset-0 bg-surface z-[600] flex items-center justify-center p-6 animate-in zoom-in duration-200">
-      <div className="bg-card p-8 rounded-2xl w-full max-w-md border border-border shadow-2xl">
+      <div className="bg-card p-8 rounded-2xl w-full max-w-md border border-border shadow-modal">
         <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
           <h2 className="text-[10px] font-bold uppercase tracking-widest text-success">Venda Direta</h2>
           <button onClick={onClose} className="p-1.5 bg-surface-light rounded-md hover:bg-danger text-primary hover:text-white transition-all"><X size={16}/></button>

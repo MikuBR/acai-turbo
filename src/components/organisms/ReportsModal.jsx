@@ -325,7 +325,7 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
 
   return (
     <div className="fixed inset-0 bg-surface z-[900] flex items-center justify-center p-6 animate-in fade-in duration-200">
-      <div className="bg-card w-full max-w-6xl h-[85vh] rounded-2xl border border-border flex flex-col overflow-hidden shadow-2xl">
+      <div className="bg-card w-full max-w-6xl h-[85vh] rounded-2xl border border-border flex flex-col overflow-hidden shadow-modal">
         <div className="p-4 bg-surface-light border-b border-border flex justify-between items-center px-6">
           <div className="flex items-center gap-4">
             <h2 className="text-xs font-bold uppercase tracking-widest text-success">Relatórios</h2>

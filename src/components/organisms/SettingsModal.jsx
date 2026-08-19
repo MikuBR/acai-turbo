@@ -138,7 +138,7 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
 
   return (
     <div className="fixed inset-0 bg-surface z-[900] flex items-center justify-center p-6 animate-in fade-in duration-200">
-      <div className="bg-card w-full max-w-5xl h-[80vh] rounded-2xl border border-border flex flex-col overflow-hidden shadow-2xl">
+      <div className="bg-card w-full max-w-5xl h-[80vh] rounded-2xl border border-border flex flex-col overflow-hidden shadow-modal">
         <div className="p-4 bg-surface-light border-b border-border flex justify-between items-center px-6">
           <SettingsTabs activeTab={settingsTab} onTabChange={setSettingsTab} />
           <button onClick={onClose} className="p-1.5 hover:bg-danger/20 rounded-md text-muted hover:text-danger transition-all"><X size={20}/></button>
@@ -309,7 +309,7 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                             const modal = document.createElement('div');
                             modal.className = 'fixed inset-0 bg-surface z-[901] flex items-center justify-center p-6';
                             modal.innerHTML = `
-                              <div class="bg-card w-full max-w-xs rounded-2xl border border-border p-6 shadow-2xl">
+                              <div class="bg-card w-full max-w-xs rounded-2xl border border-border p-6 shadow-modal">
                                 <h3 class="text-xs font-bold uppercase text-muted mb-4">Ajustar Estoque</h3>
                                 <div class="space-y-4">
                                   <div>

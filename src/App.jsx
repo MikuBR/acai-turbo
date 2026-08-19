@@ -21,7 +21,7 @@ function App() {
   const { setLoading, clearLoading } = useLoadingStore();
   const { 
     activeTableId, tables, catalog, setActiveTable, addItemToActiveTable, 
-    removeItemFromActiveTable, addTable, checkoutActiveTable, setCatalog 
+    removeItemFromActiveTable, addTable, checkoutActiveTable, deleteTable, setCatalog 
   } = useStore();
 
   const orderLog = logger.withScope('orders');
@@ -627,6 +627,12 @@ function App() {
     setModals({...modals, newTable: false});
   };
 
+  const handleDeleteTable = (id) => {
+    const table = safeTables.find(t => t.id === id);
+    deleteTable(id);
+    addToast(`Comanda "${table?.name || 'BALCÃO'}" cancelada`, 'info');
+  };
+
   const handleItemSelect = (p) => {
     if (p.category === 'COPOS DE AÇAÍ' || (p.ingredients && p.ingredients.length > 0)) {
       const defaults = p.ingredients ? p.ingredients.split(',').map(i => i.trim()).filter(Boolean) : [];
@@ -725,6 +731,7 @@ function App() {
         onOpenReports={() => { setModals({...modals, reports: true}); loadReports(); }}
         onOpenSettings={() => runWithManagerAuth(() => setModals({...modals, settings: true}))}
         onLogout={handleLogout}
+        onDeleteTable={handleDeleteTable}
         ifoodConnected={!!ifoodConfig.enabled}
         ifoodUnreadCount={ifoodUnreadCount}
       />
@@ -746,7 +753,7 @@ function App() {
         <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {(selectedCategory === 'TODOS' || selectedCategory.includes('AÇAÍ')) && (
-              <button onClick={() => setBuilder({ base: null, standard: [], removals: [], extras: [], obs: '', quantity: 1, adjustment: 0 })} className="col-span-2 h-28 bg-gradient-to-br from-primary-dark to-primary p-5 rounded-xl border border-white/5 shadow-lg flex items-center justify-between group active:scale-95 transition-all">
+              <button onClick={() => setBuilder({ base: null, standard: [], removals: [], extras: [], obs: '', quantity: 1, adjustment: 0 })} className="col-span-2 h-28 bg-gradient-to-br from-primary-dark to-primary p-5 rounded-xl border border-white/5 shadow-floating flex items-center justify-between group active:scale-95 transition-all">
                 <div className="text-left">
                   <span className="font-bold text-lg block text-white uppercase tracking-tight">Montagem</span>
                   <span className="text-[9px] text-white/60 font-bold uppercase tracking-widest">Personalizar Açaí</span>
@@ -771,6 +778,7 @@ function App() {
         activeTable={activeTable}
         onRemoveItem={removeItemFromActiveTable}
         onCheckout={() => setModals({...modals, checkout: true})}
+        onDeleteTable={handleDeleteTable}
         ifoodOrderId={activeTable?.ifoodOrderId || null}
         onIfoodAction={handleIfoodAction}
       />

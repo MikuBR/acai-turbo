@@ -1,6 +1,70 @@
 @import "tailwindcss";
 @import "./styles/theme.css";
 
+/* ============================================================
+   Paridade visual Linux/Windows
+   ============================================================ */
+
+/* Fonte Inter variável embutida (mesma tipografia no Windows/Linux) */
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter-Variable.woff2') format('woff2-variations');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Base: Inter primeiro, com fallbacks para cada plataforma */
+html {
+  font-family: 'Inter', 'Segoe UI', 'Noto Sans', sans-serif;
+  /* Suavização de fonte consistente (macOS/Windows/Linux) */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Scrollbar consistente — Firefox */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: theme('colors.primary') theme('colors.surface');
+}
+
+/* Scrollbar consistente — Chrome/Edge/Electron (Windows) */
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: theme('colors.surface');
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: theme('colors.primary');
+  border-radius: 10px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+}
+
+/* Sombras explícitas (profundidade idêntica em todas as plataformas) */
+.shadow-elegant {
+  box-shadow: 0 12px 24px -8px rgba(126, 34, 206, 0.35), 0 4px 8px -4px rgba(126, 34, 206, 0.18);
+}
+
+.shadow-floating {
+  box-shadow: 0 10px 15px -3px rgba(26, 10, 46, 0.10), 0 4px 6px -4px rgba(26, 10, 46, 0.06);
+}
+
+.shadow-modal {
+  box-shadow: 0 25px 50px -12px rgba(26, 10, 46, 0.22);
+}
+
+.shadow-primary-soft {
+  box-shadow: 0 4px 10px -2px rgba(126, 34, 206, 0.18);
+}
+
 @theme {
   --color-primary: var(--accent-primary);
   --color-primary-dark: var(--accent-secondary);

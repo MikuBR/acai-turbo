@@ -20,9 +20,9 @@ export default function LoginModal({
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-card p-8 rounded-2xl border border-border w-96 shadow-2xl">
+      <div className="bg-card p-8 rounded-2xl border border-border w-96 shadow-modal">
         <div className="text-center mb-6">
-          <div className="w-20 h-20 bg-gradient-to-br from-primary to-primary-dark rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary/30">
+          <div className="w-20 h-20 bg-gradient-to-br from-primary to-primary-dark rounded-full flex items-center justify-center mx-auto mb-4 shadow-elegant">
             <Lock size={36} className="text-white"/>
           </div>
           <h2 className="text-2xl font-bold text-primary mb-1">Açaí Wave</h2>
@@ -75,7 +75,7 @@ export default function LoginModal({
           <button
             type="submit"
             disabled={submitting}
-            className="w-full bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary py-3 rounded-lg font-bold text-sm uppercase tracking-widest text-white transition-all active:scale-95 shadow-lg shadow-primary/40 disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100 flex items-center justify-center gap-2"
+            className="w-full bg-primary bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary py-3 rounded-lg font-bold text-sm uppercase tracking-widest text-white transition-all active:scale-95 shadow-elegant disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100 flex items-center justify-center gap-2"
           >
             {submitting && <Loader2 size={16} className="animate-spin" />}
             {submitting ? 'Entrando...' : 'Entrar'}

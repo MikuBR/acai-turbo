@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { ShoppingCart, FileText, Settings, X, Wifi } from 'lucide-react';
+import { ShoppingCart, FileText, Settings, X, Wifi, Trash2 } from 'lucide-react';
 
 /**
  * OrderSidebar - Sidebar de comandas (esquerda)
@@ -12,6 +12,7 @@ import { ShoppingCart, FileText, Settings, X, Wifi } from 'lucide-react';
  * @param {Function} props.onOpenReports - Callback ao abrir relatórios
  * @param {Function} props.onOpenSettings - Callback ao abrir configurações
  * @param {Function} props.onLogout - Callback ao sair
+ * @param {Function} props.onDeleteTable - Callback ao cancelar/remover comanda (recebe id)
  * @param {boolean} props.ifoodConnected - Status da conexao iFood
  * @param {number} props.ifoodUnreadCount - Pedidos iFood nao visualizados
  */
@@ -23,6 +24,7 @@ export const OrderSidebar = memo(function OrderSidebar({
   onOpenReports,
   onOpenSettings,
   onLogout,
+  onDeleteTable,
   ifoodConnected = false,
   ifoodUnreadCount = 0,
 }) {
@@ -70,12 +72,20 @@ export const OrderSidebar = memo(function OrderSidebar({
 
       <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
         {tables.map((t) => (
-          <button
+          <div
             key={t.id}
+            role="button"
+            tabIndex={0}
             onClick={() => onSelectTable(t.id)}
-            className={`w-full text-left p-3 rounded-xl border transition-all ${
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onSelectTable(t.id);
+              }
+            }}
+            className={`group w-full text-left p-3 rounded-xl border transition-all cursor-pointer ${
               activeTableId === t.id
-                ? 'bg-primary/10 border-primary/40 shadow-lg shadow-primary/10'
+                ? 'bg-primary/10 border-primary/40 shadow-primary-soft'
                 : 'bg-surface border-border hover:border-primary/30 hover:bg-surface-light'
             }`}
           >
@@ -88,11 +98,21 @@ export const OrderSidebar = memo(function OrderSidebar({
                 )}
                 <span className="font-bold text-xs text-primary uppercase tracking-wide">{t.name}</span>
               </div>
-              {t.isDelivery && (
-                <span className={`text-[9px] font-bold uppercase ${t.name?.startsWith('iFood') ? 'text-warning' : 'text-highlight'}`}>
-                  {t.name?.startsWith('iFood') ? 'iFood' : 'Delivery'}
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                {t.isDelivery && (
+                  <span className={`text-[9px] font-bold uppercase ${t.name?.startsWith('iFood') ? 'text-warning' : 'text-highlight'}`}>
+                    {t.name?.startsWith('iFood') ? 'iFood' : 'Delivery'}
+                  </span>
+                )}
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDeleteTable?.(t.id); }}
+                  className="p-0.5 opacity-0 group-hover:opacity-100 text-muted hover:text-danger transition-opacity"
+                  title="Cancelar comanda"
+                  aria-label={`Cancelar comanda ${t.name}`}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
             </div>
             <div className="mt-2 flex items-center justify-between">
               <span className="text-[10px] text-muted">
@@ -102,14 +122,14 @@ export const OrderSidebar = memo(function OrderSidebar({
                 R$ {(t.total || 0).toFixed(2)}
               </span>
             </div>
-          </button>
+          </div>
         ))}
       </div>
 
       <div className="p-3 border-t border-border">
         <button
           onClick={onNewTable}
-          className="w-full py-3 rounded-xl bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary text-surface font-bold text-xs uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-primary/30"
+          className="w-full py-3 rounded-xl bg-primary bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary text-surface font-bold text-xs uppercase tracking-widest transition-all active:scale-95 shadow-elegant"
         >
           Nova Comanda
         </button>

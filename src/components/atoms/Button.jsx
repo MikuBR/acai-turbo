@@ -1,6 +1,6 @@
 
 const variants = {
-  primary: 'bg-success hover:bg-success text-white shadow-lg active:scale-95',
+  primary: 'bg-success hover:bg-success text-white shadow-floating active:scale-95',
   secondary: 'bg-surface-light hover:bg-surface-light text-primary',
   danger: 'bg-danger hover:bg-danger text-white',
   ghost: 'bg-transparent hover:bg-surface-light/40 text-muted hover:text-primary',

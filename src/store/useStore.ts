@@ -30,6 +30,7 @@ interface StoreState {
   addItemToActiveTable: (product: MenuItem) => void;
   removeItemFromActiveTable: (index: number) => void;
   checkoutActiveTable: () => void;
+  deleteTable: (id: number) => void;
 }
 
 export const useStore = create<StoreState>((set) => ({
@@ -84,6 +85,17 @@ export const useStore = create<StoreState>((set) => ({
 
   checkoutActiveTable: () => set((state: StoreState) => {
     const remaining = state.tables.filter((t: Table) => t.id !== state.activeTableId);
+    if (remaining.length === 0) {
+      return { tables: [{ id: 1, name: 'BALCÃO', isDelivery: false, address: '', phone: '', items: [], total: 0 }], activeTableId: 1 };
+    }
+    return { tables: remaining, activeTableId: remaining[0].id };
+  }),
+
+  deleteTable: (id: number) => set((state: StoreState) => {
+    const remaining = state.tables.filter((t: Table) => t.id !== id);
+    if (state.activeTableId !== id) {
+      return { tables: remaining };
+    }
     if (remaining.length === 0) {
       return { tables: [{ id: 1, name: 'BALCÃO', isDelivery: false, address: '', phone: '', items: [], total: 0 }], activeTableId: 1 };
     }

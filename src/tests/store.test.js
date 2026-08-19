@@ -122,4 +122,59 @@ describe('useStore', () => {
     expect(useStore.getState().tables).toHaveLength(2)
     expect(useStore.getState().activeTableId).toBe(useStore.getState().tables[0].id)
   })
+
+  it('deleteTable removes table by id', () => {
+    useStore.setState({
+      activeTableId: 3,
+      tables: [
+        { id: 1, name: 'BALCÃO', isDelivery: false, address: '', phone: '', items: [], total: 0 },
+        { id: 2, name: 'MESA 01', isDelivery: false, address: '', phone: '', items: [], total: 0 },
+        { id: 3, name: 'MESA 02', isDelivery: false, address: '', phone: '', items: [], total: 0 },
+      ],
+    })
+    useStore.getState().deleteTable(2)
+    const state = useStore.getState()
+    expect(state.tables).toHaveLength(2)
+    expect(state.tables.some(t => t.id === 2)).toBe(false)
+  })
+
+  it('deleteTable switches to next table when deleting the active one', () => {
+    useStore.setState({
+      activeTableId: 2,
+      tables: [
+        { id: 1, name: 'BALCÃO', isDelivery: false, address: '', phone: '', items: [], total: 0 },
+        { id: 2, name: 'MESA 01', isDelivery: false, address: '', phone: '', items: [], total: 0 },
+        { id: 3, name: 'MESA 02', isDelivery: false, address: '', phone: '', items: [], total: 0 },
+      ],
+    })
+    useStore.getState().deleteTable(2)
+    const state = useStore.getState()
+    expect(state.tables).toHaveLength(2)
+    expect(state.tables.some(t => t.id === 2)).toBe(false)
+    expect(state.activeTableId).toBe(state.tables[0].id)
+  })
+
+  it('deleteTable keeps active table when deleting another one', () => {
+    useStore.setState({
+      activeTableId: 3,
+      tables: [
+        { id: 1, name: 'BALCÃO', isDelivery: false, address: '', phone: '', items: [], total: 0 },
+        { id: 2, name: 'MESA 01', isDelivery: false, address: '', phone: '', items: [], total: 0 },
+        { id: 3, name: 'MESA 02', isDelivery: false, address: '', phone: '', items: [], total: 0 },
+      ],
+    })
+    useStore.getState().deleteTable(1)
+    const state = useStore.getState()
+    expect(state.tables).toHaveLength(2)
+    expect(state.tables.some(t => t.id === 1)).toBe(false)
+    expect(state.activeTableId).toBe(3)
+  })
+
+  it('deleteTable recreates default table if last one is removed', () => {
+    useStore.getState().deleteTable(1)
+    const state = useStore.getState()
+    expect(state.tables).toHaveLength(1)
+    expect(state.tables[0].name).toBe('BALCÃO')
+    expect(state.activeTableId).toBe(1)
+  })
 })

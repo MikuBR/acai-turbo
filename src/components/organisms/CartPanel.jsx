@@ -14,10 +14,11 @@ const IFOOD_STATUS_FLOW = [
  * @param {Object} props.activeTable - Mesa ativa com { name, items, total, isDelivery }
  * @param {Function} props.onRemoveItem - Callback ao remover item (recebe index)
  * @param {Function} props.onCheckout - Callback ao finalizar venda
+ * @param {Function} props.onDeleteTable - Callback ao cancelar comanda vazia (recebe id)
  * @param {string|null} props.ifoodOrderId - ID do pedido iFood (se for de delivery iFood)
  * @param {Function} props.onIfoodAction - Callback ao clicar em acao iFood (recebe action, orderId)
  */
-export const CartPanel = memo(function CartPanel({ activeTable, onRemoveItem, onCheckout, ifoodOrderId = null, onIfoodAction = null }) {
+export const CartPanel = memo(function CartPanel({ activeTable, onRemoveItem, onCheckout, onDeleteTable, ifoodOrderId = null, onIfoodAction = null }) {
   const items = activeTable?.items || [];
   const total = activeTable?.total || 0;
   const isIfood = !!ifoodOrderId;
@@ -34,7 +35,7 @@ export const CartPanel = memo(function CartPanel({ activeTable, onRemoveItem, on
   };
 
   return (
-    <div className="w-80 shrink-0 bg-surface border-l border-border flex flex-col shadow-2xl z-10">
+    <div className="w-80 shrink-0 bg-surface border-l border-border flex flex-col shadow-modal z-10">
       <div className="p-5 border-b border-border font-bold flex items-center justify-between">
         <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted">
           <ShoppingCart size={14} /> RESUMO
@@ -131,10 +132,18 @@ export const CartPanel = memo(function CartPanel({ activeTable, onRemoveItem, on
         <button
           onClick={onCheckout}
           disabled={items.length === 0}
-          className="w-full py-3 rounded-xl bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary text-surface font-bold text-xs uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-3 rounded-xl bg-primary bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary text-surface font-bold text-xs uppercase tracking-widest transition-all active:scale-95 shadow-elegant disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Finalizar
         </button>
+        {items.length === 0 && (
+          <button
+            onClick={() => onDeleteTable?.(activeTable?.id)}
+            className="w-full py-2.5 rounded-xl border border-danger/30 text-danger font-bold text-[10px] uppercase tracking-widest transition-all hover:bg-danger/10 active:scale-95"
+          >
+            Cancelar Comanda
+          </button>
+        )}
       </div>
     </div>
   );

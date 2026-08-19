@@ -50,7 +50,7 @@ export default function ConfirmDialog({
 
   return (
     <div className="fixed inset-0 bg-surface/80 z-[901] flex items-center justify-center p-6 animate-in fade-in duration-200">
-      <div className="bg-card w-full max-w-sm rounded-2xl border border-border p-6 shadow-2xl">
+      <div className="bg-card w-full max-w-sm rounded-2xl border border-border p-6 shadow-modal">
         <div className="flex flex-col items-center text-center gap-4">
           <div className={`w-14 h-14 rounded-full flex items-center justify-center border ${styles.iconBg} ${styles.iconBorder}`}>
             <AlertTriangle size={28} className={styles.icon} />

@@ -36,7 +36,7 @@ export default function AdjustStockModal({ isOpen, onClose, productName, onConfi
 
   return (
     <div className="fixed inset-0 bg-surface/80 z-[901] flex items-center justify-center p-6 animate-in fade-in duration-200">
-      <div className="bg-card w-full max-w-xs rounded-2xl border border-border p-6 shadow-2xl">
+      <div className="bg-card w-full max-w-xs rounded-2xl border border-border p-6 shadow-modal">
         <h3 className="text-xs font-bold uppercase text-muted mb-1">Ajustar Estoque</h3>
         <p className="text-[10px] text-muted mb-4 truncate">{productName}</p>
 

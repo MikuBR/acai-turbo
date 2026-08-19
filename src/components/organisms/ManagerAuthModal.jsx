@@ -26,7 +26,7 @@ export default function ManagerAuthModal({ show, onCancel, onSuccess, ipcGet }) 
 
   return (
     <div className="fixed inset-0 bg-surface z-[1000] flex items-center justify-center">
-      <div className="bg-card p-8 rounded-2xl border border-border w-80 shadow-2xl text-center">
+      <div className="bg-card p-8 rounded-2xl border border-border w-80 shadow-modal text-center">
         <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-success/30">
           <Lock size={32} className="text-success"/>
         </div>

@@ -5,7 +5,7 @@ export default function PasswordModal({ isOpen, changePasswordForm, setChangePas
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-card p-8 rounded-2xl border border-border w-96 shadow-2xl">
+      <div className="bg-card p-8 rounded-2xl border border-border w-96 shadow-modal">
         <div className="text-center mb-6">
           <div className="w-20 h-20 bg-warning/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-warning/30">
             <Lock size={40} className="text-warning"/>
