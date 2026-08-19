@@ -435,6 +435,8 @@ function App() {
         ifoodOrderId: orderData.orderId,
       });
 
+      addToast(`🛵 Pedido iFood recebido — comanda "${tableName}" criada automaticamente`, 'info');
+
       if (order.items && Array.isArray(order.items)) {
         order.items.forEach(item => {
           const qty = Math.max(1, item.quantity || 1);
