@@ -131,6 +131,9 @@ process.on('unhandledRejection', (reason) => {
 });
 
 let mainWindow = null;
+let appIsQuitting = false;
+// Flag para controlar fechamento gracioso e evitar dialog duplicado
+app.isQuitting = false;
 
 function showFallbackErrorPage() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
@@ -225,6 +228,58 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
+  });
+
+  // ============================================================
+  // FECHAMENTO SEGURO: Interceptar X / Alt+F4 / Task Manager
+  // ============================================================
+  mainWindow.on('close', async (e) => {
+    if (app.isQuitting) {
+      return; // Segunda vez passa direto
+    }
+
+    e.preventDefault(); // Impede fechamento imediato
+
+    // Perguntar ao renderer se há comandas com itens não finalizados
+    let hasOpenOrders = false;
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      try {
+        const result = await mainWindow.webContents.executeJavaScript(`
+          (() => {
+            const store = window.__ACAI_STORE__;
+            if (!store) return false;
+            const state = store.getState();
+            return state.tables?.some(t => t.items && t.items.length > 0) ?? false;
+          })()
+        `);
+        hasOpenOrders = result === true;
+      } catch (err) {
+        console.error('[main] Erro ao verificar comandas abertas:', err.message);
+        // Em caso de erro, assumir que pode haver dados e confirmar
+        hasOpenOrders = true;
+      }
+    }
+
+    if (hasOpenOrders) {
+      const { response } = await dialog.showMessageBox(mainWindow, {
+        type: 'warning',
+        buttons: ['Cancelar', 'Sair mesmo assim'],
+        defaultId: 0,
+        cancelId: 0,
+        title: 'Comandas em aberto',
+        message: 'Existem comandas com itens não finalizados.',
+        detail: 'Se você sair agora, as comandas abertas serão perdidas (salvas no localStorage para restauração no próximo lançamento). Deseja realmente sair?',
+      });
+
+      if (response === 1) {
+        app.isQuitting = true;
+        mainWindow.close(); // Segunda vez passa pelo handler sem preventDefault
+      }
+      // response === 0 (Cancelar) ou fechar dialog → não faz nada, janela permanece aberta
+    } else {
+      app.isQuitting = true;
+      mainWindow.close();
+    }
   });
 
   mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
