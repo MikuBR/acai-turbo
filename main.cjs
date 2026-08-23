@@ -240,46 +240,21 @@ function createWindow() {
 
     e.preventDefault(); // Impede fechamento imediato
 
-    // Perguntar ao renderer se há comandas com itens não finalizados
-    let hasOpenOrders = false;
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      try {
-        const result = await mainWindow.webContents.executeJavaScript(`
-          (() => {
-            const store = window.__ACAI_STORE__;
-            if (!store) return false;
-            const state = store.getState();
-            return state.tables?.some(t => t.items && t.items.length > 0) ?? false;
-          })()
-        `);
-        hasOpenOrders = result === true;
-      } catch (err) {
-        console.error('[main] Erro ao verificar comandas abertas:', err.message);
-        // Em caso de erro, assumir que pode haver dados e confirmar
-        hasOpenOrders = true;
-      }
-    }
+    const { response } = await dialog.showMessageBox(mainWindow, {
+      type: 'warning',
+      buttons: ['Cancelar', 'Sair mesmo assim'],
+      defaultId: 0,
+      cancelId: 0,
+      title: 'Fechar Açaí Wave',
+      message: 'Deseja realmente fechar o aplicativo?',
+      detail: 'Comandas não finalizadas podem ser perdidas.',
+    });
 
-    if (hasOpenOrders) {
-      const { response } = await dialog.showMessageBox(mainWindow, {
-        type: 'warning',
-        buttons: ['Cancelar', 'Sair mesmo assim'],
-        defaultId: 0,
-        cancelId: 0,
-        title: 'Comandas em aberto',
-        message: 'Existem comandas com itens não finalizados.',
-        detail: 'Se você sair agora, as comandas abertas serão perdidas (salvas no localStorage para restauração no próximo lançamento). Deseja realmente sair?',
-      });
-
-      if (response === 1) {
-        app.isQuitting = true;
-        mainWindow.close(); // Segunda vez passa pelo handler sem preventDefault
-      }
-      // response === 0 (Cancelar) ou fechar dialog → não faz nada, janela permanece aberta
-    } else {
+    if (response === 1) {
       app.isQuitting = true;
-      mainWindow.close();
+      mainWindow.close(); // Segunda vez passa pelo handler sem preventDefault
     }
+    // response === 0 (Cancelar) ou fechar dialog → não faz nada, janela permanece aberta
   });
 
   mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
@@ -827,7 +802,23 @@ function ifoodRestorePendingOrders() {
 }
 
 app.on('before-quit', () => {
-  ifoodStopPolling();
+  try {
+    ifoodStopPolling();
+  } catch (e) {
+    console.error('[main] ifoodStopPolling error:', e.message);
+  }
+  try {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('app:shutdown');
+    }
+  } catch (e) {
+    console.error('[main] app:shutdown send error:', e.message);
+  }
+  try {
+    if (typeof logger?.flush === 'function') logger.flush();
+  } catch (e) {
+    console.error('[main] logger flush error:', e.message);
+  }
 });
 
 // ============================================================

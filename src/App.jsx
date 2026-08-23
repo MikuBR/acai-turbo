@@ -68,7 +68,8 @@ function App() {
       };
     }
     return null;
-  }; 
+  };
+
   const [showPassModal, setShowPassModal] = useState({ show: false, onResult: null });
 
   const [categories, setCategories] = useState([]);
@@ -515,6 +516,9 @@ function App() {
     }
     setCurrentUser(null);
     setAuthToken(null);
+    setLoginError('');
+    setLoginForm({ username: '', password: '' });
+    setIsLoggingIn(false);
     localStorage.removeItem('authToken');
     setModals({ ...modals, login: true });
   };
@@ -554,6 +558,23 @@ function App() {
   useEffect(() => {
     localStorage.removeItem('authToken');
   }, []);
+
+  // Shutdown gracioso: salvar estado antes do app fechar
+  useEffect(() => {
+    const ipc = getIPC();
+    if (!ipc) return;
+    const cleanup = () => {
+      try {
+        localStorage.setItem('lastActiveTableId', String(activeTableId));
+        localStorage.setItem('lastSearchTerm', searchTerm);
+        setModals(prev => ({ ...prev, settings: false, reports: false, checkout: false, newTable: false, changePassword: false }));
+      } catch (e) {
+        console.error('[app:shutdown] cleanup error:', e.message);
+      }
+    };
+    ipc.on('app:shutdown', cleanup);
+    return () => ipc.removeListener('app:shutdown', cleanup);
+  }, [activeTableId, searchTerm]);
 
   const hasPermission = (action) => {
     if (!currentUser) return false;

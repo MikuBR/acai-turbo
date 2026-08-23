@@ -78,6 +78,9 @@ const ALLOWED_CHANNELS = {
   'auth:reset-manager-password': true,
   'auth:force-reset-admin': true,
   'logging:write': true,
+
+  'app:check-unsaved-orders': true,
+  'app:shutdown': true,
 };
 
 function safeInvoke(channel, ...args) {
