@@ -1,14 +1,50 @@
-import { useRef } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import useFocusTrap from '../../hooks/useFocusTrap';
 
 export default function NewTableModal({ isOpen, onClose, tableType, setTableType, newTableName, setNewTableName, delivForm, setDelivForm, handleAddTable }) {
   const containerRef = useFocusTrap(isOpen);
+  const [phoneLoading, setPhoneLoading] = useState(false);
 
   const nameRef = useRef(null);
   const phoneRef = useRef(null);
   const addressRef = useRef(null);
   const feeRef = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen || tableType !== 'DELIVERY') return;
+    const raw = (delivForm.phone || '').trim();
+    const digits = raw.replace(/\D/g, '');
+    if (digits.length < 8) return;
+
+    let cancelled = false;
+    setPhoneLoading(true);
+    const timer = setTimeout(async () => {
+      try {
+        const ipc = window.api?.clients;
+        if (!ipc) return;
+        const result = await ipc.getByPhone(raw);
+        if (cancelled) return;
+        if (result?.data && !delivForm.name && !delivForm.address) {
+          setDelivForm(prev => ({
+            ...prev,
+            name: result.data.name || prev.name,
+            address: result.data.address || prev.address,
+          }));
+        }
+      } catch {
+        // ignore lookup errors
+      } finally {
+        if (!cancelled) setPhoneLoading(false);
+      }
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      setPhoneLoading(false);
+    };
+  }, [isOpen, tableType, delivForm.phone]);
 
   if (!isOpen) return null;
 

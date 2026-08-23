@@ -60,6 +60,7 @@ const ALLOWED_CHANNELS = {
   'clients:delete': true,
   'clients:get-orders': true,
   'clients:add-order': true,
+  'clients:get-by-phone': true,
 
   'config:get-all': true,
   'config:update': true,
@@ -164,6 +165,7 @@ const api = {
     delete: (...args) => safeInvoke('clients:delete', ...args),
     getOrders: (...args) => safeInvoke('clients:get-orders', ...args),
     addOrder: (...args) => safeInvoke('clients:add-order', ...args),
+    getByPhone: (...args) => safeInvoke('clients:get-by-phone', ...args),
   },
   ifood: {
     testConnection: (...args) => safeInvoke('ifood:test-connection', ...args),

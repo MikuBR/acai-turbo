@@ -1104,6 +1104,7 @@ createHandler('clients:update', async (data) => ({ count: updateClient(data.id, 
 createHandler('clients:delete', async (id) => ({ count: deleteClient(id) }));
 createHandler('clients:get-orders', async (clientId) => ({ data: getClientOrders(clientId) }));
 createHandler('clients:add-order', async ({ clientId, orderId, totalAmount }) => ({ id: addClientOrder(clientId, orderId, totalAmount) }));
+createHandler('clients:get-by-phone', async ({ phone }) => ({ data: getClientByPhone(phone) }));
 
 // ============================================================
 // RECUPERAÇÃO DE SENHAS (redundância)
