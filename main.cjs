@@ -291,7 +291,7 @@ async function printTickets(orderData, items) {
   const kitchenItems = items.filter(i => !i.category.toUpperCase().includes('BEBIDA') && !i.category.toUpperCase().includes('REFRIGERANTE') && !i.category.toUpperCase().includes('CHOPP'));
   const frontItems = items.filter(i => i.category.toUpperCase().includes('BEBIDA') || i.category.toUpperCase().includes('REFRIGERANTE') || i.category.toUpperCase().includes('CHOPP'));
   const now = new Date();
-  const dateStr = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth()+1).toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+  const dateStr = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth()+1).toString().padStart(2, '0')}/${now.getFullYear()} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
   const { kitchenIp, frontName, frontIp } = getPrinterConfig();
 
   if (kitchenItems.length > 0) {
@@ -1104,6 +1104,7 @@ createHandler('clients:update', async (data) => ({ count: updateClient(data.id, 
 createHandler('clients:delete', async (id) => ({ count: deleteClient(id) }));
 createHandler('clients:get-orders', async (clientId) => ({ data: getClientOrders(clientId) }));
 createHandler('clients:add-order', async ({ clientId, orderId, totalAmount }) => ({ id: addClientOrder(clientId, orderId, totalAmount) }));
+createHandler('clients:get-by-phone', async ({ phone }) => ({ data: getClientByPhone(phone) }));
 
 // ============================================================
 // RECUPERAÇÃO DE SENHAS (redundância)
