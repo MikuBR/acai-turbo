@@ -702,7 +702,9 @@ function App() {
            amountReceived: Number(amountReceived) || 0,
            isDelivery: activeTable.isDelivery,
            address: activeTable.address,
-           phone: activeTable.phone
+           phone: activeTable.phone,
+           operatorName: currentUser?.full_name || currentUser?.name || '',
+           createdAt: new Date().toISOString()
          },
          items: activeTable.items || []
        }).then(res => {
