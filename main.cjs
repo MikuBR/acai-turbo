@@ -311,49 +311,82 @@ function resolvePrinterInterface(name, ip) {
   return `printer:${name}`;
 }
 
+const RECEIPT_WIDTH = 40;
+
+function receiptLine(char = '=', text = '') {
+  const line = char.repeat(RECEIPT_WIDTH);
+  if (!text) return line;
+  const pad = Math.floor((RECEIPT_WIDTH - text.length) / 2);
+  return line.slice(0, pad) + text + line.slice(0, RECEIPT_WIDTH - text.length - pad);
+}
+
+function receiptDate(iso) {
+  const d = iso ? new Date(iso) : new Date();
+  return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()} - ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
+}
+
+function stripEscPos(text) {
+  return (text || '').replace(/[\x00-\x1F\x7F]/g, '');
+}
+
 async function printTickets(orderData, items) {
-  const result = { kitchen: { success: false, reason: 'Nenhum item para cozinha' }, front: { success: false, reason: 'Nenhum item para balcão' } };
+  const result = { kitchen: { success: false, reason: 'Nenhum item para cozinha', preview: '' }, front: { success: false, reason: 'Nenhum item para balcão', preview: '' } };
   const kitchenItems = items.filter(i => !i.category.toUpperCase().includes('BEBIDA') && !i.category.toUpperCase().includes('REFRIGERANTE') && !i.category.toUpperCase().includes('CHOPP'));
   const frontItems = items.filter(i => i.category.toUpperCase().includes('BEBIDA') || i.category.toUpperCase().includes('REFRIGERANTE') || i.category.toUpperCase().includes('CHOPP'));
-  const now = new Date();
-  const dateStr = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth()+1).toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+  const dateStr = receiptDate(orderData.createdAt);
+  const table = orderData.tableName || '';
+  const operator = orderData.operatorName || (currentSession && currentSession.user ? currentSession.user.full_name : '');
   const { kitchenIp, frontName, frontIp } = getPrinterConfig();
 
   if (kitchenItems.length > 0) {
     try {
       const printerKitchen = new ThermalPrinter({ type: PrinterTypes.EPSON, interface: `tcp://${kitchenIp}`, timeout: 5000, characterSet: CharacterSet.PC852_LATIN2 });
       if (await printerKitchen.isPrinterConnected()) {
-        printerKitchen.alignCenter(); 
-        printerKitchen.setTextDoubleHeight(); 
-        printerKitchen.println("COZINHA / PREPARO"); 
-        printerKitchen.setTextNormal(); 
-        printerKitchen.drawLine(); 
+        printerKitchen.alignCenter();
+        printerKitchen.setTextDoubleHeight();
+        printerKitchen.println('AÇAÍ');
+        printerKitchen.setTextNormal();
         printerKitchen.alignLeft();
-        
+        printerKitchen.println(receiptLine('='));
+
         if (orderData.isDelivery) {
-          printerKitchen.println("** DELIVERY **");
+          printerKitchen.println('** DELIVERY **');
           printerKitchen.println(`Cliente: ${orderData.tableName.toUpperCase()}`);
           if (orderData.phone) printerKitchen.println(`Tel: ${orderData.phone}`);
           if (orderData.address) printerKitchen.println(`End: ${orderData.address}`);
         } else {
-          printerKitchen.println(orderData.tableName.toUpperCase());
+          printerKitchen.println(table);
         }
-        
-        printerKitchen.println(`Data: ${dateStr}`); 
-        printerKitchen.drawLine();
-        
-        kitchenItems.forEach(item => {
-          printerKitchen.println(item.name.toUpperCase());
-          if (item.notes) item.notes.split('|').map(n => n.trim()).forEach(note => printerKitchen.println(`*${note}`));
-          printerKitchen.println("");
+
+        printerKitchen.println(`Operador: ${operator}`);
+        printerKitchen.println(`Data: ${dateStr}`);
+        printerKitchen.println(receiptLine('-'));
+
+        kitchenItems.forEach((item, idx) => {
+          const title = `${item.quantity || 1} ${item.name.toUpperCase()} (${item.size || ''})`.trim();
+          printerKitchen.println(title);
+          if (item.notes) {
+            item.notes.split('|').map(n => n.trim()).filter(Boolean).forEach(note => {
+              printerKitchen.println(`  * ${note}`);
+            });
+          }
+          if (idx < kitchenItems.length - 1) {
+            printerKitchen.println(receiptLine('-'));
+          }
         });
-        printerKitchen.cut(); await printerKitchen.execute();
-        result.kitchen = { success: true };
+
+        printerKitchen.println(receiptLine('='));
+        printerKitchen.cut();
+        await printerKitchen.execute();
+
+        const preview = stripEscPos(printerKitchen.getText());
+        logger.info('[print] kitchen preview', { preview });
+        result.kitchen = { success: true, preview };
       } else {
         result.kitchen = { success: false, reason: 'Impressora da cozinha não conectada' };
       }
-    } catch (e) { 
-      console.error("[print] Cozinha erro:", e.message);
+    } catch (e) {
+      console.error('[print] Cozinha erro:', e.message);
       result.kitchen = { success: false, reason: e.message };
     }
   }
@@ -363,41 +396,48 @@ async function printTickets(orderData, items) {
       const frontInterface = resolvePrinterInterface(frontName, frontIp);
       const printerFront = new ThermalPrinter({ type: PrinterTypes.EPSON, interface: frontInterface, timeout: 5000, characterSet: CharacterSet.PC852_LATIN2 });
       if (await printerFront.isPrinterConnected()) {
-        printerFront.alignLeft(); 
-        printerFront.setTextDoubleHeight(); 
-        printerFront.println("BEBIDAS"); 
-        printerFront.setTextNormal(); 
-        printerFront.drawLine();
-        
+        printerFront.alignCenter();
+        printerFront.setTextDoubleHeight();
+        printerFront.println('AÇAÍ');
+        printerFront.setTextNormal();
+        printerFront.alignLeft();
+        printerFront.println(receiptLine('='));
+
         if (orderData.isDelivery) {
-          printerFront.println("** DELIVERY **");
+          printerFront.println('** DELIVERY **');
           printerFront.println(`Cliente: ${orderData.tableName.toUpperCase()}`);
           if (orderData.phone) printerFront.println(`Tel: ${orderData.phone}`);
+          if (orderData.address) printerFront.println(`End: ${orderData.address}`);
         } else {
-          printerFront.println(orderData.tableName.toUpperCase());
+          printerFront.println(table);
         }
 
-        printerFront.println(`Data: ${dateStr}`); 
-        printerFront.drawLine();
-        
-        frontItems.forEach(item => {
-          printerFront.println(item.name.toUpperCase());
-          if (item.notes) printerFront.println(`*${item.notes}`);
+        printerFront.println(`Operador: ${operator}`);
+        printerFront.println(`Data: ${dateStr}`);
+        printerFront.println(receiptLine('-'));
+
+        frontItems.forEach((item, idx) => {
+          const title = `${item.quantity || 1} ${item.name.toUpperCase()} (${item.size || ''})`.trim();
+          printerFront.println(title);
+          if (item.notes) {
+            item.notes.split('|').map(n => n.trim()).filter(Boolean).forEach(note => {
+              printerFront.println(`  * ${note}`);
+            });
+          }
+          if (idx < frontItems.length - 1) {
+            printerFront.println(receiptLine('-'));
+          }
         });
 
         // Imprimir formas de pagamento
         if (orderData.payments && Array.isArray(orderData.payments) && orderData.payments.length > 0) {
-          printerFront.drawLine();
-          printerFront.alignCenter();
-          printerFront.setTextDoubleHeight();
-          printerFront.println("RESUMO PAGAMENTOS");
-          printerFront.setTextNormal();
-          printerFront.alignLeft();
-          printerFront.drawLine();
+          printerFront.println(receiptLine('-'));
+          printerFront.println('RESUMO PAGAMENTOS');
+          printerFront.println(receiptLine('-'));
           for (const p of orderData.payments) {
             printerFront.println(`${p.method.padEnd(12)} R$ ${Number(p.amount).toFixed(2)}`);
           }
-          printerFront.drawLine();
+          printerFront.println(receiptLine('-'));
           const sumP = orderData.payments.reduce((s, p) => s + Number(p.amount), 0);
           printerFront.println(`TOTAL PAGO: R$ ${sumP.toFixed(2)}`);
           if (orderData.amountReceived && Number(orderData.amountReceived) > 0) {
@@ -405,42 +445,47 @@ async function printTickets(orderData, items) {
             printerFront.println(`Recebido:   R$ ${Number(orderData.amountReceived).toFixed(2)}`);
             printerFront.println(`Troco:      R$ ${(Number(orderData.amountReceived) - cashSumP).toFixed(2)}`);
           }
-          printerFront.drawLine();
+          printerFront.println(receiptLine('-'));
 
           const permutaPayment = orderData.payments.find(p => p.method === 'PERMUTA');
           if (permutaPayment) {
             printerFront.alignCenter();
             printerFront.setTextDoubleHeight();
-            printerFront.println("** PERMUTA **");
+            printerFront.println('** PERMUTA **');
             printerFront.setTextNormal();
             printerFront.alignLeft();
             printerFront.println(`TROCADO POR: ${permutaPayment.exchangeFor || '(não informado)'}`);
-            printerFront.drawLine();
+            printerFront.println(receiptLine('-'));
           } else {
             printerFront.openCashDrawer();
           }
         } else if (orderData.paymentMethod?.toUpperCase() === 'PERMUTA') {
           // Formato legado PERMUTA
-          printerFront.drawLine();
+          printerFront.println(receiptLine('-'));
           printerFront.alignCenter();
           printerFront.setTextDoubleHeight();
-          printerFront.println("** PERMUTA **");
+          printerFront.println('** PERMUTA **');
           printerFront.setTextNormal();
           printerFront.alignLeft();
           printerFront.println(`TROCADO POR: ${orderData.exchangeFor || '(não informado)'}`);
-          printerFront.drawLine();
+          printerFront.println(receiptLine('-'));
         } else {
           // Formato legado normal
           printerFront.openCashDrawer();
         }
 
-        printerFront.cut(); await printerFront.execute();
-        result.front = { success: true };
+        printerFront.println(receiptLine('='));
+        printerFront.cut();
+        await printerFront.execute();
+
+        const preview = stripEscPos(printerFront.getText());
+        logger.info('[print] front preview', { preview });
+        result.front = { success: true, preview };
       } else {
         result.front = { success: false, reason: 'Impressora do balcão não conectada' };
       }
-    } catch (e) { 
-      console.error("[print] Balcão erro:", e.message);
+    } catch (e) {
+      console.error('[print] Balcão erro:', e.message);
       result.front = { success: false, reason: e.message };
     }
   }
