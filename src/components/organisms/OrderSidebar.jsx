@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { ShoppingCart, FileText, Settings, X, Wifi, Trash2 } from 'lucide-react';
+import { ShoppingCart, FileText, Settings, X, Wifi, Trash2, CircleDollarSign } from 'lucide-react';
 
 /**
  * OrderSidebar - Sidebar de comandas (esquerda)
@@ -11,6 +11,7 @@ import { ShoppingCart, FileText, Settings, X, Wifi, Trash2 } from 'lucide-react'
  * @param {Function} props.onNewTable - Callback ao clicar em nova comanda
  * @param {Function} props.onOpenReports - Callback ao abrir relatórios
  * @param {Function} props.onOpenSettings - Callback ao abrir configurações
+ * @param {Function} props.onOpenCash - Callback ao abrir caixa
  * @param {Function} props.onLogout - Callback ao sair
  * @param {Function} props.onDeleteTable - Callback ao cancelar/remover comanda (recebe id)
  * @param {boolean} props.ifoodConnected - Status da conexao iFood
@@ -23,6 +24,7 @@ export const OrderSidebar = memo(function OrderSidebar({
   onNewTable,
   onOpenReports,
   onOpenSettings,
+  onOpenCash,
   onLogout,
   onDeleteTable,
   ifoodConnected = false,
@@ -52,6 +54,13 @@ export const OrderSidebar = memo(function OrderSidebar({
             title="Caixa e Relatórios"
           >
             <FileText size={18} />
+          </button>
+          <button
+            onClick={onOpenCash}
+            className="p-1.5 hover:bg-surface-light rounded-md text-muted hover:text-success transition-colors"
+            title="Caixa"
+          >
+            <CircleDollarSign size={18} />
           </button>
           <button
             onClick={onOpenSettings}

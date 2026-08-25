@@ -129,6 +129,27 @@ const validators = {
     return { success: true, data: { ...data, amount: Number(data.amount) } };
   },
 
+  'cash:open': (data) => {
+    if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
+    if (data.openingAmount === undefined || isNaN(Number(data.openingAmount)) || Number(data.openingAmount) < 0) return { success: false, error: 'Valor de abertura inválido' };
+    return { success: true, data: { openingAmount: Number(data.openingAmount) } };
+  },
+
+  'cash:close': (data) => {
+    if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
+    if (data.closingAmount === undefined || isNaN(Number(data.closingAmount)) || Number(data.closingAmount) < 0) return { success: false, error: 'Valor de fechamento inválido' };
+    return { success: true, data: { closingAmount: Number(data.closingAmount) } };
+  },
+
+  'cash:get-current': () => ({ success: true, data: null }),
+
+  'cash:get-history': (params) => {
+    if (!params || typeof params !== 'object') return { success: true, data: {} };
+    if (params.startDate && typeof params.startDate !== 'string') return { success: false, error: 'Data inicial inválida' };
+    if (params.endDate && typeof params.endDate !== 'string') return { success: false, error: 'Data final inválida' };
+    return { success: true, data: params };
+  },
+
   'reports:by-period': (data) => {
     if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
     if (!data.startDate || typeof data.startDate !== 'string') return { success: false, error: 'Data inicial inválida' };

@@ -328,6 +328,82 @@ function registerCashMovement(data) {
   return db.prepare('INSERT INTO cash_movements (type, amount, description) VALUES (?, ?, ?)').run(data.type, data.amount, data.description).lastInsertRowid;
 }
 
+// --- SESSOES DE CAIXA ---
+function openCashSession(openingAmount, userId) {
+  if (openingAmount === undefined || isNaN(openingAmount) || Number(openingAmount) < 0) {
+    throw new Error('Valor de abertura inválido');
+  }
+  const amount = Number(openingAmount);
+  const stmt = db.prepare('INSERT INTO cash_sessions (user_id, opening_amount, status) VALUES (?, ?, ?)');
+  return stmt.run(userId || null, amount, 'OPEN').lastInsertRowid;
+}
+
+function getCurrentCashSession() {
+  return db.prepare("SELECT * FROM cash_sessions WHERE status = 'OPEN' ORDER BY opened_at DESC LIMIT 1").get();
+}
+
+function closeCashSession(sessionId, closingAmount, userId) {
+  if (!sessionId || isNaN(sessionId)) {
+    throw new Error('ID da sessão inválido');
+  }
+  if (closingAmount === undefined || isNaN(Number(closingAmount)) || Number(closingAmount) < 0) {
+    throw new Error('Valor de fechamento inválido');
+  }
+
+  const session = db.prepare('SELECT * FROM cash_sessions WHERE id = ? AND status = ?').get(sessionId, 'OPEN');
+  if (!session) {
+    throw new Error('Sessão de caixa não encontrada ou já fechada');
+  }
+
+  const closing = Number(closingAmount);
+
+  // Calcular valor esperado: abertura + vendas em dinheiro + entradas - saídas dentro do período da sessão
+  const salesCash = db.prepare(`
+    SELECT COALESCE(SUM(op.amount), 0) as total
+    FROM order_payments op
+    JOIN orders o ON op.order_id = o.id
+    WHERE o.created_at >= ?
+      AND o.created_at <= ?
+      AND op.payment_method = 'DINHEIRO'
+  `).get(session.opened_at, new Date().toISOString()).total || 0;
+
+  const movements = db.prepare(`
+    SELECT type, amount
+    FROM cash_movements
+    WHERE created_at >= ?
+      AND created_at <= ?
+  `).all(session.opened_at, new Date().toISOString());
+
+  const entries = movements.filter(m => m.type === 'ENTRADA').reduce((a, m) => a + Number(m.amount), 0);
+  const exits = movements.filter(m => m.type === 'SAIDA').reduce((a, m) => a + Number(m.amount), 0);
+
+  const expected = Number(session.opening_amount) + Number(salesCash) + entries - exits;
+  const difference = closing - expected;
+
+  const closedAt = new Date().toISOString();
+  const stmt = db.prepare(`
+    UPDATE cash_sessions
+    SET closed_at = ?, closing_amount = ?, expected_amount = ?, difference = ?, status = 'CLOSED', notes = ?
+    WHERE id = ?
+  `);
+  return stmt.run(closedAt, closing, expected, difference, userId ? `Fechado por usuário ${userId}` : null, sessionId).changes > 0;
+}
+
+function getCashSessions(startDate = null, endDate = null) {
+  let query = "SELECT * FROM cash_sessions WHERE 1=1";
+  const params = [];
+  if (startDate) {
+    query += " AND date(opened_at) >= date(?)";
+    params.push(startDate);
+  }
+  if (endDate) {
+    query += " AND date(opened_at) <= date(?)";
+    params.push(endDate);
+  }
+  query += " ORDER BY opened_at DESC";
+  return db.prepare(query).all(...params);
+}
+
 function getDailyReport() {
   const sales = db.prepare(`SELECT payment_method, is_delivery, SUM(total) as total_amount FROM orders WHERE date(created_at, 'localtime') = date('now', 'localtime') AND is_exchange = 0 GROUP BY payment_method, is_delivery`).all();
   const exchanges = db.prepare(`
@@ -342,7 +418,7 @@ function getDailyReport() {
   const exchangesWithItems = exchanges.map(e => ({ ...e, items: getItems.all(e.id) }));
 
   const movements = db.prepare(`SELECT id, type, amount as total_amount, description, created_at FROM cash_movements WHERE date(created_at, 'localtime') = date('now', 'localtime') ORDER BY created_at DESC`).all();
-  const topProducts = db.prepare(`SELECT product_name, COUNT(*) as qty FROM order_items JOIN orders ON order_items.order_id = orders.id WHERE date(orders.created_at, 'localtime') = date('now', 'localtime') AND orders.is_exchange = 0 GROUP BY product_name ORDER BY qty DESC LIMIT 5`).all();
+  const topProducts = db.prepare(`SELECT product_name, COUNT(*) as qty, SUM(price) as total_revenue, AVG(price) as avg_price FROM order_items JOIN orders ON order_items.order_id = orders.id WHERE date(orders.created_at, 'localtime') = date('now', 'localtime') AND orders.is_exchange = 0 GROUP BY product_name ORDER BY qty DESC LIMIT 5`).all();
   return { sales, exchanges: exchangesWithItems, movements, topProducts };
 }
 
@@ -379,7 +455,7 @@ function getReportByPeriod(startDate, endDate) {
   `).all(startDate, endDateTime);
 
   const topProducts = db.prepare(`
-    SELECT product_name, COUNT(*) as qty, SUM(price) as total_revenue
+    SELECT product_name, COUNT(*) as qty, SUM(price) as total_revenue, AVG(price) as avg_price
     FROM order_items
     JOIN orders ON order_items.order_id = orders.id
     WHERE datetime(orders.created_at, 'localtime') >= datetime(?, 'localtime')
@@ -821,6 +897,7 @@ module.exports = {
   saveFullOrder,
   getOrdersHistory, deleteOrder,
   registerCashMovement,
+  getCurrentCashSession, openCashSession, closeCashSession, getCashSessions,
   getDailyReport, getReportByPeriod,
   getPromotions, addPromotion, updatePromotion, deletePromotion, getActivePromotions,
   getUsers, getUserById, getUserByUsername, addUser, updateUser, deleteUser, toggleUserActive,

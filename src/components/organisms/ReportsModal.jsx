@@ -196,11 +196,13 @@ function generatePDF(data, isPeriodView, financialSummary, reportPeriod) {
               { text: 'Produto', style: 'tableHeader' },
               { text: 'Qtd', style: 'tableHeader', alignment: 'center' },
               { text: 'Receita', style: 'tableHeader', alignment: 'right' },
+              { text: 'Média', style: 'tableHeader', alignment: 'right' },
             ],
             ...data.topProducts.map(p => [
               p.product_name,
               { text: String(p.qty), alignment: 'center' },
               { text: `R$ ${Number(p.total_revenue || 0).toFixed(2)}`, alignment: 'right' },
+              { text: `R$ ${Number(p.avg_price || 0).toFixed(2)}`, alignment: 'right' },
             ]),
           ],
         },
@@ -562,7 +564,7 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                   <div key={i} className="bg-surface-light border border-border rounded-xl p-4 flex items-center justify-between">
                     <div>
                       <div className="font-bold text-sm text-primary">{p.product_name}</div>
-                      <div className="text-[10px] text-muted">{p.qty} vendidos</div>
+                      <div className="text-[10px] text-muted">{p.qty} vendidos • média R$ {Number(p.avg_price || 0).toFixed(2)}</div>
                     </div>
                     <div className="text-right">
                       <div className="font-mono font-bold text-success">R$ {p.total_revenue.toFixed(2)}</div>

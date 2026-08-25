@@ -10,10 +10,10 @@ import {
 } from 'lucide-react';
 
 import { ProductCard } from './components/atoms/ProductCard';
-import {
+import { 
   OrderSidebar, CartPanel, SettingsModal, LoginModal,
   CheckoutModal, AcaiBuilderModal, QuickBuilderModal, PasswordModal,
-  ManagerAuthModal, ReportsModal, NewTableModal
+  ManagerAuthModal, ReportsModal, NewTableModal, CashModal
 } from './components/organisms';
 
 function App() {
@@ -38,7 +38,7 @@ function App() {
 
   const [builder, setBuilder] = useState(null);
   const [simpleBuilder, setSimpleBuilder] = useState(null);
-  const [modals, setModals] = useState({ newTable: false, settings: false, checkout: false, reports: false, login: true, changePassword: false });
+  const [modals, setModals] = useState({ newTable: false, settings: false, checkout: false, reports: false, login: true, changePassword: false, cash: false });
   const [changePasswordForm, setChangePasswordForm] = useState({ current: '', new: '', confirm: '' });
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('TODOS');
@@ -734,6 +734,7 @@ function App() {
         onNewTable={() => setModals({...modals, newTable: true})}
         onOpenReports={() => { setModals({...modals, reports: true}); loadReports(); }}
         onOpenSettings={() => runWithManagerAuth(() => setModals({...modals, settings: true}))}
+        onOpenCash={() => runWithManagerAuth(() => setModals({...modals, cash: true}))}
         onLogout={handleLogout}
         onDeleteTable={handleDeleteTable}
         ifoodConnected={!!ifoodConfig.enabled}
@@ -890,6 +891,13 @@ function App() {
         isTestingIfood={isTestingIfood}
         ifoodConnectionStatus={ifoodConnectionStatus}
         saveIfoodConfig={saveIfoodConfig}
+      />}
+
+      {modals.cash && <CashModal
+        isOpen={modals.cash}
+        onClose={() => setModals({...modals, cash: false})}
+        runWithAuth={runWithAuth}
+        getIPC={getIPC}
       />}
 
       {modals.checkout && <CheckoutModal

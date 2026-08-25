@@ -18,13 +18,15 @@ export default function CheckoutModal({ isOpen, onClose, activeTable, promotions
   const sumPayments = payments.reduce((s, p) => s + p.amount, 0);
   const remaining = Math.max(0, finalTotal - sumPayments);
 
-  const hasCash = payments.some(p => p.method === 'DINHEIRO');
-  const cashSum = payments.filter(p => p.method === 'DINHEIRO').reduce((s, p) => s + p.amount, 0);
+  const cashPayments = payments.filter(p => p.method === 'DINHEIRO');
+  const hasCash = cashPayments.length > 0;
+  const cashTarget = hasCash ? Math.max(0, finalTotal - (sumPayments - cashPayments.reduce((s, p) => s + p.amount, 0))) : 0;
   const amt = Number(amountReceived) || 0;
-  const change = hasCash && amt >= cashSum ? amt - cashSum : 0;
+  const change = hasCash ? Math.max(0, amt - cashTarget) : 0;
 
   const isComplete = Math.round(sumPayments * 100) >= Math.round(finalTotal * 100);
-  const canConfirm = isComplete && payments.length > 0 && (!hasCash || (amountReceived && amt >= cashSum));
+  const hasValidCash = !hasCash || (amt >= cashTarget);
+  const canConfirm = isComplete && payments.length > 0 && hasValidCash;
 
   const hasPermuta = payments.some(p => p.method === 'PERMUTA');
 
@@ -214,7 +216,7 @@ export default function CheckoutModal({ isOpen, onClose, activeTable, promotions
               className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-2xl text-center font-mono font-medium shadow-sm"
               placeholder="0.00"
             />
-            {amt >= cashSum && amt > 0 && (
+            {hasCash && amt > cashTarget && amt > 0 && (
               <div className="mt-3 p-3 bg-surface-light border border-border rounded-lg text-center animate-in fade-in">
                 <span className="text-[10px] text-muted font-bold uppercase tracking-widest block mb-1">Troco a Devolver</span>
                 <span className="text-2xl font-bold text-warning font-mono">R$ {change.toFixed(2)}</span>

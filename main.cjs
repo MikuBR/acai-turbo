@@ -5,7 +5,8 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const {
   saveFullOrder, getProducts, addProduct, deleteProduct, registerCashMovement,
-  getDailyReport, getReportByPeriod, updateProduct, getConfig, updateConfig, getAllConfigs,
+  getDailyReport, getReportByPeriod, getCurrentCashSession, openCashSession, closeCashSession, getCashSessions,
+  updateProduct, getConfig, updateConfig, getAllConfigs,
   getCategories, addCategory, deleteCategory, getOrdersHistory, deleteOrder,
   getPromotions, addPromotion, updatePromotion, deletePromotion, getActivePromotions,
   getUsers, getUserById, getUserByUsername, addUser, updateUser, deleteUser, toggleUserActive,
@@ -522,6 +523,29 @@ createHandler('orders:delete', async (id) => ({ count: deleteOrder(id) }));
 // CAIXA / RELATÓRIOS - IPC Handlers
 // ============================================================
 createHandler('cash:register', async (data) => ({ id: registerCashMovement(data) }));
+createHandler('cash:open', async (data) => ({ id: openCashSession(data.openingAmount, currentSession?.user?.id) }));
+createHandler('cash:close', async (data) => {
+  const session = getCurrentCashSession();
+  if (!session) return { success: false, error: 'Nenhum caixa aberto' };
+  const ok = closeCashSession(session.id, data.closingAmount, currentSession?.user?.id);
+  if (!ok) return { success: false, error: 'Falha ao fechar caixa' };
+  const updated = getCurrentCashSession();
+  return { success: true, session: updated ? { ...updated, status: 'CLOSED' } : null };
+});
+createHandler('cash:get-current', async () => ({ data: getCurrentCashSession() }));
+createHandler('cash:get-history', async (params) => ({ data: getCashSessions(params?.startDate, params?.endDate) }));
+createHandler('cash:preview-close', async (data) => {
+  const session = getCurrentCashSession();
+  if (!session) return { success: false, error: 'Nenhum caixa aberto' };
+  const closing = Number(data?.closingAmount || 0);
+  const salesCash = db.prepare(`SELECT COALESCE(SUM(op.amount), 0) as total FROM order_payments op JOIN orders o ON op.order_id = o.id WHERE o.created_at >= ? AND o.created_at <= ? AND op.payment_method = 'DINHEIRO'`).get(session.opened_at, new Date().toISOString()).total || 0;
+  const movements = db.prepare(`SELECT type, amount FROM cash_movements WHERE created_at >= ? AND created_at <= ?`).all(session.opened_at, new Date().toISOString());
+  const entries = movements.filter(m => m.type === 'ENTRADA').reduce((a, m) => a + Number(m.amount), 0);
+  const exits = movements.filter(m => m.type === 'SAIDA').reduce((a, m) => a + Number(m.amount), 0);
+  const expected = Number(session.opening_amount) + Number(salesCash) + entries - exits;
+  const difference = closing - expected;
+  return { success: true, expected, difference, closingAmount: closing, openingAmount: session.opening_amount, salesCash: expected - Number(session.opening_amount) - entries + exits };
+});
 createHandler('reports:daily', async () => ({ data: getDailyReport() }));
 createHandler('reports:by-period', async ({ startDate, endDate }) => ({ data: getReportByPeriod(startDate, endDate) }));
 
