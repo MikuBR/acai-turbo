@@ -849,6 +849,13 @@ const getClientById = (id) => {
   return db.prepare('SELECT * FROM clients WHERE id = ?').get(id);
 };
 
+const getClientByPhone = (phone) => {
+  if (!phone || typeof phone !== 'string' || !phone.trim()) {
+    return null;
+  }
+  return db.prepare('SELECT * FROM clients WHERE phone = ?').get(phone.trim());
+};
+
 const getClientOrders = (clientId) => {
   if (!clientId || isNaN(clientId)) {
     throw new Error('Invalid client ID');
@@ -905,7 +912,7 @@ module.exports = {
   createAuditLog, getAuditLogs,
   getInventory, getInventoryByProductId, addInventory, updateInventoryQuantity, adjustInventory, getInventoryMovements, getLowStockItems,
   getFinancialAccounts, addFinancialAccount, updateFinancialAccount, deleteFinancialAccount, addFinancialTransaction, getFinancialTransactions, getFinancialSummary,
-  getClients, addClient, updateClient, deleteClient, getClientById, getClientOrders, addClientOrder,
+  getClients, addClient, updateClient, deleteClient, getClientById, getClientByPhone, getClientOrders, addClientOrder,
   addIfoodPendingOrder, getIfoodPendingOrders, getIfoodPendingOrderByOrderId,
   updateIfoodPendingOrderStatus, removeIfoodPendingOrder, countIfoodPendingOrders
 };
