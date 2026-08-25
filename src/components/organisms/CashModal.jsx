@@ -38,8 +38,10 @@ export default function CashModal({ isOpen, onClose, getIPC }) {
     try {
       const res = await ipc.invoke('cash:open', { openingAmount: amount });
       if (res?.id) {
-        await loadCurrent();
-        await loadHistory();
+        const currentRes = await ipc.invoke('cash:get-current');
+        setCurrent(currentRes?.data || null);
+        const historyRes = await ipc.invoke('cash:get-history', {});
+        setHistory(historyRes?.data || []);
         setOpeningAmount('');
       } else {
         setError('Não foi possível abrir o caixa');
@@ -86,7 +88,8 @@ export default function CashModal({ isOpen, onClose, getIPC }) {
       const res = await ipc.invoke('cash:close', { closingAmount: amount });
       if (res?.success) {
         setCurrent({ ...(res.session || current), status: 'CLOSED' });
-        await loadHistory();
+        const historyRes = await ipc.invoke('cash:get-history', {});
+        setHistory(historyRes?.data || []);
         setClosingAmount('');
         setPreview(null);
       } else {
