@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { X, Check, CircleDollarSign, Wallet, Lock, LogOut } from 'lucide-react';
+import { X, Check, Wallet } from 'lucide-react';
 
-export default function CashModal({ isOpen, onClose, runWithAuth, getIPC }) {
+export default function CashModal({ isOpen, onClose, getIPC }) {
   const [current, setCurrent] = useState(null);
   const [openingAmount, setOpeningAmount] = useState('');
   const [closingAmount, setClosingAmount] = useState('');
@@ -12,28 +12,20 @@ export default function CashModal({ isOpen, onClose, runWithAuth, getIPC }) {
 
   const ipc = getIPC?.();
 
-  const loadCurrent = async () => {
-    if (!ipc) return;
-    const res = await ipc.invoke('cash:get-current');
-    setCurrent(res?.data || null);
-  };
-
-  const loadHistory = async () => {
-    if (!ipc) return;
-    const res = await ipc.invoke('cash:get-history', {});
-    setHistory(res?.data || []);
-  };
-
   useEffect(() => {
-    if (!isOpen) return;
-    loadCurrent();
-    loadHistory();
-    const interval = setInterval(() => {
-      loadCurrent();
-      loadHistory();
-    }, 10000);
+    if (!isOpen || !ipc) return;
+
+    const refresh = async () => {
+      const currentRes = await ipc.invoke('cash:get-current');
+      setCurrent(currentRes?.data || null);
+      const historyRes = await ipc.invoke('cash:get-history', {});
+      setHistory(historyRes?.data || []);
+    };
+
+    refresh();
+    const interval = setInterval(refresh, 10000);
     return () => clearInterval(interval);
-  }, [isOpen]);
+  }, [isOpen, ipc]);
 
   const handleOpen = async () => {
     setError('');
