@@ -107,6 +107,22 @@ jobs:
           echo "VERSION=$version" >> $env:GITHUB_OUTPUT
         shell: pwsh
 
+      - name: Generate release notes from commits
+        id: release_notes
+        run: |
+          $fromTag = git describe --tags --abbrev=0 HEAD~1 2>$null
+          if (-not $fromTag) {
+            $fromTag = $(git rev-list --max-parents=0 HEAD)
+          }
+          $notes = git log --no-merges --oneline "${fromTag}..HEAD" 2>$null
+          if (-not $notes) {
+            $notes = "Automated build from tag ${{ github.ref_name }}"
+          }
+          echo "NOTES<<EOF" >> $env:GITHUB_OUTPUT
+          echo $notes >> $env:GITHUB_OUTPUT
+          echo "EOF" >> $env:GITHUB_OUTPUT
+        shell: pwsh
+
       - name: Upload installer as release asset
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/v')
@@ -121,7 +137,7 @@ jobs:
             - **Windows Installer (NSIS):** `acai-wave Setup ${{ steps.version.outputs.VERSION }}.exe`
 
             ### 🔧 Changes
-            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
+            ${{ steps.release_notes.outputs.notes }}
 
             ### 📦 Installation
             1. Download the `.exe` above
