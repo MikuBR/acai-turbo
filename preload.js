@@ -15,6 +15,11 @@ const ALLOWED_CHANNELS = {
   'orders:delete': true,
 
   'cash:register': true,
+  'cash:open': true,
+  'cash:close': true,
+  'cash:get-current': true,
+  'cash:get-history': true,
+  'cash:preview-close': true,
   'reports:daily': true,
   'reports:by-period': true,
 
@@ -110,6 +115,11 @@ const api = {
   },
   cash: {
     register: (...args) => safeInvoke('cash:register', ...args),
+    open: (...args) => safeInvoke('cash:open', ...args),
+    close: (...args) => safeInvoke('cash:close', ...args),
+    getCurrent: (...args) => safeInvoke('cash:get-current', ...args),
+    getHistory: (...args) => safeInvoke('cash:get-history', ...args),
+    previewClose: (...args) => safeInvoke('cash:preview-close', ...args),
   },
   reports: {
     daily: (...args) => safeInvoke('reports:daily', ...args),

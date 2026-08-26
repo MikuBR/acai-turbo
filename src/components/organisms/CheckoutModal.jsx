@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { X, Check, Plus, Trash2 } from 'lucide-react';
 
-const PAYMENT_METHODS = ['DINHEIRO', 'PIX', 'DÉBITO', 'CRÉDITO', 'OUTROS', 'PERMUTA'];
+const PAYMENT_METHODS = ['DINHEIRO', 'PIX', 'DÉBITO', 'CRÉDITO', 'PERMUTA'];
 
 export default function CheckoutModal({ isOpen, onClose, activeTable, promotions, selectedPromotion, setSelectedPromotion, calculateDiscount, onFinalize }) {
   const [payments, setPayments] = useState([]);
@@ -10,7 +10,6 @@ export default function CheckoutModal({ isOpen, onClose, activeTable, promotions
   const [pendingMethod, setPendingMethod] = useState('DINHEIRO');
   const [pendingAmount, setPendingAmount] = useState('');
   const [pendingExchangeFor, setPendingExchangeFor] = useState('');
-  const [pendingOtherLabel, setPendingOtherLabel] = useState('');
 
   if (!isOpen) return null;
 
@@ -19,13 +18,15 @@ export default function CheckoutModal({ isOpen, onClose, activeTable, promotions
   const sumPayments = payments.reduce((s, p) => s + p.amount, 0);
   const remaining = Math.max(0, finalTotal - sumPayments);
 
-  const hasCash = payments.some(p => p.method === 'DINHEIRO');
-  const cashSum = payments.filter(p => p.method === 'DINHEIRO').reduce((s, p) => s + p.amount, 0);
+  const cashPayments = payments.filter(p => p.method === 'DINHEIRO');
+  const hasCash = cashPayments.length > 0;
+  const cashTarget = hasCash ? Math.max(0, finalTotal - (sumPayments - cashPayments.reduce((s, p) => s + p.amount, 0))) : 0;
   const amt = Number(amountReceived) || 0;
-  const change = hasCash && amt >= cashSum ? amt - cashSum : 0;
+  const change = hasCash ? Math.max(0, amt - cashTarget) : 0;
 
-  const isComplete = sumPayments >= finalTotal;
-  const canConfirm = isComplete && payments.length > 0 && (!hasCash || (amountReceived && Number(amountReceived) >= cashSum));
+  const isComplete = Math.round(sumPayments * 100) >= Math.round(finalTotal * 100);
+  const hasValidCash = !hasCash || (amt >= cashTarget);
+  const canConfirm = isComplete && payments.length > 0 && hasValidCash;
 
   const hasPermuta = payments.some(p => p.method === 'PERMUTA');
 
@@ -33,7 +34,6 @@ export default function CheckoutModal({ isOpen, onClose, activeTable, promotions
     setPendingMethod('DINHEIRO');
     setPendingAmount(remaining > 0 ? remaining.toFixed(2) : '');
     setPendingExchangeFor('');
-    setPendingOtherLabel('');
     setShowAddPayment(true);
   };
 
@@ -47,11 +47,7 @@ export default function CheckoutModal({ isOpen, onClose, activeTable, promotions
       setPayments([{ method: 'PERMUTA', amount: finalAmt, exchangeFor: pendingExchangeFor.trim() }]);
     } else {
       if (hasPermuta) setPayments([]);
-      const payment = { method: pendingMethod, amount: truncatedAmt };
-      if (pendingMethod === 'OUTROS') {
-        payment.otherLabel = pendingOtherLabel.trim();
-      }
-      setPayments(prev => [...prev.filter(p => p.method !== 'PERMUTA'), payment]);
+      setPayments(prev => [...prev.filter(p => p.method !== 'PERMUTA'), { method: pendingMethod, amount: truncatedAmt }]);
     }
     setShowAddPayment(false);
     setAmountReceived('');
@@ -104,7 +100,7 @@ export default function CheckoutModal({ isOpen, onClose, activeTable, promotions
               {payments.map((p, i) => (
                 <div key={i} className="flex items-center justify-between bg-surface-light border border-border rounded-lg p-3 group animate-in fade-in">
                   <div className="flex items-center gap-2">
-                    <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded ${p.method === 'PERMUTA' ? 'bg-warning/20 text-warning' : p.method === 'OUTROS' ? 'bg-highlight/20 text-highlight' : 'bg-primary/10 text-primary'}`}>{p.otherLabel || p.method}</span>
+                    <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded ${p.method === 'PERMUTA' ? 'bg-warning/20 text-warning' : 'bg-primary/10 text-primary'}`}>{p.method}</span>
                     {p.exchangeFor && <span className="text-[10px] text-muted italic truncate max-w-[180px]">· {p.exchangeFor}</span>}
                   </div>
                   <div className="flex items-center gap-3">
@@ -180,15 +176,6 @@ export default function CheckoutModal({ isOpen, onClose, activeTable, promotions
               {pendingMethod !== 'PERMUTA' && Number(pendingAmount) > remaining && remaining > 0 && (
                 <div className="text-[9px] text-danger mt-1">Valor excede o restante (R$ {remaining.toFixed(2)})</div>
               )}
-              {pendingMethod === 'OUTROS' && (
-                <input
-                  type="text"
-                  value={pendingOtherLabel}
-                  onChange={e => setPendingOtherLabel(e.target.value)}
-                  className="w-full bg-card border border-highlight/40 p-3 rounded-lg text-primary outline-none focus:border-highlight focus:ring-2 focus:ring-highlight/20 transition-all text-sm font-medium shadow-sm mt-2"
-                  placeholder="Ex: Vale alimentação, ticket..."
-                />
-              )}
             </div>
 
             {pendingMethod === 'PERMUTA' && (
@@ -208,7 +195,7 @@ export default function CheckoutModal({ isOpen, onClose, activeTable, promotions
               <button onClick={() => setShowAddPayment(false)} className="flex-1 bg-surface-light border border-border py-2.5 rounded-lg text-xs font-bold uppercase text-muted hover:text-primary transition-all">Cancelar</button>
               <button
                 onClick={addPayment}
-                disabled={pendingMethod === 'PERMUTA' ? !pendingExchangeFor.trim() || !pendingAmount : !pendingAmount || Number(pendingAmount) <= 0 || (pendingMethod === 'OUTROS' && !pendingOtherLabel.trim())}
+                disabled={pendingMethod === 'PERMUTA' ? !pendingExchangeFor.trim() || !pendingAmount : !pendingAmount || Number(pendingAmount) <= 0}
                 className="flex-1 bg-primary hover:bg-primary py-2.5 rounded-lg text-xs font-bold uppercase text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Adicionar
@@ -229,7 +216,7 @@ export default function CheckoutModal({ isOpen, onClose, activeTable, promotions
               className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-2xl text-center font-mono font-medium shadow-sm"
               placeholder="0.00"
             />
-            {amt >= cashSum && amt > 0 && (
+            {hasCash && amt > cashTarget && amt > 0 && (
               <div className="mt-3 p-3 bg-surface-light border border-border rounded-lg text-center animate-in fade-in">
                 <span className="text-[10px] text-muted font-bold uppercase tracking-widest block mb-1">Troco a Devolver</span>
                 <span className="text-2xl font-bold text-warning font-mono">R$ {change.toFixed(2)}</span>

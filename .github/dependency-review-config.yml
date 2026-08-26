@@ -21,21 +21,5 @@ deny-licenses:
   - SSPL-1.0
 
 # Allow these licenses explicitly
-allow-licenses:
-  - MIT
-  - Apache-2.0
-  - BSD-2-Clause
-  - BSD-3-Clause
-  - ISC
-  - Unicode-DFS-2016
-  - CC0-1.0
-  - Zlib
-  - Python-2.0
-  - MPL-2.0
-  - LGPL-2.1-only
-  - LGPL-2.1-or-later
-  - BlueOak-1.0.0
-
-# Private packages configuration (if using private registry)
 # private-packages:
 #   - @your-org/*

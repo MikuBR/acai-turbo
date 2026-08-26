@@ -11,3 +11,4 @@ export { default as PasswordModal } from './PasswordModal';
 export { default as ManagerAuthModal } from './ManagerAuthModal';
 export { default as ReportsModal } from './ReportsModal';
 export { default as NewTableModal } from './NewTableModal';
+export { default as CashModal } from './CashModal';
