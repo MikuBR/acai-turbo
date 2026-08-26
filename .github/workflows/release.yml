@@ -4,10 +4,14 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+
+concurrency:
+  group: build-windows-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: write  # needed for creating releases
-  packages: write  # optional, for npm packages if needed
 
 env:
   NODE_VERSION: '22'
@@ -32,13 +36,12 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          registry-url: 'https://registry.npmjs.org'
 
       - name: Setup MSBuild (for native modules)
         uses: microsoft/setup-msbuild@v2
 
       - name: Install dependencies
-        run: npm install --ignore-scripts --legacy-peer-deps
+        run: npm install --legacy-peer-deps
         shell: pwsh
 
       - name: Rebuild native modules for Electron
