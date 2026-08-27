@@ -36,6 +36,9 @@ jobs:
       - name: Run TypeScript type check
         run: npm run typecheck
 
+      - name: Validate migration versions
+        run: node scripts/validate-migrations.cjs
+
   # ──────────────────────────────────────────────────────────────────
   # TESTS ON NODE.JS (ABI 127) - Vitest suite
   # ──────────────────────────────────────────────────────────────────
