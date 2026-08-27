@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+    branches: [main, develop]
   workflow_dispatch:
 
 concurrency:
@@ -99,42 +100,72 @@ jobs:
           }
         shell: pwsh
 
-      - name: Get version from tag
-        id: version
-        run: |
-          $tag = "${{ github.ref_name }}"
-          $version = $tag.TrimStart('v')
-          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+      - name: Get version/tag for release
+        id: refinfo
         shell: pwsh
-
-      - name: Generate release notes from commits
-        id: release_notes
         run: |
-          $fromTag = git describe --tags --abbrev=0 HEAD~1 2>$null
-          if (-not $fromTag) {
-            $fromTag = $(git rev-list --max-parents=0 HEAD)
+          if ($env:GITHUB_REF_TYPE -eq 'tag') {
+            echo "TAG=$env:GITHUB_REF_NAME" >> $env:GITHUB_OUTPUT
+            echo "REF_TYPE=tag" >> $env:GITHUB_OUTPUT
+          } else {
+            $safeRef = "$env:GITHUB_REF_NAME".Replace('/', '-')
+            echo "TAG=windows-installer-$safeRef" >> $env:GITHUB_OUTPUT
+            echo "REF_TYPE=branch" >> $env:GITHUB_OUTPUT
           }
-          $notes = git log --no-merges --oneline "${fromTag}..HEAD" 2>$null
-          if (-not $notes) {
-            $notes = "Automated build from tag ${{ github.ref_name }}"
+
+      - name: Generate release notes
+        id: release_notes
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ($env:REF_TYPE -eq 'tag') {
+            $fromTag = git describe --tags --abbrev=0 HEAD~1 2>$null
+            if (-not $fromTag) { $fromTag = git rev-list --max-parents=0 HEAD }
+            $notes = git log --no-merges --oneline "$fromTag..HEAD" 2>$null
+            if (-not $notes) { $notes = "Release $env:TAG" }
+          } else {
+            $notes = git log --no-merges --oneline -20 2>$null
+            if (-not $notes) { $notes = "Automated Windows installer build from $env:GITHUB_REF" }
           }
           echo "NOTES<<EOF" >> $env:GITHUB_OUTPUT
           echo $notes >> $env:GITHUB_OUTPUT
           echo "EOF" >> $env:GITHUB_OUTPUT
-        shell: pwsh
 
-      - name: Upload installer as release asset
+      - name: Determine prerelease flag
+        id: prerelease_flag
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF_TYPE -eq 'tag') {
+            $isPre = $env:GITHUB_REF_NAME.Contains('-')
+            echo "is_prerelease=$isPre" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "is_prerelease=true" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Ensure release tag exists for branch build
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = "${{ steps.refinfo.outputs.TAG }}"
+          if (-not (gh release view $tag --repo $env:GITHUB_REPOSITORY 2>$null)) {
+            gh release create $tag --repo $env:GITHUB_REPOSITORY --title "Açaí Wave $tag" --notes "Windows installer for $env:GITHUB_REF" --prerelease
+          }
+
+      - name: Create/update GitHub Release with installer
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           files: release/*.exe
-          tag_name: ${{ github.ref_name }}
-          name: "Açaí Wave v${{ steps.version.outputs.VERSION }}"
+          tag_name: ${{ steps.refinfo.outputs.TAG }}
+          name: "Açaí Wave ${{ steps.refinfo.outputs.TAG }}"
           body: |
-            ## Açaí Wave v${{ steps.version.outputs.VERSION }}
+            ## Açaí Wave ${{ steps.refinfo.outputs.TAG }}
 
             ### 📥 Download
-            - **Windows Installer (NSIS):** `acai-wave Setup ${{ steps.version.outputs.VERSION }}.exe`
+            - **Windows Installer (NSIS):** `acai-wave Setup ${{ steps.refinfo.outputs.TAG }}.exe`
 
             ### 🔧 Changes
             ${{ steps.release_notes.outputs.notes }}
@@ -146,10 +177,10 @@ jobs:
 
             ---
             *Built from commit ${{ github.sha }}*
+            *Trigger: ${{ github.ref_type }} ${{ github.ref }}*
           draft: false
-          prerelease: ${{ contains(github.ref_name, '-') }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          prerelease: ${{ steps.prerelease_flag.outputs.is_prerelease }}
+          allow_overwrite: true
 
       - name: Upload installer as workflow artifact (backup)
         uses: actions/upload-artifact@v4
