@@ -33,11 +33,21 @@ class MigrationEngine {
       .sort();
 
     const migrations = [];
+    const seenVersions = new Set();
     for (const file of files) {
       const mod = require(path.join(this.migrationsDir, file));
       const version = parseInt(file.match(/^(\d+)/)[1], 10);
+      const explicitVersion = mod.version;
+      const effectiveVersion = explicitVersion !== undefined ? explicitVersion : version;
+      if (seenVersions.has(effectiveVersion)) {
+        throw new MigrationError(
+          `Duplicate migration version v${effectiveVersion}: ${file}`,
+          { version: effectiveVersion, stage: 'load' }
+        );
+      }
+      seenVersions.add(effectiveVersion);
       migrations.push({
-        version,
+        version: effectiveVersion,
         file,
         description: mod.description || file,
         up: mod.up,
