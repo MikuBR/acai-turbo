@@ -10,10 +10,6 @@ export default function AcaiBuilderScreen() {
 
   const passedProduct = location.state?.product || null;
 
-  const safeCatalog = catalog || [];
-  const acaiBases = useMemo(() => safeCatalog.filter(p => p.category === 'COPOS DE AÇAÍ'), [safeCatalog]);
-  const availableAddons = useMemo(() => safeCatalog.filter(p => p.category === 'ADICIONAIS DOCES'), [safeCatalog]);
-
   const [builder, setBuilder] = useState(() => {
     if (passedProduct) {
       const defaults = passedProduct.ingredients ? passedProduct.ingredients.split(',').map(i => i.trim()).filter(Boolean) : [];
@@ -21,6 +17,20 @@ export default function AcaiBuilderScreen() {
     }
     return { base: null, standard: [], removals: [], extras: [], obs: '', quantity: 1, adjustment: 0 };
   });
+
+  const acaiBases = useMemo(() => (catalog || []).filter(p => p.category === 'COPOS DE AÇAÍ'), [catalog]);
+  const availableAddons = useMemo(() => (catalog || []).filter(p => p.category === 'ADICIONAIS DOCES'), [catalog]);
+
+  if (acaiBases.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-surface text-muted">
+        <div className="text-center p-8 max-w-md">
+          <span className="text-[10px] font-bold uppercase tracking-widest mb-2 block text-danger">Aviso</span>
+          <p className="text-sm">Nenhuma base de açaí no catálogo. Adicione um produto na categoria COPOS DE AÇAÍ para começar.</p>
+        </div>
+      </div>
+    );
+  }
 
   const toggleRemoval = (ing) => setBuilder(prev => ({ ...prev, removals: prev.removals.includes(ing) ? prev.removals.filter(r => r !== ing) : [...prev.removals, ing] }));
 

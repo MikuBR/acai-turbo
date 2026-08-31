@@ -633,6 +633,34 @@ const getAuditLogs = (limit = 100) => {
   return logs;
 };
 
+// --- RATE LIMITING DE VERIFICAÇÃO DE SENHA ---
+
+const _verifyPasswordAttempts = {};
+
+function checkVerifyPasswordRateLimit() {
+  if (!_verifyPasswordAttempts.current || !_verifyPasswordAttempts.current.count) return;
+  const elapsed = Date.now() - (_verifyPasswordAttempts.current.firstAt || Date.now());
+  if (elapsed > 900000) {
+    _verifyPasswordAttempts.current = null;
+    return;
+  }
+  if (_verifyPasswordAttempts.current.count >= 5) {
+    throw new Error('Muitas tentativas de login. Aguarde 15 minutos.');
+  }
+}
+
+function resetVerifyPasswordRateLimit() {
+  _verifyPasswordAttempts.current = null;
+}
+
+function recordVerifyPasswordAttempt() {
+  if (!_verifyPasswordAttempts.current) {
+    _verifyPasswordAttempts.current = { count: 1, firstAt: Date.now() };
+  } else {
+    _verifyPasswordAttempts.current.count += 1;
+  }
+}
+
 // --- EXPORTAÇÕES DE ESTOQUE ---
 const getInventory = () => {
   const inventory = db.prepare(`
@@ -914,5 +942,10 @@ module.exports = {
   getFinancialAccounts, addFinancialAccount, updateFinancialAccount, deleteFinancialAccount, addFinancialTransaction, getFinancialTransactions, getFinancialSummary,
   getClients, addClient, updateClient, deleteClient, getClientById, getClientByPhone, getClientOrders, addClientOrder,
   addIfoodPendingOrder, getIfoodPendingOrders, getIfoodPendingOrderByOrderId,
-  updateIfoodPendingOrderStatus, removeIfoodPendingOrder, countIfoodPendingOrders
+  updateIfoodPendingOrderStatus, removeIfoodPendingOrder, countIfoodPendingOrders,
+  getMigrationError,
+  db,
+  checkVerifyPasswordRateLimit,
+  resetVerifyPasswordRateLimit,
+  recordVerifyPasswordAttempt
 };

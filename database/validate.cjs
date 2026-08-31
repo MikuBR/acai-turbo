@@ -389,6 +389,37 @@ const validators = {
     if (data.meta !== undefined && data.meta !== null && typeof data.meta !== 'object') return { success: false, error: 'Metadados inválidos' };
     return { success: true, data: { level: data.level, message: data.message, meta: data.meta || {} } };
   },
+
+  'clients:get-by-phone': (phone) => {
+    if (!phone || typeof phone !== 'string' || phone.trim().length < 8) return { success: false, error: 'Telefone inválido' };
+    return { success: true, data: phone.trim() };
+  },
+
+  'auth:reset-admin-password': (data) => {
+    if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
+    if (!data.adminId || isNaN(Number(data.adminId))) return { success: false, error: 'ID do administrador inválido' };
+    if (!data.newPassword || typeof data.newPassword !== 'string' || data.newPassword.length < 8) return { success: false, error: 'Senha deve ter no mínimo 8 caracteres' };
+    return { success: true, data: { ...data, adminId: Number(data.adminId) } };
+  },
+
+  'catalog:get-products': () => ({ success: true, data: null }),
+  'catalog:get-price-history': (data) => {
+    if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
+    if (!data.productId || isNaN(Number(data.productId))) return { success: false, error: 'ID do produto inválido' };
+    return { success: true, data: { productId: Number(data.productId) } };
+  },
+  'cash:preview-close': (data) => {
+    if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
+    if (data.closingAmount === undefined || data.closingAmount === null) return { success: false, error: 'Valor de fechamento inválido' };
+    if (isNaN(Number(data.closingAmount)) || Number(data.closingAmount) < 0) return { success: false, error: 'Valor de fechamento inválido' };
+    return { success: true, data: { closingAmount: Number(data.closingAmount) } };
+  },
+  'reports:daily': () => ({ success: true, data: null }),
+  'promotions:get': () => ({ success: true, data: null }),
+  'promotions:get-active': () => ({ success: true, data: null }),
+  'users:get': () => ({ success: true, data: null }),
+  'clients:get': () => ({ success: true, data: null }),
+  'config:get-all': () => ({ success: true, data: null }),
 };
 
 /**

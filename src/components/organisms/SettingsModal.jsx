@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Pencil, Trash2, X, Check, FileText, ArrowUpCircle, Save } from 'lucide-react';
 import useToastStore from '../../store/toastStore';
 import SettingsTabs from '../molecules/SettingsTabs';
@@ -12,7 +13,39 @@ import CategoryForm from '../forms/CategoryForm';
 
 export default function SettingsModal({ isOpen, onClose, settingsTab, setSettingsTab, safeCatalog, categories, newCatName, setNewCatName, newProd, setNewProd, newPromo, setNewPromo, users, newUser, setNewUser, inventory, inventoryForm, setInventoryForm, selectedInventoryItem, setSelectedInventoryItem, inventoryMovements, loadInventoryMovements, financialAccounts, financialForm, setFinancialForm, financialFilter, setFinancialFilter, clients, clientForm, setClientForm, selectedClientOrders, promotions, pwdForm, setPwdForm, syncDB, loadUsers, loadInventory, loadFinancialAccounts, loadClients, loadClientOrders, runWithAuth, getIPC, printerConfig, setPrinterConfig, savePrinterConfig, currentUser, ifoodConfig, setIfoodConfig, handleTestIfoodConnection, isTestingIfood, ifoodConnectionStatus, saveIfoodConfig }) {
   const addToast = useToastStore(s => s.addToast);
+  const [showResetAdminModal, setShowResetAdminModal] = useState(false);
+  const [resetAdminForm, setResetAdminForm] = useState({ adminId: '', password: '', confirm: '' });
+  const [resetAdminError, setResetAdminError] = useState('');
   if (!isOpen) return null;
+
+  const handleResetAdminSubmit = () => {
+    const adminId = parseInt(resetAdminForm.adminId);
+    if (!adminId || Number.isNaN(adminId)) {
+      setResetAdminError('Informe um ID de administrador válido');
+      return;
+    }
+    if (resetAdminForm.password.length < 8) {
+      setResetAdminError('A nova senha deve ter no mínimo 8 caracteres');
+      return;
+    }
+    if (resetAdminForm.password !== resetAdminForm.confirm) {
+      setResetAdminError('As senhas não coincidem');
+      return;
+    }
+    setResetAdminError('');
+    const ipc = getIPC();
+    if (ipc) {
+      ipc.invoke('auth:reset-admin-password', { adminId, newPassword: resetAdminForm.password }).then(res => {
+        if (res?.success) {
+          addToast('Senha do administrador alterada com sucesso! O usuário deverá trocar a senha no próximo login.', 'success');
+          setShowResetAdminModal(false);
+          setResetAdminForm({ adminId: '', password: '', confirm: '' });
+        } else {
+          addToast(res?.error || 'Erro ao resetar senha', 'error');
+        }
+      });
+    }
+  };
 
   const handleAddCategory = () => {
     const ipc = getIPC();
@@ -226,7 +259,7 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                       <div className="font-bold text-xs uppercase text-warning mb-1">Recuperação de Senhas</div>
                       <div className="text-[10px] text-muted">Administradores podem resetar senhas para evitar bloqueio do sistema.</div>
                       <button onClick={() => { const ipc = getIPC(); if(ipc && window.confirm('Resetar a senha do gerente? Uma nova senha temporária será gerada.')) { ipc.invoke('auth:reset-manager-password').then(res => { if(res.success) addToast(`Senha do gerente resetada! Nova senha temporária: ${res.tempPassword}. Guarde esta senha em local seguro.`, 'success', 10000); else addToast('Erro: ' + res.error, 'error'); }); } }} className="w-full bg-warning hover:bg-warning py-2 rounded-lg font-bold text-[10px] uppercase tracking-widest text-white transition-all">Resetar Senha do Gerente</button>
-                      <button onClick={() => { if(!users || users.length === 0) { addToast('Nenhum usuário encontrado', 'warning'); return; } const adminUser = window.prompt('ID do administrador para resetar senha:'); if(adminUser) { const newPwd = window.prompt('Nova senha (mínimo 8 caracteres):'); if(newPwd && newPwd.length >= 8) { const ipc = getIPC(); if(ipc) ipc.invoke('auth:force-reset-admin', { adminId: parseInt(adminUser), newPassword: newPwd }).then(res => { if(res.success) addToast('Senha do administrador alterada com sucesso! O usuário deverá trocar a senha no próximo login.', 'success'); else addToast('Erro: ' + res.error, 'error'); }); } else { addToast('A senha deve ter no mínimo 8 caracteres.', 'warning'); } } }} className="w-full bg-info hover:bg-info py-2 rounded-lg font-bold text-[10px] uppercase tracking-widest text-white transition-all">Resetar Senha de Admin</button>
+                      <button onClick={() => { if(!users || users.length === 0) { addToast('Nenhum usuário encontrado', 'warning'); return; } setShowResetAdminModal(true); }} className="w-full bg-info hover:bg-info py-2 rounded-lg font-bold text-[10px] uppercase tracking-widest text-white transition-all">Resetar Senha de Admin</button>
                     </div>
                   )}
                   <div className="bg-success/10 border border-success/30 p-4 rounded-lg">
@@ -568,6 +601,45 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                 </div>
               </div>
             </>
+          )}
+          {showResetAdminModal && (
+            <div className="fixed inset-0 bg-surface/80 z-[1200] flex items-center justify-center p-6 animate-in fade-in">
+              <div className="bg-card p-6 rounded-2xl border border-border shadow-modal w-96">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-[10px] font-bold uppercase tracking-widest text-primary">Resetar Senha de Admin</h3>
+                  <button onClick={() => { setShowResetAdminModal(false); setResetAdminForm({ adminId: '', password: '', confirm: '' }); setResetAdminError(''); }} className="p-1 hover:bg-danger/10 rounded text-muted hover:text-danger transition-all"><X size={16} /></button>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[10px] text-muted font-bold uppercase ml-1 mb-1 block">ID do Administrador</label>
+                    <select
+                      value={resetAdminForm.adminId}
+                      onChange={e => { setResetAdminForm({...resetAdminForm, adminId: e.target.value}); setResetAdminError(''); }}
+                      className="w-full bg-surface-light border border-border p-2.5 rounded-lg text-sm outline-none focus:border-primary"
+                    >
+                      <option value="">Selecione...</option>
+                      {(users || []).filter(u => u.role === 'admin').map(u => (
+                        <option key={u.id} value={u.id}>{u.full_name} ({u.username})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted font-bold uppercase ml-1 mb-1 block">Nova Senha</label>
+                    <input type="password" value={resetAdminForm.password} onChange={e => { setResetAdminForm({...resetAdminForm, password: e.target.value}); setResetAdminError(''); }} className="w-full bg-surface-light border border-border p-2.5 rounded-lg text-sm outline-none focus:border-primary" placeholder="Mínimo 8 caracteres" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted font-bold uppercase ml-1 mb-1 block">Confirmar Senha</label>
+                    <input type="password" value={resetAdminForm.confirm} onChange={e => { setResetAdminForm({...resetAdminForm, confirm: e.target.value}); setResetAdminError(''); }} className="w-full bg-surface-light border border-border p-2.5 rounded-lg text-sm outline-none focus:border-primary" placeholder="Repita a senha" />
+                  </div>
+                  {resetAdminError && <p className="text-[9px] text-danger font-bold">{resetAdminError}</p>}
+                  <p className="text-[9px] text-muted">O administrador deverá trocar esta senha no próximo login.</p>
+                </div>
+                <div className="flex gap-2 mt-5">
+                  <button onClick={() => { setShowResetAdminModal(false); setResetAdminForm({ adminId: '', password: '', confirm: '' }); setResetAdminError(''); }} className="flex-1 bg-surface-light border border-border py-2.5 rounded-lg text-xs font-bold uppercase text-muted hover:text-primary transition-all">Cancelar</button>
+                  <button onClick={handleResetAdminSubmit} className="flex-1 bg-info hover:bg-info py-2.5 rounded-lg text-xs font-bold uppercase text-white transition-all">Confirmar</button>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>

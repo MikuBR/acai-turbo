@@ -80,13 +80,13 @@ function generatePDF(data, isPeriodView, financialSummary, reportPeriod) {
           },
           layout: 'lightHorizontalLines',
         }
-      : { text: 'Nenhuma movimentacao registrada.', italics: true, color: '#888', margin: [0, 5, 0, 5] },
+      : { text: 'Nenhuma movimentação registrada.', italics: true, color: '#888', margin: [0, 5, 0, 5] },
     { text: `Total Entradas: R$ ${entradasTotal.toFixed(2)}`, margin: [0, 10, 0, 2], color: '#16a34a', bold: true },
-    { text: `Total Saidas:   R$ ${sangriasTotal.toFixed(2)}`, margin: [0, 0, 0, 2], color: '#dc2626', bold: true },
+    { text: `Total Saídas:   R$ ${sangriasTotal.toFixed(2)}`, margin: [0, 0, 0, 2], color: '#dc2626', bold: true },
 
     { text: '3. SALDO DO CAIXA', style: 'sectionTitle', margin: [0, 20, 0, 5] },
     {
-      text: `Vendas (R$ ${salesTotal.toFixed(2)}) + Entradas (R$ ${entradasTotal.toFixed(2)}) - Saidas (R$ ${sangriasTotal.toFixed(2)})`,
+      text: `Vendas (R$ ${salesTotal.toFixed(2)}) + Entradas (R$ ${entradasTotal.toFixed(2)}) - Saídas (R$ ${sangriasTotal.toFixed(2)})`,
       fontSize: 9,
       color: '#555',
       margin: [0, 0, 0, 5],

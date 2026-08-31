@@ -105,8 +105,13 @@ export default function CheckoutModal({ isOpen, onClose, activeTable, promotions
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="font-mono font-bold text-success text-sm">R$ {p.amount.toFixed(2)}</span>
-                    <button onClick={() => removePayment(i)} className="opacity-0 group-hover:opacity-100 p-1 bg-danger/10 hover:bg-danger text-danger hover:text-white rounded transition-all" title="Remover">
-                      <Trash2 size={12}/>
+                    <button
+                      onClick={() => removePayment(i)}
+                      aria-label={`Remover pagamento ${i + 1}: ${p.method} R$ ${p.amount.toFixed(2)}`}
+                      title="Remover"
+                      className="p-1.5 bg-danger/10 hover:bg-danger text-danger hover:text-white rounded transition-all"
+                    >
+                      <Trash2 size={12} />
                     </button>
                   </div>
                 </div>

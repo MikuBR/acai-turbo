@@ -20,7 +20,8 @@ export default function CheckoutScreen() {
   const [selectedPromotion, setSelectedPromotion] = useState(null);
 
   const safeTables = tables || [];
-  const activeTable = useMemo(() => safeTables.find(t => t.id === activeTableId) || safeTables[0] || { id: 1, name: 'BALCÃO', isDelivery: false, address: '', phone: '', items: [], total: 0 }, [safeTables, activeTableId]);
+  const FALLBACK_TABLE = { id: null, name: 'Selecione uma mesa', isDelivery: false, address: '', phone: '', items: [], total: 0 };
+  const activeTable = useMemo(() => safeTables.find(t => t.id === activeTableId) || safeTables[0] || FALLBACK_TABLE, [safeTables, activeTableId]);
 
   useEffect(() => {
     const ipc = getIPC();
@@ -45,8 +46,17 @@ export default function CheckoutScreen() {
     const ipc = getIPC();
     if (!ipc) return;
 
+    if (!activeTable?.items || activeTable.items.length === 0 || activeTable.total <= 0) {
+      addToast('Adicione itens antes de finalizar', 'warning');
+      return;
+    }
+
     const discount = selectedPromotion ? calculateDiscount(selectedPromotion, activeTable.total) : 0;
     const finalTotal = activeTable.total - discount;
+    if (finalTotal <= 0) {
+      addToast('Total do pedido inválido', 'warning');
+      return;
+    }
     setLoading('Finalizando pedido...');
 
     ipc.invoke('orders:save', {

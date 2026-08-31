@@ -69,7 +69,10 @@ export default function PdvScreen() {
         </div>
         <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-1">
           {categoriesMenu.map(c => (
-            <button key={c} onClick={() => setSelectedCategory(c)} className={`px-4 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all border whitespace-nowrap ${selectedCategory === c ? 'bg-primary border-primary-dark text-surface' : 'bg-surface-light border-border text-muted hover:text-primary'}`}>{c}</button>
+            <button
+              key={c}
+              aria-label={'Filtrar por categoria ' + c}
+              onClick={() => setSelectedCategory(c)} className={`px-4 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all border whitespace-nowrap ${selectedCategory === c ? 'bg-primary border-primary-dark text-surface' : 'bg-surface-light border-border text-muted hover:text-primary'}`}>{c}</button>
           ))}
         </div>
       </div>

@@ -35,6 +35,7 @@ const ALLOWED_CHANNELS = {
   'auth:verify-password': true,
   'auth:update-password': true,
   'auth:change-user-password': true,
+  'auth:reset-admin-password': true,
 
   'users:get': true,
   'users:add': true,
@@ -44,19 +45,16 @@ const ALLOWED_CHANNELS = {
 
   'audit:get-logs': true,
 
-  'inventory:get': true,
   'inventory:add': true,
   'inventory:update-quantity': true,
   'inventory:adjust': true,
   'inventory:get-movements': true,
-  'inventory:get-low-stock': true,
 
   'financial:get-accounts': true,
   'financial:add-account': true,
   'financial:update-account': true,
   'financial:delete-account': true,
   'financial:add-transaction': true,
-  'financial:get-transactions': true,
   'financial:get-summary': true,
 
   'clients:get': true,
@@ -85,7 +83,6 @@ const ALLOWED_CHANNELS = {
   'auth:force-reset-admin': true,
   'logging:write': true,
 
-  'app:check-unsaved-orders': true,
   'app:shutdown': true,
 };
 
@@ -152,12 +149,10 @@ const api = {
     getLogs: (...args) => safeInvoke('audit:get-logs', ...args),
   },
   inventory: {
-    get: (...args) => safeInvoke('inventory:get', ...args),
     add: (...args) => safeInvoke('inventory:add', ...args),
     updateQuantity: (...args) => safeInvoke('inventory:update-quantity', ...args),
     adjust: (...args) => safeInvoke('inventory:adjust', ...args),
     getMovements: (...args) => safeInvoke('inventory:get-movements', ...args),
-    getLowStock: (...args) => safeInvoke('inventory:get-low-stock', ...args),
   },
   financial: {
     getAccounts: (...args) => safeInvoke('financial:get-accounts', ...args),
@@ -165,7 +160,6 @@ const api = {
     updateAccount: (...args) => safeInvoke('financial:update-account', ...args),
     deleteAccount: (...args) => safeInvoke('financial:delete-account', ...args),
     addTransaction: (...args) => safeInvoke('financial:add-transaction', ...args),
-    getTransactions: (...args) => safeInvoke('financial:get-transactions', ...args),
     getSummary: (...args) => safeInvoke('financial:get-summary', ...args),
   },
   clients: {

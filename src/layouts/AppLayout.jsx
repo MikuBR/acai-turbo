@@ -9,6 +9,7 @@ import logger from '../services/logger.js';
 import { OrderSidebar } from '../components/organisms/OrderSidebar.jsx';
 import { CartPanel } from '../components/organisms/CartPanel.jsx';
 import ManagerAuthModal from '../components/organisms/ManagerAuthModal.jsx';
+import CashModal from '../components/organisms/CashModal.jsx';
 import ToastContainer from '../components/atoms/Toast';
 import LoadingOverlay from '../components/atoms/LoadingOverlay';
 
@@ -43,10 +44,12 @@ export default function AppLayout() {
   const [ifoodConfig, setIfoodConfig] = useState({ clientId: '', clientSecret: '', merchantId: '', enabled: false });
   const [ifoodUnreadCount, setIfoodUnreadCount] = useState(0);
   const [showPassModal, setShowPassModal] = useState({ show: false, onResult: null });
+  const [showCashModal, setShowCashModal] = useState(false);
 
   const { activeTable, safeTables } = useMemo(() => {
     const safeTables = tables || [];
-    const activeTable = safeTables.find(t => t.id === activeTableId) || safeTables[0] || { id: 1, name: 'BALCÃO', isDelivery: false, address: '', phone: '', items: [], total: 0 };
+    const FALLBACK_TABLE = { id: null, name: 'Selecione uma mesa', isDelivery: false, address: '', phone: '', items: [], total: 0 };
+    const activeTable = safeTables.find(t => t.id === activeTableId) || safeTables[0] || FALLBACK_TABLE;
     return { activeTable, safeTables };
   }, [tables, activeTableId]);
 
@@ -187,6 +190,7 @@ export default function AppLayout() {
         onNewTable={() => navigate('/pdv/new-table')}
         onOpenReports={() => navigate('/reports')}
         onOpenSettings={() => runWithManagerAuth(() => navigate('/settings'))}
+        onOpenCash={() => runWithManagerAuth(() => setShowCashModal(true))}
         onLogout={handleLogout}
         ifoodConnected={!!ifoodConfig.enabled}
         ifoodUnreadCount={ifoodUnreadCount}
@@ -210,13 +214,22 @@ export default function AppLayout() {
       <ToastContainer />
       <LoadingOverlay />
 
-      {/* Manager auth modal (preserved as overlay - not a route) */}
+      {/* --- MODAIS --- */}
+
       {showPassModal.show && (
         <ManagerAuthModal
           show={showPassModal.show}
           onCancel={() => setShowPassModal({ show: false, onResult: null })}
           onSuccess={() => { setAuthTime(Date.now()); showPassModal.onResult?.(); setShowPassModal({ show: false, onResult: null }); }}
           ipcGet={getIPC}
+        />
+      )}
+
+      {showCashModal && (
+        <CashModal
+          isOpen={showCashModal}
+          onClose={() => setShowCashModal(false)}
+          getIPC={getIPC}
         />
       )}
     </div>

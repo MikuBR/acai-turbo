@@ -14,12 +14,15 @@ const {
   createAuditLog, getAuditLogs,
   getInventory, getInventoryByProductId, addInventory, updateInventoryQuantity, adjustInventory, getInventoryMovements, getLowStockItems,
   getFinancialAccounts, addFinancialAccount, updateFinancialAccount, deleteFinancialAccount, addFinancialTransaction, getFinancialTransactions, getFinancialSummary,
-  getClients, addClient, updateClient, deleteClient, getClientById, getClientOrders, addClientOrder,
+  getClients, addClient, updateClient, deleteClient, getClientById, getClientByPhone, getClientOrders, addClientOrder,
   getProductPriceHistory,
   addIfoodPendingOrder, getIfoodPendingOrders, getIfoodPendingOrderByOrderId,
   updateIfoodPendingOrderStatus, removeIfoodPendingOrder, countIfoodPendingOrders,
   getMigrationError,
-  db
+  db,
+  checkVerifyPasswordRateLimit,
+  resetVerifyPasswordRateLimit,
+  recordVerifyPasswordAttempt
 } = require('./database/db.cjs');
 const { ThermalPrinter, PrinterTypes, CharacterSet } = require('node-thermal-printer');
 const { validateIPC } = require('./database/validate.cjs');
@@ -49,27 +52,34 @@ function requireRole(minRole) {
 }
 
 // ============================================================
-// SEGURANÇA: Rate limiter para verify-password
+// SEGURANÇA: Rate limiter para login (por username)
 // ============================================================
-const verifyPasswordAttempts = { count: 0, lockUntil: 0 };
+const loginAttempts = {};
 
-function checkVerifyPasswordRateLimit() {
-  if (Date.now() < verifyPasswordAttempts.lockUntil) {
-    const secondsLeft = Math.ceil((verifyPasswordAttempts.lockUntil - Date.now()) / 1000);
+function checkLoginRateLimit(username) {
+  const key = String(username);
+  const entry = loginAttempts[key];
+  if (entry && entry.count >= 10 && Date.now() < entry.lockUntil) {
+    const secondsLeft = Math.ceil((entry.lockUntil - Date.now()) / 1000);
     throw new Error(`Muitas tentativas. Tente novamente em ${secondsLeft} segundos.`);
   }
 }
 
-function recordVerifyPasswordAttempt() {
-  verifyPasswordAttempts.count++;
-  if (verifyPasswordAttempts.count >= 5) {
-    verifyPasswordAttempts.lockUntil = Date.now() + 15 * 60 * 1000;
+function recordLoginAttempt(username) {
+  const key = String(username);
+  if (!loginAttempts[key]) loginAttempts[key] = { count: 0, lockUntil: 0 };
+  loginAttempts[key].count++;
+  if (loginAttempts[key].count >= 10) {
+    loginAttempts[key].lockUntil = Date.now() + 15 * 60 * 1000;
   }
 }
 
-function resetVerifyPasswordRateLimit() {
-  verifyPasswordAttempts.count = 0;
-  verifyPasswordAttempts.lockUntil = 0;
+function resetLoginAttempts(username) {
+  const key = String(username);
+  if (loginAttempts[key]) {
+    loginAttempts[key].count = 0;
+    loginAttempts[key].lockUntil = 0;
+  }
 }
 
 // ============================================================
@@ -554,6 +564,7 @@ createHandler('reports:by-period', async ({ startDate, endDate }) => ({ data: ge
 // ============================================================
 ipcMain.handle('dialog:save-pdf', async (event, { data, defaultName }) => {
   try {
+    requireRole('manager');
     const result = await dialog.showSaveDialog(mainWindow, {
       defaultPath: defaultName || 'relatorio.pdf',
       filters: [{ name: 'PDF', extensions: ['pdf'] }],
@@ -995,6 +1006,7 @@ createHandler('ifood:dispatch', async ({ orderId }) => {
 // ============================================================
 ipcMain.handle('auth:verify-password', async (e, password) => {
   try {
+    const { checkVerifyPasswordRateLimit, resetVerifyPasswordRateLimit, recordVerifyPasswordAttempt } = require('./database/db.cjs');
     checkVerifyPasswordRateLimit();
     if (!password || typeof password !== 'string') {
       return { success: false, valid: false, error: 'Senha inválida' };
@@ -1044,8 +1056,10 @@ ipcMain.handle('auth:login', async (e, data) => {
     if (!valid.success) return { success: false, error: valid.error };
 
     const { username, password } = valid.data;
+    checkLoginRateLimit(username);
     const user = getUserByUsername(username);
     if (!user || !user.is_active) {
+      resetLoginAttempts(username);
       return { success: false, error: 'Usuário não encontrado ou inativo' };
     }
 
@@ -1057,6 +1071,7 @@ ipcMain.handle('auth:login', async (e, data) => {
 
     const isValid = bcrypt.compareSync(password, user.password_hash);
     if (!isValid) {
+      recordLoginAttempt(username);
       const attempts = (user.failed_login_attempts || 0) + 1;
       db.prepare('UPDATE users SET failed_login_attempts = ? WHERE id = ?').run(attempts, user.id);
 
@@ -1069,6 +1084,8 @@ ipcMain.handle('auth:login', async (e, data) => {
       const remaining = 5 - attempts;
       return { success: false, error: `Senha incorreta. ${remaining} tentativas restantes antes do bloqueio.` };
     }
+
+    resetLoginAttempts(username);
 
     db.prepare('UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = ?').run(user.id);
 
@@ -1129,6 +1146,7 @@ createHandler('users:update', async (data) => ({ count: updateUser(data.id, data
 createHandler('users:delete', async (id) => ({ count: deleteUser(id) }), { minRole: 'admin' });
 createHandler('users:toggle-active', async (id) => ({ count: toggleUserActive(id) }), { minRole: 'admin' });
 createHandler('auth:change-user-password', async ({ userId, current, new: newPassword }) => {
+  requireRole('admin');
   const user = getUserById(userId);
   if (!user) {
     throw new Error('Usuário não encontrado');
@@ -1147,6 +1165,21 @@ createHandler('auth:change-user-password', async ({ userId, current, new: newPas
   return { success: true };
 });
 
+createHandler('auth:reset-admin-password', async ({ adminId, newPassword }) => {
+  requireRole('admin');
+  if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 8) {
+    throw new Error('Nova senha deve ter no mínimo 8 caracteres');
+  }
+  const admin = getUserById(adminId);
+  if (!admin || admin.role !== 'admin') {
+    throw new Error('Administrador não encontrado');
+  }
+  const hash = bcrypt.hashSync(newPassword, 10);
+  db.prepare('UPDATE users SET password_hash = ?, must_change_password = 1 WHERE id = ?').run(hash, adminId);
+  createAuditLog(adminId, 'ADMIN_PASSWORD_RESET', null, null, 'Admin password reset');
+  return { success: true };
+});
+
 // ============================================================
 // AUDITORIA - IPC Handlers
 // ============================================================
@@ -1155,12 +1188,10 @@ createHandler('audit:get-logs', async (limit) => ({ data: getAuditLogs(limit) })
 // ============================================================
 // ESTOQUE - IPC Handlers
 // ============================================================
-createHandler('inventory:get', async () => ({ data: getInventory() }));
 createHandler('inventory:add', async (data) => ({ id: addInventory(data.productId, data.quantity, data.unit, data.minQuantity) }));
 createHandler('inventory:update-quantity', async ({ inventoryId, newQuantity }) => ({ count: updateInventoryQuantity(inventoryId, newQuantity) }));
 createHandler('inventory:adjust', async (data) => ({ data: adjustInventory(data.inventoryId, data.delta, data.reason) }));
 createHandler('inventory:get-movements', async ({ inventoryId, limit }) => ({ data: getInventoryMovements(inventoryId, limit) }));
-createHandler('inventory:get-low-stock', async () => ({ data: getLowStockItems() }));
 
 // ============================================================
 // FINANCEIRO - IPC Handlers
@@ -1170,13 +1201,13 @@ createHandler('financial:add-account', async (account) => ({ id: addFinancialAcc
 createHandler('financial:update-account', async (data) => ({ count: updateFinancialAccount(data.id, data.account) }));
 createHandler('financial:delete-account', async (id) => ({ count: deleteFinancialAccount(id) }));
 createHandler('financial:add-transaction', async (transaction) => ({ id: addFinancialTransaction(transaction) }));
-createHandler('financial:get-transactions', async (accountId) => ({ data: getFinancialTransactions(accountId) }));
 createHandler('financial:get-summary', async ({ startDate, endDate }) => ({ data: getFinancialSummary(startDate, endDate) }));
 
 // ============================================================
 // CLIENTES - IPC Handlers
 // ============================================================
 createHandler('clients:get', async () => ({ data: getClients() }));
+createHandler('clients:get-by-phone', async (phone) => ({ data: getClientByPhone(phone) }));
 createHandler('clients:add', async (client) => ({ id: addClient(client) }));
 createHandler('clients:update', async (data) => ({ count: updateClient(data.id, data.client) }));
 createHandler('clients:delete', async (id) => ({ count: deleteClient(id) }));
@@ -1257,7 +1288,7 @@ ipcMain.handle('auth:force-reset-admin', async (e, { adminId, newPassword }) => 
 // ============================================================
 // CONFIGURAÇÕES - IPC Handlers (printer, etc.)
 // ============================================================
-createHandler('config:get-all', async () => ({ data: getAllConfigs() }));
+createHandler('config:get-all', async () => ({ data: getAllConfigs() }), { minRole: 'manager' });
 createHandler('config:update', async ({ key, value }) => {
   updateConfig(key, value);
   return { success: true };
