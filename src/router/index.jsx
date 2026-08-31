@@ -1,6 +1,6 @@
-import { createBrowserRouter } from 'react-router';
+import { createHashRouter } from 'react-router';
 import routes from './routes.jsx';
 
-const router = createBrowserRouter(routes);
+const router = createHashRouter(routes);
 
 export default router;
