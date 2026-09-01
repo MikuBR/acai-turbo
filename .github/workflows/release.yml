@@ -1,5 +1,14 @@
 name: Release - Build Windows Installer
 
+# Dispara em pushes de main (e develop) e em tags v*.
+# Todo push de main gera o EXE e o publica no release
+# windows-installer-main (pre-release, sobrescrito a cada push).
+# Tags v* criam releases versionadas com o installer correspondente.
+#
+# Nota: a workflow release-on-success.yml (workflow_run) cuida apenas da
+# release de texto edge-main. Este arquivo é o responsável pelo build do
+# executável Windows e pela anexação do .exe à release.
+
 on:
   push:
     tags:
@@ -100,7 +109,7 @@ jobs:
           }
         shell: pwsh
 
-      - name: Get version/tag for release
+      - name: Determinar tag do release
         id: refinfo
         shell: pwsh
         run: |
@@ -108,12 +117,13 @@ jobs:
             echo "TAG=$env:GITHUB_REF_NAME" >> $env:GITHUB_OUTPUT
             echo "REF_TYPE=tag" >> $env:GITHUB_OUTPUT
           } else {
+            # branch push: usa release fixa por branch
             $safeRef = "$env:GITHUB_REF_NAME".Replace('/', '-')
             echo "TAG=windows-installer-$safeRef" >> $env:GITHUB_OUTPUT
             echo "REF_TYPE=branch" >> $env:GITHUB_OUTPUT
           }
 
-      - name: Generate release notes
+      - name: Gerar release notes (commits desde última tag)
         id: release_notes
         shell: pwsh
         env:
@@ -125,14 +135,19 @@ jobs:
             $notes = git log --no-merges --oneline "$fromTag..HEAD" 2>$null
             if (-not $notes) { $notes = "Release $env:TAG" }
           } else {
-            $notes = git log --no-merges --oneline -20 2>$null
+            $lastTag = git describe --tags --abbrev=0 2>$null
+            if ($lastTag) {
+              $notes = git log --no-merges --oneline "$lastTag..HEAD" 2>$null
+            } else {
+              $notes = git log --no-merges --oneline -20 2>$null
+            }
             if (-not $notes) { $notes = "Automated Windows installer build from $env:GITHUB_REF" }
           }
           echo "NOTES<<EOF" >> $env:GITHUB_OUTPUT
           echo $notes >> $env:GITHUB_OUTPUT
           echo "EOF" >> $env:GITHUB_OUTPUT
 
-      - name: Determine prerelease flag
+      - name: Determinar prerelease flag
         id: prerelease_flag
         shell: pwsh
         run: |
@@ -143,7 +158,7 @@ jobs:
             echo "is_prerelease=true" >> $env:GITHUB_OUTPUT
           }
 
-      - name: Ensure release tag exists for branch build
+      - name: Garantir que a release da branch existe
         shell: pwsh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -153,7 +168,7 @@ jobs:
             gh release create $tag --repo $env:GITHUB_REPOSITORY --title "Açaí Wave $tag" --notes "Windows installer for $env:GITHUB_REF" --prerelease
           }
 
-      - name: Create/update GitHub Release with installer
+      - name: Criar/atualizar GitHub Release com o installer
         uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -182,7 +197,7 @@ jobs:
           prerelease: ${{ steps.prerelease_flag.outputs.is_prerelease }}
           allow_overwrite: true
 
-      - name: Upload installer as workflow artifact (backup)
+      - name: Upload installer como artefato do workflow (backup)
         uses: actions/upload-artifact@v4
         with:
           name: acai-wave-windows-installer
