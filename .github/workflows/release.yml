@@ -197,9 +197,3 @@ jobs:
           prerelease: ${{ steps.prerelease_flag.outputs.is_prerelease }}
           overwrite_files: true
 
-      - name: Upload installer como artefato do workflow (backup)
-        uses: actions/upload-artifact@v4
-        with:
-          name: acai-wave-windows-installer
-          path: release/*.exe
-          retention-days: 30
