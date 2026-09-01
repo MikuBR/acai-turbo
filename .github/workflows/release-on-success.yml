@@ -1,0 +1,147 @@
+name: Release on CI Success
+
+# Gera uma Release na aba "Releases" do GitHub automaticamente quando o CI
+# passa em pushes de main. Cada push de main cria uma release distinta
+# (tag edge-<sha-short>, marcada como pre-release) com changelog gerado pelo
+# diff de commits desde a última release/edge ou última tag git.
+#
+# Não interfere no release.yml existente (que cria releases de installer
+# Windows a partir de tags v* via workflow_dispatch/tags).
+
+on:
+  workflow_run:
+    workflows: ["CI - Açaí Wave"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-on-success-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: true
+
+jobs:
+  release:
+    if: ${{ github.event.workflow_run.conclusion == 'success' &&
+            github.event.workflow_run.head_branch == 'main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository (head commit do CI)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Configurações do Node (para acessar package.json)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Ler versão do package.json
+        id: pkgversion
+        run: |
+          version=$(node -p "require('./package.json').version")
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "Versão do package.json: $version"
+
+      - name: Determinar referência da última release/edge
+        id: lastref
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Tenta encontrar a última release que NÃO seja pre-release (release oficial)
+          last_official=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || true)
+          if [[ -z "$last_official" ]]; then
+            # Fallback: última tag git conhecida (qualquer tipo)
+            last_official=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          fi
+          # Última release edge existente (para sobrepor)
+          last_edge=$(gh release view edge-main --repo ${{ github.repository }} 2>/dev/null | grep -oE 'tag_name:\s*\S+' | awk '{print $2}' || true)
+          echo "last_official=$last_official"
+          echo "last_edge=$last_edge"
+          echo "last_official=$last_official" >> $GITHUB_OUTPUT
+          echo "last_edge=$last_edge" >> $GITHUB_OUTPUT
+
+      - name: Gerar changelog (commits desde última referência)
+        id: changelog
+        env:
+          LAST_OFFICIAL: ${{ steps.lastref.outputs.last_official }}
+          LAST_EDGE: ${{ steps.lastref.outputs.last_edge }}
+        run: |
+          set -euo pipefail
+          # Usa a referência mais recente entre última release oficial e último edge
+          if [[ -n "$LAST_EDGE" ]]; then
+            range="--not $LAST_EDGE -- $GITHUB_SHA"
+          elif [[ -n "$LAST_OFFICIAL" ]]; then
+            range="$LAST_OFFICIAL..HEAD"
+          else
+            range=""
+          fi
+
+          if [[ -n "$range" ]]; then
+            commits=$(git log --no-merges --pretty=format:"- %h %s" $range 2>/dev/null || echo "- (sem commits novos)")
+          else
+            commits=$(git log --no-merges --pretty=format:"- %h %s" -20 2>/dev/null || echo "- (sem histórico)")
+          fi
+
+          echo "## Mudanças desde a última release" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`text" >> $GITHUB_STEP_SUMMARY
+          echo "$commits" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+          echo "commits<<EOF" >> $GITHUB_OUTPUT
+          printf '%s\n' "$commits" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          # Também gera um diff resumido dos arquivos modificados
+          if [[ -n "$range" ]]; then
+            files=$(git diff --stat --name-only $range 2>/dev/null || echo "")
+            if [[ -n "$files" ]]; then
+              echo "## Arquivos modificados" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "\`\`\`text" >> $GITHUB_STEP_SUMMARY
+              echo "$files" | head -50 >> $GITHUB_STEP_SUMMARY
+              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+
+      - name: Criar/Atualizar release edge (main)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: edge-main
+          name: "Açaí Wave Edge — main (${{ github.event.workflow_run.head_sha }})"
+          body: |
+            ## Release automática — push de main
+
+            **Commit:** `${{ github.event.workflow_run.head_sha }}`
+            **Disparado por:** @${{ github.actor }}
+            **Versão do package.json:** `${{ steps.pkgversion.outputs.version }}`
+            **Status CI:** sucesso ✅
+
+            ---
+            ${{ steps.changelog.outputs.commits }}
+          draft: false
+          prerelease: true
+          allow_overwrite: true
+
+      - name: Upload artefatos de build como assets da release (se disponíveis)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-backup-${{ github.event.workflow_run.head_sha }}
+          path: dist/
+          retention-days: 7
+        if: ${{ hashFiles('dist/') != '' }}
+
+      - name: Resumo final
+        run: |
+          echo "## ✅ Release automática criada/atualizada" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag:** edge-main" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.event.workflow_run.head_sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release URL:** https://github.com/${{ github.repository }}/releases/tag/edge-main" >> $GITHUB_STEP_SUMMARY
+          echo "- **Pre-release:** true (release contínua, não versão oficial)" >> $GITHUB_STEP_SUMMARY
