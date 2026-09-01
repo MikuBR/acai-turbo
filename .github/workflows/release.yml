@@ -24,7 +24,7 @@ permissions:
   contents: write  # needed for creating releases
 
 env:
-  NODE_VERSION: '22'
+  NODE_VERSION: '24'
   ELECTRON_VERSION: '32.3.3'
 
 jobs:
@@ -33,7 +33,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     env:
-      NODE_VERSION: '22'
+      NODE_VERSION: '24'
       ELECTRON_VERSION: '32.3.3'
     steps:
       - name: Checkout repository
@@ -195,7 +195,7 @@ jobs:
             *Trigger: ${{ github.ref_type }} ${{ github.ref }}*
           draft: false
           prerelease: ${{ steps.prerelease_flag.outputs.is_prerelease }}
-          allow_overwrite: true
+          overwrite_files: true
 
       - name: Upload installer como artefato do workflow (backup)
         uses: actions/upload-artifact@v4
