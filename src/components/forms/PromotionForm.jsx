@@ -15,8 +15,11 @@ export default function PromotionForm({ newPromo, setNewPromo, categories, onSub
         </select>
       </div>
       <div>
-        <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Valor</label>
+        <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">{newPromo.type === 'BUY_X_GET_Y' ? 'Desconto por Item Livre (R$)' : 'Valor'}</label>
         <input type="number" step="0.01" value={newPromo.value} onChange={e => setNewPromo({...newPromo, value: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" required />
+        {newPromo.type === 'BUY_X_GET_Y' && (
+          <span className="text-[9px] text-muted block mt-1">A cada {newPromo.min_quantity || 'X'} itens do escopo, o próximo item é livre. Defina este valor igual ao preço do item para deixá-lo grátis.</span>
+        )}
       </div>
       <div>
         <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Aplica-se a</label>
@@ -42,7 +45,7 @@ export default function PromotionForm({ newPromo, setNewPromo, categories, onSub
         </div>
       )}
       <div>
-        <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Qtd Mínima</label>
+        <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">{newPromo.type === 'BUY_X_GET_Y' ? 'Qtd. para Ativar (X)' : 'Qtd Mínima'}</label>
         <input type="number" value={newPromo.min_quantity} onChange={e => setNewPromo({...newPromo, min_quantity: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" required />
       </div>
       <div>

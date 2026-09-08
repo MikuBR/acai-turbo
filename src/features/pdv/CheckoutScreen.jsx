@@ -6,6 +6,7 @@ import useLoadingStore from '../../store/loadingStore';
 import { getIPC } from '../../services/ipc.js';
 import logger from '../../services/logger.js';
 import CheckoutModal from '../../components/organisms/CheckoutModal.jsx';
+import { calculateDiscount } from '../../utils/promotion.js';
 
 export default function CheckoutScreen() {
   const navigate = useNavigate();
@@ -32,26 +33,11 @@ export default function CheckoutScreen() {
     }
   }, []);
 
-  const calculateDiscount = (promo, total) => {
-    if (!promo) return 0;
-    if (promo.type === 'PERCENTAGE') {
-      return total * (promo.value / 100);
-    } else if (promo.type === 'FIXED_AMOUNT') {
-      return Math.min(promo.value, total);
-    }
-    return 0;
-  };
-
   const handleFinalize = ({ payments, amountReceived }) => {
     const ipc = getIPC();
     if (!ipc) return;
 
-    if (!activeTable?.items || activeTable.items.length === 0 || activeTable.total <= 0) {
-      addToast('Adicione itens antes de finalizar', 'warning');
-      return;
-    }
-
-    const discount = selectedPromotion ? calculateDiscount(selectedPromotion, activeTable.total) : 0;
+    const discount = selectedPromotion ? calculateDiscount(selectedPromotion, activeTable.total, activeTable.items || []) : 0;
     const finalTotal = activeTable.total - discount;
     if (finalTotal <= 0) {
       addToast('Total do pedido inválido', 'warning');

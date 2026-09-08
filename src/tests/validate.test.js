@@ -631,6 +631,21 @@ describe('validateIPC', () => {
     })
   })
 
+  describe('clients:get-by-phone', () => {
+    it('accepts a phone string and trims it', () => {
+      const result = validateIPC('clients:get-by-phone', ' (11) 99999-9999 ')
+      expect(result.success).toBe(true)
+      expect(result.data).toBe('(11) 99999-9999')
+    })
+    it('rejects empty and non-string phone values', () => {
+      expect(validateIPC('clients:get-by-phone', '').success).toBe(false)
+      expect(validateIPC('clients:get-by-phone', '   ').success).toBe(false)
+      expect(validateIPC('clients:get-by-phone', undefined).success).toBe(false)
+      expect(validateIPC('clients:get-by-phone', 9999999).success).toBe(false)
+      expect(validateIPC('clients:get-by-phone', null).success).toBe(false)
+    })
+  })
+
   describe('clients:add-order', () => {
     it('accepts valid data', () => {
       const result = validateIPC('clients:add-order', { clientId: 1, orderId: 10, totalAmount: 50 })

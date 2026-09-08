@@ -1,0 +1,522 @@
+{
+  "project": "acai-turbo",
+  "path": "/home/caue/Documentos/projetos/vscode-projects/acai-turbo/src/components",
+  "investigation_date": "2026-08-31",
+  "summary": {
+    "total_components": 21,
+    "issues_found": 47,
+    "critical": 12,
+    "medium": 21,
+    "low": 14
+  },
+  "findings": {
+    "theme_toggle": {
+      "file": "ui/ThemeToggle.jsx",
+      "issues": [
+        {
+          "severity": "critical",
+          "type": "dead_code",
+          "description": "Componente vazio retornando null. Exportado mas nunca implementado.",
+          "code": "export default function ThemeToggle() { return null; }"
+        },
+        {
+          "severity": "medium",
+          "type": "unused_export",
+          "description": "Exportado em ui/index.js mas não utilizado em nenhum lugar do código."
+        }
+      ]
+    },
+    "atoms": {
+      "button": {
+        "file": "atoms/Button.jsx",
+        "issues": [
+          {
+            "severity": "medium",
+            "type": "accessibility",
+            "description": "Botão sem aria-label quando usado com ícone (se aplicável)"
+          },
+          {
+            "severity": "low",
+            "type": "accessibility",
+            "description": "Falta onKeyDown para navegação por teclado em contextos customizados"
+          }
+        ]
+      },
+      "input": {
+        "file": "atoms/Input.jsx",
+        "issues": [
+          {
+            "severity": "medium",
+            "type": "accessibility",
+            "description": "Label não associado ao input (faltando htmlFor/id)"
+          },
+          {
+            "severity": "medium",
+            "type": "accessibility",
+            "description": "Erro não anunciado para screen readers (faltando aria-describedby)"
+          },
+          {
+            "severity": "low",
+            "type": "props_debt",
+            "description": "Props error exibido mas não há aria-invalid no input"
+          }
+        ]
+      },
+      "select": {
+        "file": "atoms/Select.jsx",
+        "issues": [
+          {
+            "severity": "medium",
+            "type": "accessibility",
+            "description": "Label não associado ao select (faltando htmlFor/id)"
+          },
+          {
+            "severity": "low",
+            "type": "accessibility",
+            "description": "Sem aria-describedby para texto de ajuda"
+          }
+        ]
+      },
+      "badge": {
+        "file": "atoms/Badge.jsx",
+        "issues": [
+          {
+            "severity": "medium",
+            "type": "accessibility",
+            "description": "Badge sem role='status' para conteúdo dinâmico"
+          },
+          {
+            "severity": "low",
+            "type": "accessibility",
+            "description": "Sem aria-label para contexto"
+          }
+        ]
+      },
+      "card": {
+        "file": "atoms/Card.jsx",
+        "issues": [
+          {
+            "severity": "medium",
+            "type": "accessibility",
+            "description": "Card com onClick mas sem role='button' quando clicável"
+          },
+          {
+            "severity": "medium",
+            "type": "accessibility",
+            "description": "Falta tabIndex={0} e onKeyDown para navegação por teclado"
+          },
+          {
+            "severity": "low",
+            "type": "props_debt",
+            "description": "Prop hover adiciona cursor-pointer mas não é semanticamente correto"
+          }
+        ]
+      },
+      "confirm_dialog": {
+        "file": "atoms/ConfirmDialog.jsx",
+        "issues": [
+          {
+            "severity": "critical",
+            "type": "accessibility",
+            "description": "Modal sem role='dialog' e aria-modal='true'"
+          },
+          {
+            "severity": "critical",
+            "type": "accessibility",
+            "description": "Sem focus trap - foco não fica preso no modal"
+          },
+          {
+            "severity": "critical",
+            "type": "accessibility",
+            "description": "Sem handler para tecla Escape para fechar"
+          },
+          {
+            "severity": "medium",
+            "type": "accessibility",
+            "description": "Botões sem aria-label para contexto"
+          },
+          {
+            "severity": "low",
+            "type": "props_debt",
+            "description": "Props confirmLabel/cancelLabel fixos em português (i18n)"
+          }
+        ]
+      },
+      "loading_overlay": {
+        "file": "atoms/LoadingOverlay.jsx",
+        "issues": [
+          {
+            "severity": "medium",
+            "type": "accessibility",
+            "description": "Sem aria-live='polite' ou role='status'"
+          },
+          {
+            "severity": "medium",
+            "type": "accessibility",
+            "description": "Sem possibilidade de fechamento (apenas dispara loadingStore)"
+          }
+        ]
+      },
+      "toast": {
+        "file": "atoms/Toast.jsx",
+        "issues": [
+          {
+            "severity": "medium",
+            "type": "accessibility",
+            "description": "Container sem aria-live='assertive' para anúncios"
+          },
+          {
+            "severity": "medium",
+            "type": "accessibility",
+            "description": "Botão de fechar sem aria-label='Fechar notificação'"
+          },
+          {
+            "severity": "low",
+            "type": "i18n",
+            "description": "Texto '×' não é acessível semanticamente"
+          }
+        ]
+      },
+      "product_card": {
+        "file": "atoms/ProductCard.jsx",
+        "issues": [
+          {
+            "severity": "medium",
+            "type": "accessibility",
+            "description": "Botão sem aria-label descrevendo o produto"
+          },
+          {
+            "severity": "low",
+            "type": "props_debt",
+            "description": "Categorização hardcoded em português"
+          }
+        ]
+      }
+    },
+    "molecules": {
+      "modal_header": {
+        "file": "molecules/ModalHeader.jsx",
+        "issues": [
+          {
+            "severity": "low",
+            "type": "accessibility",
+            "description": "Botão fechar sem aria-label='Fechar'"
+          }
+        ]
+      },
+      "modal_footer": {
+        "file": "molecules/ModalFooter.jsx",
+        "issues": []
+      },
+      "settings_tab": {
+        "file": "molecules/SettingsTab.jsx",
+        "issues": [
+          {
+            "severity": "medium",
+            "type": "accessibility",
+            "description": "Tab sem role='tab' e aria-selected"
+          },
+          {
+            "severity": "medium",
+            "type": "accessibility",
+            "description": "Estado ativo não anunciado para screen readers"
+          }
+        ]
+      },
+      "settings_tabs": {
+        "file": "molecules/SettingsTabs.jsx",
+        "issues": [
+          {
+            "severity": "critical",
+            "type": "accessibility",
+            "description": "Container sem role='tablist'"
+          },
+          {
+            "severity": "critical",
+            "type": "accessibility",
+            "description": "Sem navegação por teclado entre tabs (setas)"
+          },
+          {
+            "severity": "medium",
+            "type": "i18n",
+            "description": "Labels das tabs hardcodados em português"
+          }
+        ]
+      },
+      "adjust_stock_modal": {
+        "file": "molecules/AdjustStockModal.jsx",
+        "issues": [
+          {
+            "severity": "critical",
+            "type": "accessibility",
+            "description": "Modal sem role='dialog' e aria-modal='true'"
+          },
+          {
+            "severity": "critical",
+            "type": "accessibility",
+            "description": "Sem focus trap"
+          },
+          {
+            "severity": "medium",
+            "type": "accessibility",
+            "description": "Sem handler para tecla Escape"
+          },
+          {
+            "severity": "low",
+            "type": "i18n",
+            "description": "Textos fixos em português"
+          }
+        ]
+      }
+    },
+    "templates": {
+      "main_layout": {
+        "file": "templates/MainLayout.jsx",
+        "issues": [
+          {
+            "severity": "low",
+            "type": "accessibility",
+            "description": "Layout minimalista, sem landmarks ARIA"
+          }
+        ]
+      },
+      "modal_layout": {
+        "file": "templates/ModalLayout.jsx",
+        "issues": [
+          {
+            "severity": "critical",
+            "type": "accessibility",
+            "description": "Overlay sem role='dialog' ou aria-modal"
+          },
+          {
+            "severity": "critical",
+            "type": "accessibility",
+            "description": "Sem focus trap"
+          },
+          {
+            "severity": "critical",
+            "type": "accessibility",
+            "description": "Sem handler para tecla Escape"
+          },
+          {
+            "severity": "medium",
+            "type": "props_debt",
+            "description": "onClick no overlay pode fechar acidentalmente"
+          }
+        ]
+      }
+    },
+    "ui": {
+      "divider": {
+        "file": "ui/Divider.jsx",
+        "issues": [
+          {
+            "severity": "low",
+            "type": "accessibility",
+            "description": "hr sem aria-hidden quando decorativo"
+          }
+        ]
+      },
+      "scroll_area": {
+        "file": "ui/ScrollArea.jsx",
+        "issues": [
+          {
+            "severity": "low",
+            "type": "accessibility",
+            "description": "Div scrollável sem aria-label se for região relevante"
+          }
+        ]
+      }
+    },
+    "organisms": {
+      "sidebar": {
+        "file": "organisms/Sidebar.jsx",
+        "issues": [
+          {
+            "severity": "medium",
+            "type": "accessibility",
+            "description": "Table items com role='button' mas sem aria-pressed para estado ativo"
+          },
+          {
+            "severity": "low",
+            "type": "i18n",
+            "description": "Textos fixos em português ('Nenhuma comanda ativa')"
+          }
+        ]
+      },
+      "cart_panel": {
+        "file": "organisms/CartPanel.jsx",
+        "issues": [
+          {
+            "severity": "medium",
+            "type": "accessibility",
+            "description": "Botões de ação iFood sem aria-label descritivo"
+          },
+          {
+            "severity": "medium",
+            "type": "accessibility",
+            "description": "Botão remover item sem aria-label"
+          },
+          {
+            "severity": "low",
+            "type": "i18n",
+            "description": "Textos fixos em português ('Remover', 'Finalizar', etc)"
+          }
+        ]
+      },
+      "checkout_modal": {
+        "file": "organisms/CheckoutModal.jsx",
+        "issues": [
+          {
+            "severity": "critical",
+            "type": "syntax_error",
+            "description": "Linhas 228-234: JSX mal formado - botões aninhados incorretamente, falta fechamento de tags"
+          },
+          {
+            "severity": "critical",
+            "type": "accessibility",
+            "description": "Modal sem role='dialog'"
+          },
+          {
+            "severity": "medium",
+            "type": "props_debt",
+            "description": "Múltiplos estados internos não gerenciados via props"
+          }
+        ]
+      },
+      "login_modal": {
+        "file": "organisms/LoginModal.jsx",
+        "issues": [
+          {
+            "severity": "critical",
+            "type": "accessibility",
+            "description": "Modal sem role='dialog' e aria-modal='true'"
+          },
+          {
+            "severity": "medium",
+            "type": "accessibility",
+            "description": "Botão mostrar/ocultar senha com tabIndex={-1} (inacessível por teclado)"
+          },
+          {
+            "severity": "medium",
+            "type": "accessibility",
+            "description": "Sem focus trap"
+          },
+          {
+            "severity": "low",
+            "type": "i18n",
+            "description": "Textos fixos em português"
+          }
+        ]
+      },
+      "settings_modal": {
+        "file": "organisms/SettingsModal.jsx",
+        "issues": [
+          {
+            "severity": "critical",
+            "type": "accessibility",
+            "description": "Modal gigante sem role='dialog'"
+          },
+          {
+            "severity": "critical",
+            "type": "accessibility",
+            "description": "Sem focus trap"
+          },
+          {
+            "severity": "medium",
+            "type": "props_debt",
+            "description": "Assinatura de props excessivamente longa (god component)"
+          },
+          {
+            "severity": "medium",
+            "type": "direct_dom",
+            "description": "Linhas 303-342: Manipulação direta de DOM (createElement, innerHTML) ao invés de React"
+          },
+          {
+            "severity": "medium",
+            "type": "security",
+            "description": "Uso de window.confirm em vez de modal acessível"
+          }
+        ]
+      }
+    }
+  },
+  "categories": {
+    "dead_code": [
+      "ThemeToggle.jsx - componente vazio"
+    ],
+    "props_debt": [
+      "Card.jsx - hover prop sem semântica clara",
+      "ModalLayout.jsx - onClick no overlay",
+      "SettingsModal.jsx - props excessivas",
+      "CheckoutModal.jsx - estados internos complexos"
+    ],
+    "uncalled_handlers": [
+      "Nenhum handler órfão encontrado"
+    ],
+    "inaccessible_states": [
+      "LoginModal - botão showPwd com tabIndex=-1",
+      "Todos os modais - foco não preso"
+    ],
+    "i18n_inconsistencies": [
+      "Todos os componentes com textos fixos em português",
+      "Sem sistema de internacionalização implementado"
+    ],
+    "accessibility": [
+      "Todos os modais sem role='dialog'",
+      "Todos os modais sem focus trap",
+      "Todos os modais sem handler Escape",
+      "Botões sem aria-label",
+      "Tabs sem role='tablist'",
+      "Inputs sem associação label-for"
+    ],
+    "syntax_errors": [
+      "CheckoutModal.jsx - JSX mal formado linhas 228-234"
+    ],
+    "security_issues": [
+      "SettingsModal.jsx - window.confirm em operações críticas",
+      "SettingsModal.jsx - innerHTML com template strings"
+    ],
+    "direct_dom_manipulation": [
+      "SettingsModal.jsx - createElement/innerHTML no lugar de React"
+    ]
+  },
+  "recommendations": [
+    {
+      "priority": "high",
+      "action": "Remover ThemeToggle.jsx ou implementar funcionalidade real"
+    },
+    {
+      "priority": "high",
+      "action": "Corrigir syntax error no CheckoutModal.jsx (linhas 228-234)"
+    },
+    {
+      "priority": "high",
+      "action": "Adicionar role='dialog', aria-modal, focus trap e handler Escape em todos os modais"
+    },
+    {
+      "priority": "high",
+      "action": "Implementar sistema de i18n para remove hardcoded PT-BR strings"
+    },
+    {
+      "priority": "medium",
+      "action": "Adicionar aria-labels em botões icônicos"
+    },
+    {
+      "priority": "medium",
+      "action": "Substituir window.confirm por ConfirmDialog em SettingsModal"
+    },
+    {
+      "priority": "medium",
+      "action": "Refatorar manipulação direta de DOM no SettingsModal para usar React"
+    },
+    {
+      "priority": "medium",
+      "action": "Adicionar aria-describedby em inputs com erros"
+    },
+    {
+      "priority": "low",
+      "action": "Adicionar aria-pressed em Sidebar table items"
+    }
+  ]
+}

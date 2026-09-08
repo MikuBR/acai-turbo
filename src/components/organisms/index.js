@@ -1,7 +1,5 @@
-export { default as Sidebar } from './Sidebar';
 export { OrderSidebar } from './OrderSidebar';
 export { CartPanel } from './CartPanel';
-export { CatalogPanel } from './CatalogPanel';
 export { default as SettingsModal } from './SettingsModal';
 export { default as LoginModal } from './LoginModal';
 export { default as CheckoutModal } from './CheckoutModal';

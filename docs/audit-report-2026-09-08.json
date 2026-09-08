@@ -1,0 +1,113 @@
+{
+  "audit_date": "2026-09-08",
+  "project_path": "/home/caue/Documentos/projetos/vscode-projects/acai-turbo",
+  "branch": "main (2 ahead of origin/main)",
+  "overall_completeness_percent": 82,
+  "summary": "Core PDV flows are intact and wired. ~30% of components are dead code artifacts from the app decomposition refactor. Three IPC channels in preload lack main handlers. One security inconsistency with ifood:start-polling channel.",
+  "critical_findings": [
+    {
+      "severity": "MEDIUM",
+      "title": "Ghost IPC channels without main handlers",
+      "details": "app:check-unsaved-orders, app:shutdown (preload.js:88-89), clients:get-by-phone (preload.js:68,178) have no corresponding ipcMain.handle in main.cjs. Clients:delete-by-phone DB function exists but is never invoked via IPC."
+    },
+    {
+      "severity": "MEDIUM",
+      "title": "ifood:start-polling security inconsistency",
+      "details": "Channel has validator in validate.cjs but is NOT in preload.js ALLOWED_CHANNELS. Renderer code bypasses safeInvoke via legacy ipcRenderer.invoke(), so it works at runtime but violates the documented security architecture (AGENTS.md requires ALL channels in BOTH files)."
+    },
+    {
+      "severity": "LOW",
+      "title": "Legacy App.jsx dead code (966 lines)",
+      "details": "src/App.jsx is the pre-decomposition monolithic entry point. It is NOT imported by src/main.jsx or any live route. Replaced by src/layouts/AppLayout.jsx + feature screens. Should be deleted or archived."
+    },
+    {
+      "severity": "LOW",
+      "title": "BUY_X_GET_Y promotion type not handled in renderer",
+      "details": "validate.cjs accepts BUY_X_GET_Y type. Main.cjs saves it. But calculateDiscount() in renderer (App.jsx:270-278, CheckoutScreen.jsx:34-42) only handles PERCENTAGE and FIXED_AMOUNT — BUY_X_GET_Y falls through to return 0 discount."
+    },
+    {
+      "severity": "INFO",
+      "title": "Unused APIs: inventory:get-low-stock, catalog:get-price-history",
+      "details": "Both channels are exposed in preload and have main handlers + DB functions, but no UI element triggers them. Consider adding low-stock alert badges or price-history charts."
+    }
+  ],
+  "ghost_orphan_inventory": {
+    "dead_components": [
+      "src/components/organisms/Sidebar.jsx (67 lines) — replaced by OrderSidebar",
+      "src/components/organisms/CatalogPanel.jsx (81 lines) — catalog rendered inline",
+      "src/components/templates/MainLayout.jsx (3 lines) — unused",
+      "src/components/templates/ModalLayout.jsx (9 lines) — unused",
+      "src/components/molecules/AdjustStockModal.jsx (73 lines) — never imported",
+      "src/components/atoms/ConfirmDialog.jsx — never imported",
+      "src/components/ui/ThemeToggle.jsx — never imported",
+      "src/components/ui/ScrollArea.jsx — never imported",
+      "src/components/ui/Divider.jsx — never imported",
+      "src/components/molecules/ModalHeader.jsx — never imported",
+      "src/components/molecules/ModalFooter.jsx — never imported"
+    ],
+    "ghost_ipc_channels": [
+      "app:check-unsaved-orders — in preload, no main handler",
+      "app:shutdown — in preload, no main handler",
+      "clients:get-by-phone — in preload, no main handler (getClientByPhone exists in db.cjs:852)"
+    ]
+  },
+  "connection_chains_status": {
+    "authentication": "✅ intact",
+    "catalog_crud": "✅ intact",
+    "order_checkout": "✅ intact",
+    "cash_management": "✅ intact",
+    "reports_daily": "✅ intact",
+    "reports_by_period": "✅ intact",
+    "promotions_crud": "✅ intact (BUY_X_GET_Y discount not applied in UI)",
+    "users_management": "✅ intact",
+    "inventory_crud": "✅ intact (low-stock not surfaced in UI)",
+    "financial_crud": "✅ intact",
+    "clients_crud": "✅ intact (get-by-phone missing)",
+    "ifood_integration": "⚠️ mostly intact (channel consistency issue)",
+    "printer_config": "✅ intact"
+  },
+  "ipc_coverage": {
+    "total_preload_channels": 72,
+    "total_main_handlers": 67,
+    "total_validators": 48,
+    "allowed_without_handler": ["app:check-unsaved-orders", "app:shutdown", "clients:get-by-phone"],
+    "handler_without_validator": ["auth:force-reset-admin", "auth:logout", "auth:reset-manager-password", "auth:update-password", "auth:verify-password", "auth:verify-session", "cash:preview-close", "catalog:get-categories", "catalog:get-price-history", "clients:get", "config:get-all", "financial:get-transactions", "inventory:get", "inventory:get-low-stock", "promotions:get", "promotions:get-active", "reports:daily", "users:get"],
+    "validator_without_handler": []
+  },
+  "files_created": [
+    "/home/caue/Documentos/projetos/vscode-projects/acai-turbo/docs/audit-report-2026-09-08.md"
+  ],
+  "files_read": [
+    "main.cjs (1312 lines)",
+    "preload.js (233 lines)",
+    "database/validate.cjs (405 lines)",
+    "database/db.cjs (917 lines)",
+    "database/migrations/001-initial-schema.cjs (236 lines)",
+    "database/migrate.cjs (271 lines)",
+    "database/crypto.cjs (94 lines)",
+    "database/logger.cjs (63 lines)",
+    "src/App.jsx (966 lines — legacy, dead code)",
+    "src/main.jsx (13 lines)",
+    "src/router/index.jsx (6 lines)",
+    "src/router/routes.jsx (37 lines)",
+    "src/router/authGuard.js (7 lines)",
+    "src/layouts/AppLayout.jsx (224 lines)",
+    "src/store/useStore.ts (104 lines)",
+    "src/store/authStore.ts (36 lines)",
+    "src/store/toastStore.js (22 lines)",
+    "src/store/loadingStore.js (10 lines)",
+    "src/services/ipc.js (19 lines)",
+    "src/services/logger.js (43 lines)",
+    "src/features/auth/LoginScreen.jsx (63 lines)",
+    "src/features/auth/ChangePasswordScreen.jsx (58 lines)",
+    "src/features/pdv/PdvScreen.jsx (100 lines)",
+    "src/features/pdv/CheckoutScreen.jsx (93 lines)",
+    "src/features/pdv/NewTableScreen.jsx (51 lines)",
+    "src/features/pdv/AcaiBuilderScreen.jsx (68 lines)",
+    "src/features/pdv/QuickBuilderScreen.jsx (50 lines)",
+    "src/features/reports/ReportsScreen.jsx (108 lines)",
+    "src/features/settings/SettingsScreen.jsx (357 lines read)",
+    "src/components/organisms/SettingsModal.jsx (576 lines)",
+    "Component index files and individual component sources"
+  ]
+}

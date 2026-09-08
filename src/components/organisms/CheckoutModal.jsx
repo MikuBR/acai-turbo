@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { X, Check, Plus, Trash2 } from 'lucide-react';
+import { formatPromotionLabel } from '../../utils/promotion.js';
 
 const PAYMENT_METHODS = ['DINHEIRO', 'PIX', 'DÉBITO', 'CRÉDITO', 'PERMUTA'];
 
@@ -13,7 +14,7 @@ export default function CheckoutModal({ isOpen, onClose, activeTable, promotions
 
   if (!isOpen) return null;
 
-  const discount = selectedPromotion && activeTable ? calculateDiscount(selectedPromotion, activeTable.total || 0) : 0;
+  const discount = selectedPromotion && activeTable ? calculateDiscount(selectedPromotion, activeTable.total || 0, activeTable.items || []) : 0;
   const finalTotal = activeTable ? activeTable.total - discount : 0;
   const sumPayments = payments.reduce((s, p) => s + p.amount, 0);
   const remaining = Math.max(0, finalTotal - sumPayments);
@@ -82,7 +83,7 @@ export default function CheckoutModal({ isOpen, onClose, activeTable, promotions
           >
             <option value="">Sem promoção</option>
             {promotions.map(p => (
-              <option key={p.id} value={p.id}>{p.name} ({p.type === 'PERCENTAGE' ? p.value + '%' : 'R$' + p.value})</option>
+              <option key={p.id} value={p.id}>{p.name} ({formatPromotionLabel(p)})</option>
             ))}
           </select>
           {selectedPromotion && (

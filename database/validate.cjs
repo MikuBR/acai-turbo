@@ -327,6 +327,11 @@ const validators = {
     return { success: true, data: Number(clientId) };
   },
 
+  'clients:get-by-phone': (phone) => {
+    if (!phone || typeof phone !== 'string' || phone.trim() === '') return { success: false, error: 'Telefone é obrigatório' };
+    return { success: true, data: phone.trim() };
+  },
+
   'clients:add-order': (data) => {
     if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
     if (!data.clientId || isNaN(Number(data.clientId))) return { success: false, error: 'ID do cliente inválido' };

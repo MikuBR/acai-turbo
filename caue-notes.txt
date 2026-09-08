@@ -1,0 +1,36 @@
+20:39 20/08/2026
+
+Puxar pelo telefone do cliente no delivery como 'preenchimento automatico'
+Mais de um cadastro de endereço disponivel
+Forma de pagamento 'outros', deve servir como as excessões, tipo o que não se qualifica nas outras formas de ágamento, como VALE ALIMENTAÇÃO
+
+Impressão----
+impressora do balcão é vinculada pelo computador; impressora termica TANCA
+impressora da coziha é pela rede;impressora termica Tanca
+Cupom do balcão e da cozinha SÃO DIFERENTES
+
+----
+Relação de prodtos mais vendidos, quantidade e etc, a média do produto em determinado periodo ou geral
+Ao marcar formas de pagamentos totais, não é permitido confirmar e imprimir
+O sistema de troco a devolver e receber está vinculando coisas ilogicas, verificar
+Taxa de delivery se ele adicionar manualmente por causa do whatsaap
+
+Ver os papeis no bolso direito da calça ----FORMATO DE CUPOM---
+
+Verificar lógica do cardápio e submenus, para garantir que esteja tudo corretamente vinculado
+A
+HORARIO NO CUPOM PEDIDO , HORARIO EXATO, SUPER IMPORTANTE
+
+Não necessário Estoque
+Deve ter abertura e fechamento de caixa
+
+Criar sistema de detectar update e atualizar, caso o usuario queria automaticamente, sem quebrar o banco de dados e coisas do tipo;
+
+Mudar esquema de cor futuramente
+
+Acelerar desenvolvimento
+
+Começar a decidir valor
+
+Se eu clicar no X do menu inicial, ele trava, não dando para digitar as credenciais de operador tendo como funcional somente o botão para acessar;
+Conversar regularmente com o Henrique, para garantir que ele saiba como o programa está indo e satisfazer minhas dúvidas sobre o projeto;

@@ -1,0 +1,127 @@
+{
+  "investigation_summary": {
+    "project": "Açaí Wave PDV",
+    "screens_analyzed": 9,
+    "total_buttons_catalogued": 47,
+    "analysis_date": "2026-08-31"
+  },
+  "screens": [
+    {
+      "name": "PdvScreen",
+      "file": "src/features/pdv/PdvScreen.jsx",
+      "buttons": 4,
+      "handlers_status": "all_connected",
+      "empty_states": "adequate",
+      "issues": []
+    },
+    {
+      "name": "AcaiBuilderScreen",
+      "file": "src/features/pdv/AcaiBuilderScreen.jsx",
+      "buttons": 5,
+      "handlers_status": "all_connected",
+      "empty_states": "partial",
+      "issues": ["Sem mensagem quando acaiBases está vazio"]
+    },
+    {
+      "name": "QuickBuilderScreen",
+      "file": "src/features/pdv/QuickBuilderScreen.jsx",
+      "buttons": 2,
+      "handlers_status": "all_connected",
+      "empty_states": "adequate",
+      "issues": []
+    },
+    {
+      "name": "NewTableScreen",
+      "file": "src/features/pdv/NewTableScreen.jsx",
+      "buttons": 4,
+      "handlers_status": "all_connected",
+      "empty_states": "adequate",
+      "issues": ["window.api.clients.getByPhone pode falhar (canal não validado no preload)"]
+    },
+    {
+      "name": "CheckoutScreen",
+      "file": "src/features/pdv/CheckoutScreen.jsx",
+      "buttons": 6,
+      "handlers_status": "all_connected",
+      "empty_states": "partial",
+      "issues": ["Permite checkout com total zero", "Botão remover pagamento só visível em hover"]
+    },
+    {
+      "name": "LoginScreen",
+      "file": "src/features/auth/LoginScreen.jsx",
+      "buttons": 1,
+      "handlers_status": "all_connected",
+      "empty_states": "adequate",
+      "issues": []
+    },
+    {
+      "name": "ChangePasswordScreen",
+      "file": "src/features/auth/ChangePasswordScreen.jsx",
+      "buttons": 1,
+      "handlers_status": "all_connected",
+      "empty_states": "adequate",
+      "issues": ["currentUser.id pode ser undefined se usuário não logado"]
+    },
+    {
+      "name": "SettingsScreen",
+      "file": "src/features/settings/SettingsScreen.jsx",
+      "buttons": 21,
+      "handlers_status": "all_connected",
+      "empty_states": "adequate",
+      "issues": [
+        "DOM manipulation manual com innerHTML (XSS risk)",
+        "window.prompt usado para inputs sensíveis"
+      ]
+    },
+    {
+      "name": "ReportsScreen",
+      "file": "src/features/reports/ReportsScreen.jsx",
+      "buttons": 9,
+      "handlers_status": "all_connected",
+      "empty_states": "adequate",
+      "issues": [
+        "Variável 'ex' indefinida no escopo (linhas 496-500)",
+        "Strings em PDF com falta de acentuação ('movimentacao', 'Saidas')"
+      ]
+    }
+  ],
+  "critical_findings": [
+    {
+      "severity": "high",
+      "screen": "SettingsModal.jsx",
+      "issue": "Manipulação direta de DOM com innerHTML no ajuste de estoque (linhas 309-341)",
+      "recommendation": "Converter para modal React controlado"
+    },
+    {
+      "severity": "medium",
+      "screen": "ReportsModal.jsx",
+      "issue": "Variável 'ex' referenciada mas não definida no escopo do map (linha 496)",
+      "recommendation": "Verificar fechamento do map de exchanges"
+    },
+    {
+      "severity": "medium",
+      "screen": "NewTableModal.jsx",
+      "issue": "Chamada a window.api.clients.getByPhone sem validação do canal IPC",
+      "recommendation": "Adicionar 'clients:get-by-phone' em ALLOWED_CHANNELS no preload.js"
+    },
+    {
+      "severity": "low",
+      "screen": "ChangePasswordScreen.jsx",
+      "issue": "currentUser.id pode ser undefined",
+      "recommendation": "Adicionar validação currentUser != null antes de acessar id"
+    },
+    {
+      "severity": "low",
+      "screen": "CheckoutScreen.jsx",
+      "issue": "Permite finalizar pedido com total zero",
+      "recommendation": "Adicionar verificação activeTable.items.length > 0"
+    }
+  ],
+  "accessibility_gaps": [
+    "Falta aria-label em botões de categoria e ações secundárias",
+    "Botão remover pagamento só aparece em hover (dificulta acesso via teclado)",
+    "window.prompt usado para inputs sensíveis (reset de senha admin) - não acessível"
+  ],
+  "translation_consistency": "PT-BR consistente; PDF tem pequenas inconsistências de acentuação",
+  "empty_state_coverage": "Boa cobertura geral; Builder de açaí não mostra msg quando não há bases disponíveis"
+}

@@ -1,21 +1,8 @@
-import { describe, it, expect, beforeAll, afterEach, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterEach, afterAll } from 'vitest';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { render, screen, waitFor } from '@testing-library/react';
 import { useAuthStore } from '../store/authStore';
-
-// Mock App.jsx to avoid renderer-heavy dependencies in jsdom
-vi.mock('../App.jsx', () => ({
-  default: function MockApp() {
-    return (
-      <div data-testid="pdv-screen">
-        <p>Main PDV Screen</p>
-      </div>
-    );
-  }
-}));
-
-// Re-import router after mock is registered
-const { default: router } = await import('../router/index.jsx');
+import router from '../router/index.jsx';
 
 // Helper: build a memory router for a given initial route
 function buildRouter(initialEntries) {

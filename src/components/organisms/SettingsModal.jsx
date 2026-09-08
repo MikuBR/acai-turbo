@@ -9,6 +9,7 @@ import InventoryForm from '../forms/InventoryForm';
 import FinancialForm from '../forms/FinancialForm';
 import ClientForm from '../forms/ClientForm';
 import CategoryForm from '../forms/CategoryForm';
+import { formatPromotionLabel } from '../../utils/promotion.js';
 
 
 export default function SettingsModal({ isOpen, onClose, settingsTab, setSettingsTab, safeCatalog, categories, newCatName, setNewCatName, newProd, setNewProd, newPromo, setNewPromo, users, newUser, setNewUser, inventory, inventoryForm, setInventoryForm, selectedInventoryItem, setSelectedInventoryItem, inventoryMovements, loadInventoryMovements, financialAccounts, financialForm, setFinancialForm, financialFilter, setFinancialFilter, clients, clientForm, setClientForm, selectedClientOrders, promotions, pwdForm, setPwdForm, syncDB, loadUsers, loadInventory, loadFinancialAccounts, loadClients, loadClientOrders, runWithAuth, getIPC, printerConfig, setPrinterConfig, savePrinterConfig, currentUser, ifoodConfig, setIfoodConfig, handleTestIfoodConnection, isTestingIfood, ifoodConnectionStatus, saveIfoodConfig }) {
@@ -218,7 +219,7 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                     <div key={p.id} className={`flex items-center justify-between bg-surface-light border p-3 rounded-lg ${!p.is_active ? 'border-border opacity-60' : 'border-border'}`}>
                       <div>
                         <div className="font-bold text-xs uppercase text-primary">{p.name}</div>
-                        <div className="text-[9px] text-muted uppercase">{p.type} - {p.applies_to} {p.value}{p.type === 'PERCENTAGE' ? '%' : 'R$'}</div>
+                        <div className="text-[9px] text-muted uppercase">{p.type} - {p.applies_to} {formatPromotionLabel(p)}</div>
                         <div className="text-[8px] text-muted">{new Date(p.start_date).toLocaleDateString()} até {new Date(p.end_date).toLocaleDateString()}</div>
                       </div>
                       <div className="flex gap-2">

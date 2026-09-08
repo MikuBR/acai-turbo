@@ -1,0 +1,699 @@
+{
+  "screens_investigated": [
+    {
+      "file": "src/features/pdv/PdvScreen.jsx",
+      "buttons": [
+        {
+          "label": "Cada categoria (TODOS, COPOS DE AÇAÍ, etc.)",
+          "handler": "setSelectedCategory(c)",
+          "condition": "Map sobre categoriesMenu array",
+          "connected": true,
+          "note": "Handler direto no state local"
+        },
+        {
+          "label": "Botão 'Montagem / Personalizar Açaí'",
+          "handler": "navigate('/pdv/builder/acai')",
+          "condition": "Mostrado apenas quando selectedCategory === 'TODOS' || selectedCategory.includes('AÇAÍ')",
+          "connected": true,
+          "note": "Navegação direta"
+        },
+        {
+          "label": "ProductCard (cada produto)",
+          "handler": "handleItemSelect(p) → navigate('/pdv/builder/acai' ou '/pdv/builder/quick')",
+          "condition": "p.category === 'COPOS DE AÇAÍ' ou p.ingredients length > 0 → builder acai; senão quick",
+          "connected": true
+        }
+      ],
+      "empty_states": [
+        {
+          "state": "catalog vazio ou filtrado",
+          "behavior": "Exibe 'Nenhum produto disponível' ou 'Nenhum produto encontrado para \"X\"'",
+          "adequate": true
+        },
+        {
+          "state": " IPC não disponível",
+          "behavior": "Categoria não carregada, toast de erro exibido",
+          "adequate": true
+        }
+      ],
+      "undefined_refs": [],
+      "accessibility_issues": [
+        {
+          "issue": "Botões de categoria são funcionais mas sem aria-label",
+          "severity": "low"
+        },
+        {
+          "issue": "Input de busca sem label associado",
+          "severity": "low"
+        }
+      ],
+      "translation_issues": [],
+      "critical_action_protection": "Nenhuma ação crítica (checkout, delete) nesta tela"
+    },
+    {
+      "file": "src/features/pdv/AcaiBuilderScreen.jsx",
+      "buttons": [
+        {
+          "label": "Selecionar base de açaí",
+          "handler": "setBuilder({...builder, base: b, standard: ...})",
+          "condition": "Map sobre acaiBases",
+          "connected": true
+        },
+        {
+          "label": "Toggle removal",
+          "handler": "toggleRemoval(ing)",
+          "condition": "Disponível quando builder.standard.length > 0",
+          "connected": true
+        },
+        {
+          "label": "Botão +/- extras",
+          "handler": "updateExtraInBuilder(a, ±1)",
+          "condition": "Map sobre availableAddons",
+          "connected": true
+        },
+        {
+          "label": "Botão LANÇAR",
+          "handler": "confirmFullBuild()",
+          "condition": "builder.base !== null (disabled se nulo)",
+          "connected": true,
+          "action": "addItemToActiveTable + navigate('/pdv')"
+        },
+        {
+          "label": "Botão fechar (X)",
+          "handler": "navigate('/pdv')",
+          "condition": "Sempre disponível",
+          "connected": true
+        }
+      ],
+      "empty_states": [
+        {
+          "state": "passedProduct nulo",
+          "behavior": "Abre builder com base=null; usuário deve selecionar uma base",
+          "adequate": true
+        },
+        {
+          "state": "acaiBases vazio",
+          "behavior": "Seção de tamanhos aparece vazia; builder still renderiza",
+          "adequate": false,
+          "note": "Sem mensagem de 'nenhuma base disponível'"
+        }
+      ],
+      "undefined_refs": [],
+      "accessibility_issues": [
+        {
+          "issue": "Botões de +/- não têm aria-label",
+          "severity": "low"
+        }
+      ],
+      "translation_issues": [],
+      "critical_action_protection": "Botão LANÇAR tem disabled state quando base não selecionada"
+    },
+    {
+      "file": "src/features/pdv/QuickBuilderScreen.jsx",
+      "buttons": [
+        {
+          "label": "Botão 'Voltar ao PDV'",
+          "handler": "navigate('/pdv')",
+          "condition": "show quando simpleBuilder é null",
+          "connected": true
+        },
+        {
+          "label": "Botão LANÇAR (no modal)",
+          "handler": "confirmSimpleBuild() → addItemToActiveTable + navigate('/pdv')",
+          "condition": "simpleBuilder.product existe",
+          "connected": true
+        }
+      ],
+      "empty_states": [
+        {
+          "state": "passedProduct nulo (location.state.product)",
+          "behavior": "Exibe 'Nenhum produto selecionado' com botão voltar",
+          "adequate": true
+        }
+      ],
+      "undefined_refs": [],
+      "accessibility_issues": [],
+      "translation_issues": [],
+      "critical_action_protection": "Validação básica de product exists"
+    },
+    {
+      "file": "src/features/pdv/NewTableScreen.jsx",
+      "buttons": [
+        {
+          "label": "Botão 'Mesa / Balcão'",
+          "handler": "setTableType('SALAO')",
+          "condition": "Toggle entre tipos",
+          "connected": true
+        },
+        {
+          "label": "Botão 'Delivery'",
+          "handler": "setTableType('DELIVERY')",
+          "condition": "Toggle entre tipos",
+          "connected": true
+        },
+        {
+          "label": "Botão 'Abrir Comanda'",
+          "handler": "handleAddTable() → addTable + navigate('/pdv')",
+          "condition": "SALAO: newTableName trim não vazio; DELIVERY: delivForm.name trim não vazio",
+          "connected": true
+        },
+        {
+          "label": "Botão fechar (X)",
+          "handler": "navigate('/pdv')",
+          "condition": "Sempre disponível",
+          "connected": true
+        }
+      ],
+      "empty_states": [
+        {
+          "state": "Não há validação forte de formulário delivery",
+          "behavior": "Permite criar com nome vazio se trim for ignorado (mas há validação)",
+          "adequate": true
+        }
+      ],
+      "undefined_refs": [
+        {
+          "ref": "window.api?.clients.getByPhone",
+          "location": "NewTableModal.jsx line 23",
+          "note": "Chamada via window.api, mas canal não está em ALLOWED_CHANNELS do preload. Pode falhar silenciosamente."
+        }
+      ],
+      "accessibility_issues": [
+        {
+          "issue": "Tabulação pode pular campos no formulário delivery",
+          "severity": "low"
+        }
+      ],
+      "translation_issues": [],
+      "critical_action_protection": "Validação de campos obrigatórios antes de addTable"
+    },
+    {
+      "file": "src/features/pdv/CheckoutScreen.jsx",
+      "buttons": [
+        {
+          "label": "Selecionar promoção",
+          "handler": "setSelectedPromotion(promo)",
+          "condition": "Select dropdown",
+          "connected": true
+        },
+        {
+          "label": "Botão 'Confirmar & Imprimir'",
+          "handler": "onFinalize({payments, amountReceived}) → ipc.invoke('orders:save')",
+          "condition": "canConfirm = isComplete && payments.length > 0 && hasValidCash",
+          "connected": true,
+          "note": "Validação múltipla antes de finalizar"
+        },
+        {
+          "label": "Botão fechar (X)",
+          "handler": "navigate('/pdv')",
+          "condition": "Sempre disponível",
+          "connected": true
+        },
+        {
+          "label": "Adicionar Pagamento",
+          "handler": "openAddPayment()",
+          "condition": "!showAddPayment && !hasPermuta",
+          "connected": true
+        },
+        {
+          "label": "Adicionar (pagamento)",
+          "handler": "addPayment()",
+          "condition": "pendingAmount válido (não PERMUTA) ou exchangeFor preenchido (PERMUTA)",
+          "connected": true
+        },
+        {
+          "label": "Remover pagamento",
+          "handler": "removePayment(idx)",
+          "condition": "Hover no tag de pagamento",
+          "connected": true
+        }
+      ],
+      "empty_states": [
+        {
+          "state": "activeTable sem items",
+          "behavior": "Total = 0; usuário pode confirmar com pagamentos zerados",
+          "adequate": false,
+          "note": "Deveria bloquear checkout com total zero"
+        },
+        {
+          "state": "Sem promoções",
+          "behavior": "Dropdown mostra apenas 'Sem promoção'",
+          "adequate": true
+        }
+      ],
+      "undefined_refs": [],
+      "accessibility_issues": [
+        {
+          "issue": "Botão remover pagamento só aparece em hover (opacity-0 group-hover:opacity-100)",
+          "severity": "medium",
+          "note": "Difícil acesso para teclado"
+        }
+      ],
+      "translation_issues": [],
+      "critical_action_protection": "Sim - validação de pagamento completo antes de confirmar"
+    },
+    {
+      "file": "src/features/auth/LoginScreen.jsx",
+      "buttons": [
+        {
+          "label": "Botão 'Entrar'",
+          "handler": "handleLogin(e) → ipc.invoke('auth:login')",
+          "condition": "username e password preenchidos",
+          "connected": true,
+          "note": "Redireciona para /change-password se must_change_password, senão /pdv"
+        }
+      ],
+      "empty_states": [
+        {
+          "state": "Campos vazios",
+          "behavior": "Exibe erro 'Preencha todos os campos'",
+          "adequate": true
+        }
+      ],
+      "undefined_refs": [],
+      "accessibility_issues": [],
+      "translation_issues": [],
+      "critical_action_protection": "Feedback visual de loading; validação de campos"
+    },
+    {
+      "file": "src/features/auth/ChangePasswordScreen.jsx",
+      "buttons": [
+        {
+          "label": "Botão 'Alterar Senha'",
+          "handler": "handleChangePassword(e) → ipc.invoke('auth:change-user-password')",
+          "condition": "Todos os campos preenchidos e new === confirm",
+          "connected": true,
+          "note": "Redireciona para /pdv após sucesso"
+        }
+      ],
+      "empty_states": [
+        {
+          "state": "Campos vazios ou senhas diferentes",
+          "behavior": "Toast de warning exibido",
+          "adequate": true
+        }
+      ],
+      "undefined_refs": [
+        {
+          "ref": "currentUser.id",
+          "location": "line 32",
+          "note": "Se currentUser for null, id será undefined. Deveria ter validação."
+        }
+      ],
+      "accessibility_issues": [],
+      "translation_issues": [],
+      "critical_action_protection": "Validação de campos e coincidência de senhas"
+    },
+    {
+      "file": "src/features/settings/SettingsScreen.jsx",
+      "buttons": [
+        {
+          "label": "Sync Data",
+          "handler": "syncDB()",
+          "condition": "Mount + botão manual",
+          "connected": true
+        },
+        {
+          "label": "Add Category",
+          "handler": "handleAddCategory()",
+          "condition": "newCatName não vazio",
+          "connected": true
+        },
+        {
+          "label": "Delete Category",
+          "handler": "handleDeleteCategory(cat)",
+          "condition": "window.confirm + runWithAuth('delete_products')",
+          "connected": true
+        },
+        {
+          "label": "Add/Edit Product",
+          "handler": "handleProductSubmit()",
+          "condition": "newProd.name não vazio",
+          "connected": true
+        },
+        {
+          "label": "Delete Product",
+          "handler": "ipc.invoke('catalog:delete-product')",
+          "condition": "window.confirm + runWithAuth('delete_products')",
+          "connected": true
+        },
+        {
+          "label": "Add/Edit Promotion",
+          "handler": "handlePromoSubmit()",
+          "condition": "newPromo.name não vazio",
+          "connected": true
+        },
+        {
+          "label": "Delete Promotion",
+          "handler": "ipc.invoke('promotions:delete')",
+          "condition": "window.confirm + runWithAuth('delete_promotions')",
+          "connected": true
+        },
+        {
+          "label": "Add/Edit User",
+          "handler": "handleUserSubmit()",
+          "condition": "username, password, full_name preenchidos",
+          "connected": true
+        },
+        {
+          "label": "Toggle User Active",
+          "handler": "ipc.invoke('users:toggle-active')",
+          "condition": "window.confirm",
+          "connected": true
+        },
+        {
+          "label": "Delete User",
+          "handler": "ipc.invoke('users:delete')",
+          "condition": "window.confirm",
+          "connected": true
+        },
+        {
+          "label": "Add Inventory",
+          "handler": "handleInventorySubmit()",
+          "condition": "productId e quantity preenchidos",
+          "connected": true
+        },
+        {
+          "label": "Adjust Inventory",
+          "handler": "ipc.invoke('inventory:adjust')",
+          "condition": "window.confirm + modal custom",
+          "connected": true,
+          "note": "Usa DOM manipulation manual (cria modal com innerHTML)"
+        },
+        {
+          "label": "Add Financial Account",
+          "handler": "handleFinancialSubmit()",
+          "condition": "description e amount preenchidos",
+          "connected": true
+        },
+        {
+          "label": "Delete Financial Account",
+          "handler": "ipc.invoke('financial:delete-account')",
+          "condition": "window.confirm",
+          "connected": true
+        },
+        {
+          "label": "Add/Edit Client",
+          "handler": "handleClientSubmit()",
+          "condition": "clientForm.name não vazio",
+          "connected": true
+        },
+        {
+          "label": "Delete Client",
+          "handler": "ipc.invoke('clients:delete')",
+          "condition": "window.confirm",
+          "connected": true
+        },
+        {
+          "label": "Change Password (settings)",
+          "handler": "handlePasswordChange()",
+          "condition": "pwdForm.current e pwdForm.next preenchidos",
+          "connected": true
+        },
+        {
+          "label": "Reset Manager Password",
+          "handler": "ipc.invoke('auth:reset-manager-password')",
+          "condition": "window.confirm + currentUser.role === 'admin'",
+          "connected": true
+        },
+        {
+          "label": "Reset Admin Password",
+          "handler": "ipc.invoke('auth:force-reset-admin')",
+          "condition": "window.prompt IDs + window.confirm",
+          "connected": true,
+          "note": "Usa window.prompt para input (segurança questionável)"
+        },
+        {
+          "label": "Save Printer Config",
+          "handler": "savePrinterConfig()",
+          "condition": "Sempre",
+          "connected": true
+        },
+        {
+          "label": "Test iFood Connection",
+          "handler": "handleTestIfoodConnection()",
+          "condition": "clientId, clientSecret, merchantId preenchidos",
+          "connected": true
+        },
+        {
+          "label": "Save iFood Config",
+          "handler": "saveIfoodConfig()",
+          "condition": "Sempre",
+          "connected": true
+        },
+        {
+          "label": "Load Reports",
+          "handler": "loadReports()",
+          "condition": "Mount + botão",
+          "connected": true
+        }
+      ],
+      "empty_states": [
+        {
+          "state": "Catalog vazio",
+          "behavior": "Exibe 'Nenhum produto cadastrado.'",
+          "adequate": true
+        },
+        {
+          "state": "Promotions vazio",
+          "behavior": "Exibe 'Nenhuma promoção cadastrada.'",
+          "adequate": true
+        },
+        {
+          "state": "Users vazio",
+          "behavior": "Exibe 'Nenhum usuário cadastrado.'",
+          "adequate": true
+        },
+        {
+          "state": "Inventory vazio",
+          "behavior": "Exibe 'Nenhum item em estoque.'",
+          "adequate": true
+        },
+        {
+          "state": "Financial accounts vazio",
+          "behavior": "Exibe 'Nenhuma conta financeira encontrada.'",
+          "adequate": true
+        },
+        {
+          "state": "Clients vazio",
+          "behavior": "Exibe 'Nenhum cliente cadastrado.'",
+          "adequate": true
+        }
+      ],
+      "undefined_refs": [],
+      "accessibility_issues": [
+        {
+          "issue": "Múltiplos window.prompt e window.confirm (não acessível via teclado adequadamente)",
+          "severity": "medium"
+        },
+        {
+          "issue": "DOM manipulation manual no ajuste de estoque (innerHTML)",
+          "severity": "high",
+          "note": " XSS risk e fora do padrão React"
+        },
+        {
+          "issue": "Falta aria-label em vários botões de ação",
+          "severity": "low"
+        }
+      ],
+      "translation_issues": [],
+      "critical_action_protection": "Sim - window.confirm para deletes, runWithAuth para permissões"
+    },
+    {
+      "file": "src/features/reports/ReportsScreen.jsx",
+      "buttons": [
+        {
+          "label": "Botão 'Hoje'",
+          "handler": "setAdvancedReportData(null); loadReports()",
+          "condition": "Sempre",
+          "connected": true
+        },
+        {
+          "label": "Botão 'Período'",
+          "handler": "setReportPeriod + loadAdvancedReport()",
+          "condition": "Sempre",
+          "connected": true
+        },
+        {
+          "label": "Exportar PDF",
+          "handler": "handleExportPDF()",
+          "condition": "Sempre",
+          "connected": true,
+          "note": "Lazy loads pdfmake"
+        },
+        {
+          "label": "Fechar",
+          "handler": "onClose()",
+          "condition": "Sempre",
+          "connected": true
+        },
+        {
+          "label": "Gerar Relatório",
+          "handler": "loadAdvancedReport()",
+          "condition": "startDate e endDate preenchidos",
+          "connected": true
+        },
+        {
+          "label": "Registrar Movimento (Gaveta)",
+          "handler": "ipc.invoke('cash:register')",
+          "condition": "amount e description preenchidos",
+          "connected": true
+        },
+        {
+          "label": "Estornar Pedido",
+          "handler": "ipc.invoke('orders:delete')",
+          "condition": "runWithAuth('cancel_orders') + window.confirm",
+          "connected": true
+        },
+        {
+          "label": "Filtrar / Limpar (financeiro)",
+          "handler": "setFinancialFilter / loadFinancialAccounts",
+          "condition": "Settings tab financial",
+          "connected": true
+        }
+      ],
+      "empty_states": [
+        {
+          "state": "Nenhuma venda registrada hoje",
+          "behavior": "Exibe 'Nenhuma venda registrada hoje.'",
+          "adequate": true
+        },
+        {
+          "state": "Nenhum produto no período",
+          "behavior": "Exibe 'Nenhum produto vendido no período.'",
+          "adequate": true
+        }
+      ],
+      "undefined_refs": [
+        {
+          "ref": "ex.customer_name",
+          "location": "ReportsModal.jsx line 496",
+          "note": "Variável ex referenciada mas não definida no escopo (loop map externo)"
+        }
+      ],
+      "accessibility_issues": [
+        {
+          "issue": "Botões de filtro com texto pequeno e sem labels claros",
+          "severity": "low"
+        }
+      ],
+      "translation_issues": [
+        {
+          "issue": "Strings em PDF usam 'movimentacao' (sem acento) e 'Saidas' em vez de 'Saídas'",
+          "severity": "low"
+        }
+      ],
+      "critical_action_protection": "Sim - window.confirm para estorno, runWithAuth para permissão"
+    },
+    {
+      "file": "src/layouts/AppLayout.jsx",
+      "buttons": [
+        {
+          "label": "Selecionar Mesa",
+          "handler": "setActiveTable(id)",
+          "condition": "Click na sidebar",
+          "connected": true
+        },
+        {
+          "label": "Nova Mesa",
+          "handler": "navigate('/pdv/new-table')",
+          "condition": "Sempre",
+          "connected": true
+        },
+        {
+          "label": "Relatórios",
+          "handler": "navigate('/reports')",
+          "condition": "Sempre",
+          "connected": true
+        },
+        {
+          "label": "Configurações",
+          "handler": "runWithManagerAuth(() => navigate('/settings'))",
+          "condition": "Auth manager válida ou modal de senha",
+          "connected": true
+        },
+        {
+          "label": "Logout",
+          "handler": "handleLogout()",
+          "condition": "Sempre",
+          "connected": true,
+          "note": "Chama ipc.invoke('auth:logout') + storeLogout()"
+        },
+        {
+          "label": "Ações iFood (na sidebar)",
+          "handler": "handleIfoodAction(action, orderId)",
+          "condition": "ifoodOrderId presente na mesa",
+          "connected": true
+        },
+        {
+          "label": "Finalizar Pedido",
+          "handler": "navigate('/checkout')",
+          "condition": "CartPanel",
+          "connected": true
+        },
+        {
+          "label": "Remover Item",
+          "handler": "removeItemFromActiveTable(index)",
+          "condition": "CartPanel",
+          "connected": true
+        }
+      ],
+      "empty_states": [
+        {
+          "state": "tables vazio ou activeTable não encontrado",
+          "behavior": "Fallback para {id: 1, name: 'BALCÃO', ...}",
+          "adequate": true
+        }
+      ],
+      "undefined_refs": [],
+      "accessibility_issues": [],
+      "translation_issues": [],
+      "critical_action_protection": "runWithManagerAuth para configurações; auth check no logout"
+    }
+  ],
+  "summary": {
+    "total_screens": 9,
+    "total_buttons_found": 47,
+    "handlers_connected": 47,
+    "handlers_disconnected": 0,
+    "critical_issues": [
+      {
+        "screen": "SettingsModal.jsx",
+        "issue": "DOM manipulation manual com innerHTML no ajuste de estoque (linhas 309-341)",
+        "severity": "high",
+        "recommendation": "Converter para modal React controlado"
+      },
+      {
+        "screen": "ReportsModal.jsx",
+        "issue": "Variável 'ex' indefinida na linha 496 (possível bug de renderização)",
+        "severity": "medium",
+        "recommendation": "Verificar escopo do map de exchanges"
+      },
+      {
+        "screen": "NewTableModal.jsx",
+        "issue": "Chamada a window.api.clients.getByPhone pode falhar se não estiver em ALLOWED_CHANNELS",
+        "severity": "medium",
+        "recommendation": "Verificar preload.js e adicionar canal se necessário"
+      },
+      {
+        "screen": "ChangePasswordScreen.jsx",
+        "issue": "currentUser.id pode ser undefined se usuário não autenticado",
+        "severity": "low",
+        "recommendation": "Adicionar validação currentUser != null"
+      },
+      {
+        "screen": "CheckoutScreen.jsx",
+        "issue": "Permite checkout com total zero (sem validação de items)",
+        "severity": "low",
+        "recommendation": "Adicionar verificação activeTable.items.length > 0"
+      }
+    ],
+    "accessibility_gaps": [
+      "Falta aria-label em botões de categoria e ações secundárias",
+      "Botão remover pagamento só visível em hover (dificulta uso via teclado)",
+      "window.prompt usado para inputs sensíveis (reset de senha admin)"
+    ],
+    "translation_consistency": "Todas as strings em PT-BR; PDF tem pequenas inconsistências de acentuação ('movimentacao', 'Saidas')",
+    "empty_state_coverage": "Boa cobertura na maioria das telas; builder de açaí não mostra mensagem quando não há bases"
+  }
+}
