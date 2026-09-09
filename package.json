@@ -16,7 +16,7 @@
     "test:watch": "npm run rebuild:node && vitest",
     "test:coverage": "npm run rebuild:node && vitest run --coverage",
     "rebuild:node": "npm rebuild better-sqlite3",
-    "rebuild:native": "electron-rebuild -f -w better-sqlite3",
+    "rebuild:native": "npx --no-install electron-rebuild -f -w better-sqlite3 || electron-rebuild -f -w better-sqlite3",
     "rebuild:all": "npm run rebuild:node && npm run rebuild:native",
     "swap:electron": "node scripts/swap-native-abi.cjs electron",
     "swap:node": "node scripts/swap-native-abi.cjs node",
@@ -87,7 +87,7 @@
   },
   "build": {
     "appId": "com.acaiwave.app",
-    "productName": "A\u00e7a\u00ed Wave",
+    "productName": "Açaí Wave",
     "icon": "build/icon.ico",
     "asarUnpack": [
       "node_modules/better-sqlite3",
@@ -118,7 +118,8 @@
       "installerHeader": "build/installer-header.bmp",
       "include": "build/custom.nsh",
       "license": "build/EULA.txt",
-      "artifactName": "A\u00e7a\u00ed Wave Setup ${version}.exe"
+      "artifactName": "Açaí Wave Setup ${version}.exe"
     }
-  }
+  },
+  "allowScripts": true
 }

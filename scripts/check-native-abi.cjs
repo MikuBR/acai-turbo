@@ -20,8 +20,10 @@ const stats = fs.statSync(nativeFile);
 console.log('[check-abi] Binary size:', (stats.size / 1024).toFixed(0), 'KB');
 console.log('[check-abi] Modified at:', stats.mtime.toISOString());
 
-// Check if we should skip Electron runtime test (CI without display)
-const skipElectronTest = process.argv.includes('--skip-electron-test') || process.env.CI === 'true';
+// Check if we should skip Electron runtime test (CI without display or wrong platform)
+const skipElectronTest = process.argv.includes('--skip-electron-test')
+  || process.env.CI === 'true'
+  || process.platform !== 'win32';
 
 if (!skipElectronTest) {
   try {

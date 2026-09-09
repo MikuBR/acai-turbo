@@ -24,7 +24,7 @@ permissions:
   contents: write  # needed for creating releases
 
 env:
-  NODE_VERSION: '24'
+  NODE_VERSION: '22'
   ELECTRON_VERSION: '32.3.3'
 
 jobs:
@@ -33,7 +33,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     env:
-      NODE_VERSION: '24'
+      NODE_VERSION: '22'
       ELECTRON_VERSION: '32.3.3'
     steps:
       - name: Checkout repository
