@@ -46,12 +46,17 @@ export default function CheckoutModal({ isOpen, onClose, activeTable, promotions
     if (pendingMethod === 'PERMUTA') {
       const finalAmt = Math.min(amt, finalTotal);
       setPayments([{ method: 'PERMUTA', amount: finalAmt, exchangeFor: pendingExchangeFor.trim() }]);
+      setAmountReceived('');
     } else {
       if (hasPermuta) setPayments([]);
       setPayments(prev => [...prev.filter(p => p.method !== 'PERMUTA'), { method: pendingMethod, amount: truncatedAmt }]);
+      // Sincronizar: ao adicionar DINHEIRO, pré-preencher campo "Dinheiro Recebido"
+      if (pendingMethod === 'DINHEIRO') {
+        const existingCash = payments.filter(p => p.method === 'DINHEIRO').reduce((s, p) => s + p.amount, 0);
+        setAmountReceived((existingCash + truncatedAmt).toFixed(2));
+      }
     }
     setShowAddPayment(false);
-    setAmountReceived('');
   };
 
   const removePayment = (idx) => {
