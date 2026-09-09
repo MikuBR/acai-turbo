@@ -26,6 +26,11 @@ export default function ChangePasswordScreen() {
       return;
     }
 
+    if (!currentUser) {
+      addToast('Não autenticado. Faça login novamente.', 'error');
+      return;
+    }
+
     const ipc = getIPC();
     if (ipc) {
       const res = await ipc.invoke('auth:change-user-password', {

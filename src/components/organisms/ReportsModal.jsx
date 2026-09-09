@@ -137,10 +137,10 @@ function generatePDF(data, isPeriodView, financialSummary, reportPeriod) {
     const exchangeTotal = data.exchanges.reduce((a, e) => a + Number(e.total || 0), 0);
     const exchangeRows = data.exchanges.map(ex => [
       { text: ex.customer_name || 'Permuta', fontSize: 8 },
-      { text: ex.exchange_for || '(nao informado)', fontSize: 8 },
+      { text: ex.exchange_for || '(não informado)', fontSize: 8 },
       { text: `R$ ${Number(ex.total).toFixed(2)}`, alignment: 'right', fontSize: 8 },
     ]);
-    content.push({ text: 'PERMUTAS (NAO INCLUI EM VENDAS)', style: 'sectionTitle', margin: [0, 20, 0, 5], color: '#d97706' });
+    content.push({ text: 'PERMUTAS (NÃO INCLUI EM VENDAS)', style: 'sectionTitle', margin: [0, 20, 0, 5], color: '#d97706' });
     content.push({
       style: 'table',
       table: {
@@ -174,7 +174,7 @@ function generatePDF(data, isPeriodView, financialSummary, reportPeriod) {
           {
             width: 'auto',
             stack: [
-              { text: 'Ticket Medio', fontSize: 9, color: '#555' },
+              { text: 'Ticket Médio', fontSize: 9, color: '#555' },
               { text: `R$ ${Number(data.ticketAverage).toFixed(2)}`, fontSize: 16, bold: true, alignment: 'center', color: '#16a34a', margin: [0, 5, 0, 15] },
             ],
             alignment: 'center',
@@ -211,7 +211,7 @@ function generatePDF(data, isPeriodView, financialSummary, reportPeriod) {
     }
 
     if (data.peakHours && data.peakHours.length > 0) {
-      content.push({ text: 'Horarios de Pico', fontSize: 10, bold: true, margin: [0, 15, 0, 5] });
+      content.push({ text: 'Horários de Pico', fontSize: 10, bold: true, margin: [0, 15, 0, 5] });
       content.push({
         style: 'table',
         table: {

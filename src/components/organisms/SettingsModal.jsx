@@ -14,6 +14,9 @@ import { formatPromotionLabel } from '../../utils/promotion.js';
 
 export default function SettingsModal({ isOpen, onClose, settingsTab, setSettingsTab, safeCatalog, categories, newCatName, setNewCatName, newProd, setNewProd, newPromo, setNewPromo, users, newUser, setNewUser, inventory, inventoryForm, setInventoryForm, selectedInventoryItem, setSelectedInventoryItem, inventoryMovements, loadInventoryMovements, financialAccounts, financialForm, setFinancialForm, financialFilter, setFinancialFilter, clients, clientForm, setClientForm, selectedClientOrders, promotions, pwdForm, setPwdForm, syncDB, loadUsers, loadInventory, loadFinancialAccounts, loadClients, loadClientOrders, runWithAuth, getIPC, printerConfig, setPrinterConfig, savePrinterConfig, currentUser, ifoodConfig, setIfoodConfig, handleTestIfoodConnection, isTestingIfood, ifoodConnectionStatus, saveIfoodConfig }) {
   const addToast = useToastStore(s => s.addToast);
+  const [showAdjustModal, setShowAdjustModal] = useState(false);
+  const [adjustInventoryId, setAdjustInventoryId] = useState(null);
+  const [adjustDelta, setAdjustDelta] = useState('0');
   const [showResetAdminModal, setShowResetAdminModal] = useState(false);
   const [resetAdminForm, setResetAdminForm] = useState({ adminId: '', password: '', confirm: '' });
   const [resetAdminError, setResetAdminError] = useState('');
@@ -46,6 +49,21 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
         }
       });
     }
+  };
+
+  const handleAdjustConfirm = () => {
+    const ipc = getIPC();
+    if (!ipc || !adjustInventoryId) return;
+    const delta = parseFloat(adjustDelta);
+    if (isNaN(delta)) return;
+    ipc.invoke('inventory:adjust', { inventoryId: adjustInventoryId, delta, reason: 'Ajuste manual' })
+      .then(() => {
+        loadInventory();
+        setShowAdjustModal(false);
+        setAdjustInventoryId(null);
+        setAdjustDelta('0');
+      })
+      .catch(err => console.error(err));
   };
 
   const handleAddCategory = () => {
@@ -331,50 +349,7 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                       </div>
                       <div className="flex gap-2">
                         <button onClick={() => { setSelectedInventoryItem(inv); loadInventoryMovements(inv.id); }} className="p-2 bg-info/10 hover:bg-info/20 text-info rounded-lg transition-colors" title="Ver Histórico"><FileText size={16} /></button>
-                        <button onClick={() => {
-                          const ipc = getIPC();
-                          if(ipc && window.confirm(`Ajustar estoque de ${inv.product_name}?`)) {
-                            const deltaInput = document.createElement('input');
-                            deltaInput.type = 'number';
-                            deltaInput.placeholder = 'Quantidade a adicionar (positivo) ou remover (negativo)';
-                            deltaInput.value = '0';
-                            deltaInput.className = 'bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm w-full';
-                            
-                            const modal = document.createElement('div');
-                            modal.className = 'fixed inset-0 bg-surface z-[901] flex items-center justify-center p-6';
-                            modal.innerHTML = `
-                              <div class="bg-card w-full max-w-xs rounded-2xl border border-border p-6 shadow-modal">
-                                <h3 class="text-xs font-bold uppercase text-muted mb-4">Ajustar Estoque</h3>
-                                <div class="space-y-4">
-                                  <div>
-                                    <label class="text-[10px] text-muted font-bold uppercase block mb-1">Quantidade</label>
-                                    ${deltaInput.outerHTML}
-                                  </div>
-                                  <div class="flex gap-2">
-                                    <button onclick="this.closest('.fixed').style.display='none'" class="flex-1 bg-surface-light hover:bg-border py-2 rounded-lg font-bold text-[10px] uppercase">Cancelar</button>
-                                    <button id="confirmBtn" class="flex-1 bg-warning hover:bg-warning py-2 rounded-lg font-bold text-[10px] uppercase text-white">Confirmar</button>
-                                  </div>
-                                </div>
-                              </div>
-                            `;
-                            
-                            document.body.appendChild(modal);
-                            
-                            const confirmBtn = modal.querySelector('#confirmBtn');
-                            confirmBtn.onclick = () => {
-                              const inputEl = modal.querySelector('input');
-                              const delta = parseFloat(inputEl ? inputEl.value : '0');
-                              if(!isNaN(delta)) {
-                                ipc.invoke('inventory:adjust', { inventoryId: inv.id, delta: delta, reason: 'Ajuste manual' })
-                                  .then(() => {
-                                    loadInventory();
-                                    document.body.removeChild(modal);
-                                  })
-                                  .catch(err => console.error(err));
-                              }
-                            };
-                          }
-                        }} className="p-2 bg-warning/10 hover:bg-warning/20 text-warning rounded-lg transition-colors" title="Ajustar Estoque"><ArrowUpCircle size={16} /></button>
+                        <button onClick={() => { setAdjustInventoryId(inv.id); setAdjustDelta('0'); setShowAdjustModal(true); }} className="p-2 bg-warning/10 hover:bg-warning/20 text-warning rounded-lg transition-colors" title="Ajustar Estoque"><ArrowUpCircle size={16} /></button>
                       </div>
                     </div>
                   ))}
@@ -602,6 +577,33 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                 </div>
               </div>
             </>
+          )}
+          {showAdjustModal && adjustInventoryId && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+              <div className="bg-card w-full max-w-xs rounded-2xl border border-border p-6 shadow-modal">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xs font-bold uppercase text-muted">Ajustar Estoque</h3>
+                  <button onClick={() => { setShowAdjustModal(false); setAdjustInventoryId(null); setAdjustDelta('0'); }} className="p-1 hover:bg-danger/10 rounded text-muted hover:text-danger transition-all"><X size={16} /></button>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-[10px] text-muted font-bold uppercase block mb-1">Quantidade</label>
+                    <input
+                      type="number"
+                      value={adjustDelta}
+                      onChange={e => setAdjustDelta(e.target.value)}
+                      placeholder="Quantidade a adicionar (positivo) ou remover (negativo)"
+                      className="bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm w-full"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => { setShowAdjustModal(false); setAdjustInventoryId(null); setAdjustDelta('0'); }} className="flex-1 bg-surface-light hover:bg-border py-2 rounded-lg font-bold text-[10px] uppercase">Cancelar</button>
+                    <button onClick={handleAdjustConfirm} className="flex-1 bg-warning hover:bg-warning py-2 rounded-lg font-bold text-[10px] uppercase text-white">Confirmar</button>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
           {showResetAdminModal && (
             <div className="fixed inset-0 bg-surface/80 z-[1200] flex items-center justify-center p-6 animate-in fade-in">
