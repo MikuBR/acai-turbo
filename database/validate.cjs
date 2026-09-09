@@ -395,11 +395,6 @@ const validators = {
     return { success: true, data: { level: data.level, message: data.message, meta: data.meta || {} } };
   },
 
-  'clients:get-by-phone': (phone) => {
-    if (!phone || typeof phone !== 'string' || phone.trim().length < 8) return { success: false, error: 'Telefone inválido' };
-    return { success: true, data: phone.trim() };
-  },
-
   'auth:reset-admin-password': (data) => {
     if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
     if (!data.adminId || isNaN(Number(data.adminId))) return { success: false, error: 'ID do administrador inválido' };
