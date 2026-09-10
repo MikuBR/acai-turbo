@@ -414,6 +414,20 @@ const validators = {
     if (isNaN(Number(data.closingAmount)) || Number(data.closingAmount) < 0) return { success: false, error: 'Valor de fechamento inválido' };
     return { success: true, data: { closingAmount: Number(data.closingAmount) } };
   },
+  'reports:store-info': () => ({ success: true, data: null }),
+  'reports:inventory-for-report': () => ({ success: true, data: null }),
+  'reports:all-orders-for-period': (data) => {
+    if (!data || typeof data !== 'object') return { success: true, data: {} };
+    return { success: true, data };
+  },
+  'reports:promotions-for-period': (data) => {
+    if (!data || typeof data !== 'object') return { success: true, data: {} };
+    return { success: true, data };
+  },
+  'reports:cash-sessions': (data) => {
+    if (!data || typeof data !== 'object') return { success: true, data: {} };
+    return { success: true, data };
+  },
   'reports:daily': () => ({ success: true, data: null }),
   'promotions:get': () => ({ success: true, data: null }),
   'promotions:get-active': () => ({ success: true, data: null }),

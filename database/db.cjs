@@ -405,7 +405,19 @@ function getCashSessions(startDate = null, endDate = null) {
 }
 
 function getDailyReport() {
-  const sales = db.prepare(`SELECT payment_method, is_delivery, SUM(total) as total_amount FROM orders WHERE date(created_at, 'localtime') = date('now', 'localtime') AND is_exchange = 0 GROUP BY payment_method, is_delivery`).all();
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  const endOfDay = `${today} 23:59:59`;
+
+  const sales = db.prepare(`
+    SELECT payment_method, is_delivery, SUM(total) as total_amount, COUNT(*) as order_count
+    FROM orders
+    WHERE datetime(created_at, 'localtime') >= datetime(?, 'localtime')
+      AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
+      AND is_exchange = 0
+    GROUP BY payment_method, is_delivery
+  `).all(today, endOfDay);
+
   const exchanges = db.prepare(`
     SELECT id, customer_name, exchange_for, total, created_at
     FROM orders
@@ -413,13 +425,75 @@ function getDailyReport() {
     ORDER BY created_at DESC
   `).all();
 
-  // Carregar itens para cada permuta
-  const getItems = db.prepare("SELECT * FROM order_items WHERE order_id = ?");
+  const getItems = db.prepare('SELECT * FROM order_items WHERE order_id = ?');
   const exchangesWithItems = exchanges.map(e => ({ ...e, items: getItems.all(e.id) }));
 
-  const movements = db.prepare(`SELECT id, type, amount as total_amount, description, created_at FROM cash_movements WHERE date(created_at, 'localtime') = date('now', 'localtime') ORDER BY created_at DESC`).all();
-  const topProducts = db.prepare(`SELECT product_name, COUNT(*) as qty, SUM(price) as total_revenue, AVG(price) as avg_price FROM order_items JOIN orders ON order_items.order_id = orders.id WHERE date(orders.created_at, 'localtime') = date('now', 'localtime') AND orders.is_exchange = 0 GROUP BY product_name ORDER BY qty DESC LIMIT 5`).all();
-  return { sales, exchanges: exchangesWithItems, movements, topProducts };
+  const movements = db.prepare(`
+    SELECT id, type, amount as total_amount, description, created_at
+    FROM cash_movements
+    WHERE date(created_at, 'localtime') = date('now', 'localtime')
+    ORDER BY created_at DESC
+  `).all();
+
+  const topProducts = db.prepare(`
+    SELECT product_name, COUNT(*) as qty, SUM(price) as total_revenue, AVG(price) as avg_price
+    FROM order_items JOIN orders ON order_items.order_id = orders.id
+    WHERE datetime(orders.created_at, 'localtime') >= datetime(?, 'localtime')
+      AND datetime(orders.created_at, 'localtime') <= datetime(?, 'localtime')
+      AND orders.is_exchange = 0
+    GROUP BY product_name
+    ORDER BY qty DESC
+    LIMIT 5
+  `).all(today, endOfDay);
+
+  const ticketAvg = db.prepare(`
+    SELECT AVG(total) as avg_ticket
+    FROM orders
+    WHERE datetime(created_at, 'localtime') >= datetime(?, 'localtime')
+      AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
+      AND is_exchange = 0
+  `).get(today, endOfDay);
+
+  const peakHours = db.prepare(`
+    SELECT strftime('%H', created_at) as hour, COUNT(*) as order_count, SUM(total) as total_amount
+    FROM orders
+    WHERE datetime(created_at, 'localtime') >= datetime(?, 'localtime')
+      AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
+      AND is_exchange = 0
+    GROUP BY hour
+    ORDER BY order_count DESC
+  `).all(today, endOfDay);
+
+  const deliveryStats = db.prepare(`
+    SELECT
+      SUM(CASE WHEN is_delivery = 1 THEN 1 ELSE 0 END) as deliveries,
+      SUM(CASE WHEN is_delivery = 0 THEN 1 ELSE 0 END) as pickups,
+      SUM(CASE WHEN is_delivery = 1 THEN total ELSE 0 END) as delivery_total,
+      SUM(CASE WHEN is_delivery = 0 THEN total ELSE 0 END) as pickup_total
+    FROM orders
+    WHERE datetime(created_at, 'localtime') >= datetime(?, 'localtime')
+      AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
+      AND is_exchange = 0
+  `).get(today, endOfDay);
+
+  const cashSessions = db.prepare(`
+    SELECT cs.*, u.full_name as user_full_name
+    FROM cash_sessions cs
+    LEFT JOIN users u ON cs.user_id = u.id
+    WHERE date(cs.opened_at) = date('now', 'localtime')
+    ORDER BY cs.opened_at DESC
+  `).all();
+
+  return {
+    sales,
+    exchanges: exchangesWithItems,
+    movements,
+    topProducts,
+    peakHours,
+    ticketAverage: ticketAvg?.avg_ticket || 0,
+    deliveryStats,
+    cashSessions,
+  };
 }
 
 function getReportByPeriod(startDate, endDate) {
@@ -484,7 +558,28 @@ function getReportByPeriod(startDate, endDate) {
     AND is_exchange = 0
   `).get(startDate, endDateTime);
 
-  return { sales, exchanges: exchangesWithItems, movements, topProducts, peakHours, ticketAverage: ticketAverage?.avg_ticket || 0 };
+  const deliveryStats = db.prepare(`
+    SELECT
+      SUM(CASE WHEN is_delivery = 1 THEN 1 ELSE 0 END) as deliveries,
+      SUM(CASE WHEN is_delivery = 0 THEN 1 ELSE 0 END) as pickups,
+      SUM(CASE WHEN is_delivery = 1 THEN total ELSE 0 END) as delivery_total,
+      SUM(CASE WHEN is_delivery = 0 THEN total ELSE 0 END) as pickup_total
+    FROM orders
+    WHERE datetime(created_at, 'localtime') >= datetime(?, 'localtime')
+      AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
+      AND is_exchange = 0
+  `).all(startDate, endDateTime);
+
+  const cashSessions = db.prepare(`
+    SELECT cs.*, u.full_name as user_full_name
+    FROM cash_sessions cs
+    LEFT JOIN users u ON cs.user_id = u.id
+    WHERE datetime(cs.opened_at, 'localtime') >= datetime(?, 'localtime')
+      AND datetime(cs.opened_at, 'localtime') <= datetime(?, 'localtime')
+    ORDER BY cs.opened_at DESC
+  `).all(startDate, endDateTime);
+
+  return { sales, exchanges: exchangesWithItems, movements, topProducts, peakHours, ticketAverage: ticketAverage?.avg_ticket || 0, deliveryStats, cashSessions };
 }
 
 // --- EXPORTAÇÕES DE PROMOÇÕES ---
@@ -923,6 +1018,73 @@ const getProductPriceHistory = (productId) => {
   return db.prepare('SELECT * FROM product_price_history WHERE product_id = ? ORDER BY changed_at DESC LIMIT 20').all(productId);
 };
 
+// --- FUNÇÕES AUXILIARES PARA RELATÓRIOS EXTENDIDOS ---
+const getStoreInfo = () => {
+  const name = db.prepare('SELECT value FROM config WHERE key = ?').get('store_name')?.value;
+  const cnpj = db.prepare('SELECT value FROM config WHERE key = ?').get('store_cnpj')?.value;
+  const ie = db.prepare('SELECT value FROM config WHERE key = ?').get('store_ie')?.value;
+  const address = db.prepare('SELECT value FROM config WHERE key = ?').get('store_address')?.value;
+  return { name: name || 'Açaí Wave', cnpj: cnpj || null, ie: ie || null, address: address || null };
+};
+
+const getInventoryForReport = () => {
+  const inventory = db.prepare(`
+    SELECT i.*, p.name as product_name, p.category
+    FROM inventory i
+    JOIN products p ON i.product_id = p.id
+    ORDER BY p.name ASC
+  `).all();
+
+  const lowStock = db.prepare(`
+    SELECT i.*, p.name as product_name, p.category
+    FROM inventory i
+    JOIN products p ON i.product_id = p.id
+    WHERE i.quantity <= i.min_quantity
+    ORDER BY i.quantity ASC
+  `).all();
+
+  const inventoryMovements = db.prepare(`
+    SELECT im.*, p.name as product_name
+    FROM inventory_movements im
+    JOIN inventory i ON im.inventory_id = i.id
+    JOIN products p ON i.product_id = p.id
+    ORDER BY im.created_at DESC
+    LIMIT 50
+  `).all();
+
+  return { inventory, lowStock, inventoryMovements };
+};
+
+const getAllOrdersForPeriod = (startDate, endDate) => {
+  const endDateTime = `${endDate} 23:59:59`;
+  const orders = db.prepare(`
+    SELECT * FROM orders
+    WHERE datetime(created_at, 'localtime') >= datetime(?, 'localtime')
+      AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
+    ORDER BY created_at DESC
+    LIMIT 500
+  `).all(startDate, endDateTime);
+
+  const getItems = db.prepare('SELECT * FROM order_items WHERE order_id = ?');
+  const getPayments = db.prepare('SELECT * FROM order_payments WHERE order_id = ?');
+  return orders.map(o => ({
+    ...o,
+    items: getItems.all(o.id),
+    payments: getPayments.all(o.id),
+  }));
+};
+
+const getPromotionsForPeriod = (startDate, endDate) => {
+  const endDateTime = `${endDate} 23:59:59`;
+  return db.prepare(`
+    SELECT * FROM promotions
+    WHERE is_active = 1
+      AND datetime(start_date) <= datetime(?, 'localtime')
+      AND datetime(end_date) >= datetime(?, 'localtime')
+    ORDER BY created_at DESC
+  `).all(startDate, endDateTime);
+};
+
 module.exports = {
   db,
   getMigrationError,
@@ -943,8 +1105,10 @@ module.exports = {
   getClients, addClient, updateClient, deleteClient, getClientById, getClientByPhone, getClientOrders, addClientOrder,
   addIfoodPendingOrder, getIfoodPendingOrders, getIfoodPendingOrderByOrderId,
   updateIfoodPendingOrderStatus, removeIfoodPendingOrder, countIfoodPendingOrders,
-  getMigrationError,
-  db,
+  getStoreInfo,
+  getPromotionsForPeriod,
+  getAllOrdersForPeriod,
+  getInventoryForReport,
   checkVerifyPasswordRateLimit,
   resetVerifyPasswordRateLimit,
   recordVerifyPasswordAttempt

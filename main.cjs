@@ -19,6 +19,7 @@ const {
   addIfoodPendingOrder, getIfoodPendingOrders, getIfoodPendingOrderByOrderId,
   updateIfoodPendingOrderStatus, removeIfoodPendingOrder, countIfoodPendingOrders,
   getMigrationError,
+  getStoreInfo, getInventoryForReport, getAllOrdersForPeriod, getPromotionsForPeriod,
   db,
   checkVerifyPasswordRateLimit,
   resetVerifyPasswordRateLimit,
@@ -559,9 +560,22 @@ createHandler('cash:preview-close', async (data) => {
 createHandler('reports:daily', async () => ({ data: getDailyReport() }));
 createHandler('reports:by-period', async ({ startDate, endDate }) => ({ data: getReportByPeriod(startDate, endDate) }));
 
-// ============================================================
-// DIÁLOGO - IPC Handlers
-// ============================================================
+// --- Novos endpoints para relatório expandido ---
+createHandler('reports:store-info', async () => ({ data: getStoreInfo() }));
+createHandler('reports:inventory-for-report', async () => ({ data: getInventoryForReport() }));
+createHandler('reports:all-orders-for-period', async ({ startDate, endDate }) => ({
+  data: getAllOrdersForPeriod(startDate, endDate)
+}));
+createHandler('reports:promotions-for-period', async ({ startDate, endDate }) => ({
+  data: getPromotionsForPeriod(startDate, endDate)
+}));
+
+// --- Reports cash sessions (period-filtered, already exported as getCashSessions) ---
+
+// --- New: cash sessions for reports (period-filtered) ---
+createHandler('reports:cash-sessions', async (params) => ({
+  data: getCashSessions(params?.startDate, params?.endDate)
+}));
 ipcMain.handle('dialog:save-pdf', async (event, { data, defaultName }) => {
   try {
     requireRole('manager');
@@ -569,7 +583,7 @@ ipcMain.handle('dialog:save-pdf', async (event, { data, defaultName }) => {
       defaultPath: defaultName || 'relatorio.pdf',
       filters: [{ name: 'PDF', extensions: ['pdf'] }],
     });
-    if (result.canceled) return { success: false };
+    if (result.canceled) return { success: false, canceled: true };
     const buffer = Buffer.from(data, 'base64');
     fs.writeFileSync(result.filePath, buffer);
     return { success: true, path: result.filePath };

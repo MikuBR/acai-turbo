@@ -30,8 +30,11 @@ export default function ReportsScreen() {
         ipc.invoke('reports:daily'),
         ipc.invoke('orders:get-history'),
       ]).then(([daily, history]) => {
-        if (daily?.success) { setReportData(daily.data); reportsLog.info('reports loaded'); }
-        else addToast('Erro ao carregar relatório diário', 'error');
+        if (daily?.success) {
+          const merged = { ...daily.data };
+          setReportData(merged);
+          reportsLog.info('reports loaded');
+        } else addToast('Erro ao carregar relatório diário', 'error');
         if (history?.success) setOrdersHistory(history.data);
       }).finally(() => clearLoading());
       const today = new Date().toISOString().split('T')[0];
@@ -43,9 +46,26 @@ export default function ReportsScreen() {
     const ipc = getIPC();
     if (ipc && reportPeriod.startDate && reportPeriod.endDate) {
       setLoading('Carregando relatório...');
-      ipc.invoke('reports:by-period', reportPeriod).then(res => {
-        if (res && res.success) setAdvancedReportData(res.data);
-        else addToast('Erro ao carregar relatório do período', 'error');
+      Promise.all([
+        ipc.invoke('reports:by-period', reportPeriod),
+        ipc.invoke('reports:store-info'),
+        ipc.invoke('reports:inventory-for-report'),
+        ipc.invoke('reports:all-orders-for-period', reportPeriod),
+        ipc.invoke('reports:promotions-for-period', reportPeriod),
+        ipc.invoke('reports:cash-sessions', reportPeriod),
+      ]).then(([period, storeInfo, inventory, allOrders, promotions, cashSessions]) => {
+        if (period?.success) {
+          const merged = { ...period.data };
+          if (storeInfo?.success) merged.storeInfo = storeInfo.data;
+          if (inventory?.success) merged.inventory = inventory.data?.inventory || [];
+          merged.lowStock = inventory?.data?.lowStock || [];
+          if (allOrders?.success) merged.allOrders = allOrders.data;
+          if (promotions?.success) merged.promotions = promotions.data;
+          if (cashSessions?.success && cashSessions.data?.length) {
+            merged.cashSessions = cashSessions.data;
+          }
+          setAdvancedReportData(merged);
+        } else addToast('Erro ao carregar relatório do período', 'error');
       }).finally(() => clearLoading());
       loadFinancialSummary(reportPeriod.startDate, reportPeriod.endDate);
     }

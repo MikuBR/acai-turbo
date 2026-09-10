@@ -1,7 +1,7 @@
 import { X, Trash2, ArrowUpCircle, ArrowDownCircle, DollarSign, FileDown } from 'lucide-react';
 import useToastStore from '../../store/toastStore';
 
-function generatePDF(data, isPeriodView, financialSummary, reportPeriod) {
+function generatePDF(data, isPeriodView, financialSummary, reportPeriod, storeInfo, allOrders, promotions) {
   const salesTotal = (data?.sales || []).reduce((a, c) => a + Number(c.total_amount || 0), 0);
   const entradasTotal = (data?.movements || []).reduce((a, m) => m.type === 'ENTRADA' ? a + m.total_amount : a, 0);
   const sangriasTotal = (data?.movements || []).reduce((a, m) => m.type === 'SAIDA' ? a + m.total_amount : a, 0);
@@ -235,6 +235,111 @@ function generatePDF(data, isPeriodView, financialSummary, reportPeriod) {
     }
   }
 
+  // SEÇÃO 5: SESSÕES DE CAIXA
+  (data?.cashSessions || []).length > 0 && (() => {
+    content.push({ text: '5. SESSÕES DE CAIXA', style: 'sectionTitle', margin: [0, 20, 0, 5] });
+    const sessionRows = data.cashSessions.map(cs => [
+      { text: cs.opened_at ? new Date(cs.opened_at + 'Z').toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-', fontSize: 8 },
+      { text: `R$ ${Number(cs.opening_amount || 0).toFixed(2)}`, alignment: 'right', fontSize: 8 },
+      cs.closed_at
+        ? { text: `R$ ${Number(cs.closing_amount || 0).toFixed(2)}`, alignment: 'right', fontSize: 8, color: (cs.difference !== undefined && Math.abs(cs.difference) > 0.01) ? '#dc2626' : '#16a34a' }
+        : { text: 'ABERTO', alignment: 'right', fontSize: 8, color: '#d97706', bold: true },
+      cs.user_full_name || '-',
+      cs.difference !== undefined && Math.abs(cs.difference) > 0.01
+        ? { text: `DÉBITO: R$ ${Number(cs.difference).toFixed(2)}`, alignment: 'right', fontSize: 8, color: '#dc2626', bold: true }
+        : '-',
+    ]);
+    content.push({
+      style: 'table',
+      table: {
+        headerRows: 1,
+        widths: ['auto', 'auto', 'auto', '*', 'auto'],
+        body: [
+          [
+            { text: 'Abertura', style: 'tableHeader', fontSize: 8 },
+            { text: 'Abertura', style: 'tableHeader', alignment: 'right', fontSize: 8 },
+            { text: 'Fechamento', style: 'tableHeader', alignment: 'right', fontSize: 8 },
+            { text: 'Operador', style: 'tableHeader', fontSize: 8 },
+            { text: 'Diferença', style: 'tableHeader', alignment: 'right', fontSize: 8 },
+          ],
+          ...sessionRows,
+        ],
+      },
+      layout: 'lightHorizontalLines',
+    });
+  })();
+
+  // SEÇÃO 6: DADOS DA LOJA
+  content.push({ text: '6. DADOS DA LOJA', style: 'sectionTitle', margin: [0, 20, 0, 5] });
+  const si = storeInfo || {};
+  content.push({
+    style: 'table',
+    table: {
+      headerRows: 0,
+      body: [
+        [{ text: 'Loja:', bold: true }, si.name || 'Açaí Wave'],
+        [{ text: 'CNPJ:', bold: true }, si.cnpj || '-'],
+        [{ text: 'IE:', bold: true }, si.ie || '-'],
+        [{ text: 'Endereço:', bold: true }, si.address || '-'],
+        [{ text: 'Gerado em:', bold: true }, `${dateStr} as ${timeStr}`],
+      ],
+    },
+    layout: 'lightHorizontalLines',
+    margin: [0, 0, 0, 15],
+  });
+
+  // SEÇÃO 7: PROMOÇÕES ATIVAS NO PERÍODO
+  (promotions || []).length > 0 && (() => {
+    content.push({ text: '7. PROMOÇÕES ATIVAS', style: 'sectionTitle', margin: [0, 20, 0, 5] });
+    content.push({
+      style: 'table',
+      table: {
+        headerRows: 1,
+        widths: ['*', 'auto', '*', 'auto'],
+        body: [
+          [
+            { text: 'Nome', style: 'tableHeader' },
+            { text: 'Valor', style: 'tableHeader', alignment: 'right' },
+            { text: 'Aplica-se a', style: 'tableHeader' },
+            { text: 'Período', style: 'tableHeader', fontSize: 8 },
+          ],
+          ...promotions.map(p => [
+            p.name,
+            { text: `${p.type === 'percentage' ? '%' : 'R$'} ${Number(p.value).toFixed(p.type === 'percentage' ? 0 : 2)}`, alignment: 'right' },
+            p.applies_to,
+            { text: `${p.start_date} → ${p.end_date}`, fontSize: 8 },
+          ]),
+        ],
+      },
+      layout: 'lightHorizontalLines',
+    });
+  })();
+
+  // SEÇÃO 8: RESUMO GERAL DE PEDIDOS
+  (allOrders && allOrders.length > 0) && (() => {
+    const totalPedidos = allOrders.length;
+    const totalValor = allOrders.reduce((a, o) => a + Number(o.total || 0), 0);
+    const totalItens = allOrders.reduce((a, o) => a + (o.items ? o.items.length : 0), 0);
+    const entregas = allOrders.filter(o => o.is_delivery).length;
+    const retiradas = allOrders.filter(o => !o.is_delivery).length;
+
+    content.push({ text: '8. RESUMO GERAL DE PEDIDOS', style: 'sectionTitle', margin: [0, 20, 0, 5] });
+    content.push({
+      style: 'table',
+      table: {
+        headerRows: 0,
+        body: [
+          [{ text: 'Total de Pedidos', bold: true }, { text: String(totalPedidos), alignment: 'right' }],
+          [{ text: 'Total em Vendas', bold: true }, { text: `R$ ${totalValor.toFixed(2)}`, alignment: 'right' }],
+          [{ text: 'Total de Itens', bold: true }, { text: String(totalItens), alignment: 'right' }],
+          [{ text: 'Entregas', bold: true }, { text: String(entregas), alignment: 'right' }],
+          [{ text: 'Retiradas', bold: true }, { text: String(retiradas), alignment: 'right' }],
+        ],
+      },
+      layout: 'lightHorizontalLines',
+    });
+  })();
+
   content.push({ text: `Gerado em: ${dateStr} as ${timeStr}`, style: 'footerNote', margin: [0, 30, 0, 0] });
   content.push({ text: 'Acai Wave - PDV', style: 'footerNote' });
 
@@ -291,7 +396,26 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
     const ipc = getIPC();
     if (!ipc) { addToast('Sem conexao com o sistema', 'error'); return; }
 
-    const docDef = generatePDF(data, isPeriodView, financialSummary, reportPeriod);
+    // Buscar dados extras necessários para o PDF expandido
+    const [resStoreInfo, resOrders, resPromos] = await Promise.all([
+      ipc.invoke('reports:store-info'),
+      ipc.invoke('reports:all-orders-for-period', reportPeriod),
+      ipc.invoke('reports:promotions-for-period', reportPeriod),
+    ]);
+
+    const storeInfo = resStoreInfo?.data || {};
+    const allOrders = resOrders?.data || [];
+    const promotions = resPromos?.data || [];
+
+    const docDef = generatePDF(
+      data,
+      isPeriodView,
+      financialSummary,
+      reportPeriod,
+      storeInfo,
+      allOrders,
+      promotions,
+    );
     const now = new Date();
     const datePart = now.toISOString().split('T')[0];
     const defaultName = `relatorio-financeiro-${datePart}.pdf`;
