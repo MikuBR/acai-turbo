@@ -119,8 +119,7 @@
       "uninstallerIcon": "build/installer-icon.ico",
       "installerHeader": "build/installer-header.bmp",
       "include": "build/custom.nsh",
-      "license": "build/EULA.txt",
-      "artifactName": "Açaí Wave Setup ${version}.exe"
+      "license": "build/EULA.txt"
     },
     "publish": {
       "provider": "github",
