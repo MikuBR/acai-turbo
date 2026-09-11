@@ -36,7 +36,7 @@ export default function AppLayout() {
   const { setLoading, clearLoading } = useLoadingStore();
   const { currentUser, authToken, setAuthTime, isAuthValid, logout: storeLogout } = useAuthStore();
 
-  const { tables, activeTableId, setActiveTable, addTable, addItemToActiveTable, removeItemFromActiveTable, setCatalog } = useStore();
+  const { tables, activeTableId, setActiveTable, addTable, addItemToActiveTable, removeItemFromActiveTable, setCatalog, deleteTable } = useStore();
 
   const catalogLog = logger.withScope('catalog');
   const ifoodLog = logger.withScope('ifood');
@@ -56,7 +56,6 @@ export default function AppLayout() {
 
   // Bootstrap: load initial data on mount
   useEffect(() => {
-    localStorage.removeItem('authToken');
     const ipc = getIPC();
     if (!ipc) return;
 
@@ -183,7 +182,7 @@ export default function AppLayout() {
 
   return (
     <div className="flex h-screen bg-surface text-primary font-sans overflow-hidden select-none">
-      {/* 1. SIDEBAR - COMANDAS */}
+      {/* 1. SIDEBAR - COMANDOS */}
       <OrderSidebar
         tables={safeTables}
         activeTableId={activeTableId}
@@ -193,6 +192,7 @@ export default function AppLayout() {
         onOpenSettings={() => runWithManagerAuth(() => navigate('/settings'))}
         onOpenCash={() => runWithManagerAuth(() => setShowCashModal(true))}
         onLogout={handleLogout}
+        onDeleteTable={(id) => deleteTable(id)}
         ifoodConnected={!!ifoodConfig.enabled}
         ifoodUnreadCount={ifoodUnreadCount}
       />
@@ -207,6 +207,7 @@ export default function AppLayout() {
         activeTable={activeTable}
         onRemoveItem={removeItemFromActiveTable}
         onCheckout={() => navigate('/checkout')}
+        onDeleteTable={(id) => deleteTable(id)}
         ifoodOrderId={activeTable?.ifoodOrderId || null}
         onIfoodAction={handleIfoodAction}
       />

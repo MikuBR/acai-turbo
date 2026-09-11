@@ -987,6 +987,7 @@ const getPromotionsForPeriod = (startDate, endDate) => {
 module.exports = {
   db,
   getMigrationError,
+  getDbPath,
   getCategories, addCategory, deleteCategory,
   getProducts, addProduct, updateProduct, deleteProduct,
   getConfig, updateConfig, getAllConfigs, getProductPriceHistory,
