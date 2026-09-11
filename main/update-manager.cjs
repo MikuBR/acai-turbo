@@ -14,7 +14,7 @@ const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
 const { getDbPath } = require('../database/db.cjs');
-const logger = require('../database/logger.cjs').getLogger();
+const logger = require('../database/logger.cjs').logger();
 
 let isUpdateDownloaded = false;
 let downloadProgress = null;
