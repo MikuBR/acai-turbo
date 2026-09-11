@@ -570,7 +570,6 @@ createHandler('reports:by-period', async ({ startDate, endDate }) => ({ data: ge
 
 // --- Novos endpoints para relatório expandido ---
 createHandler('reports:store-info', async () => ({ data: getStoreInfo() }));
-createHandler('reports:inventory-for-report', async () => ({ data: getInventoryForReport() }));
 createHandler('reports:all-orders-for-period', async ({ startDate, endDate }) => ({
   data: getAllOrdersForPeriod(startDate, endDate)
 }));

@@ -23,7 +23,6 @@ const ALLOWED_CHANNELS = {
   'reports:daily': true,
   'reports:by-period': true,
   'reports:store-info': true,
-  'reports:inventory-for-report': true,
   'reports:all-orders-for-period': true,
   'reports:promotions-for-period': true,
   'reports:cash-sessions': true,

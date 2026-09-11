@@ -388,7 +388,6 @@ const validators = {
     return { success: true, data: { closingAmount: Number(data.closingAmount) } };
   },
   'reports:store-info': () => ({ success: true, data: null }),
-  'reports:inventory-for-report': () => ({ success: true, data: null }),
   'reports:all-orders-for-period': (data) => {
     if (!data || typeof data !== 'object') return { success: true, data: {} };
     return { success: true, data };
