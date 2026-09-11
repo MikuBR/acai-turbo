@@ -50,11 +50,6 @@ const ALLOWED_CHANNELS = {
 
   'audit:get-logs': true,
 
-  'inventory:add': true,
-  'inventory:update-quantity': true,
-  'inventory:adjust': true,
-  'inventory:get-movements': true,
-
   'financial:get-accounts': true,
   'financial:add-account': true,
   'financial:update-account': true,
@@ -155,12 +150,6 @@ const api = {
   },
   audit: {
     getLogs: (...args) => safeInvoke('audit:get-logs', ...args),
-  },
-  inventory: {
-    add: (...args) => safeInvoke('inventory:add', ...args),
-    updateQuantity: (...args) => safeInvoke('inventory:update-quantity', ...args),
-    adjust: (...args) => safeInvoke('inventory:adjust', ...args),
-    getMovements: (...args) => safeInvoke('inventory:get-movements', ...args),
   },
   financial: {
     getAccounts: (...args) => safeInvoke('financial:get-accounts', ...args),

@@ -155,6 +155,134 @@ describe('validateIPC', () => {
       const result = validateIPC('cash:register', { type: 'ENTRADA', amount: 50, description: '' })
       expect(result.success).toBe(false)
     })
+
+    it('accepts SAIDA type', () => {
+      const result = validateIPC('cash:register', { type: 'SAIDA', amount: 50, description: 'Compras' })
+      expect(result.success).toBe(true)
+    })
+  })
+
+  describe('cash:open', () => {
+    it('accepts valid opening amount', () => {
+      const result = validateIPC('cash:open', { openingAmount: 1000 })
+      expect(result.success).toBe(true)
+      expect(result.data.openingAmount).toBe(1000)
+    })
+
+    it('accepts zero opening amount', () => {
+      const result = validateIPC('cash:open', { openingAmount: 0 })
+      expect(result.success).toBe(true)
+    })
+
+    it('rejects negative opening amount', () => {
+      const result = validateIPC('cash:open', { openingAmount: -50 })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects missing openingAmount', () => {
+      const result = validateIPC('cash:open', {})
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects null data', () => {
+      const result = validateIPC('cash:open', null)
+      expect(result.success).toBe(false)
+    })
+  })
+
+  describe('cash:close', () => {
+    it('accepts valid closing amount', () => {
+      const result = validateIPC('cash:close', { closingAmount: 2000 })
+      expect(result.success).toBe(true)
+      expect(result.data.closingAmount).toBe(2000)
+    })
+
+    it('accepts zero closing amount', () => {
+      const result = validateIPC('cash:close', { closingAmount: 0 })
+      expect(result.success).toBe(true)
+    })
+
+    it('rejects negative closing amount', () => {
+      const result = validateIPC('cash:close', { closingAmount: -100 })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects missing closingAmount', () => {
+      const result = validateIPC('cash:close', {})
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects null data', () => {
+      const result = validateIPC('cash:close', null)
+      expect(result.success).toBe(false)
+    })
+  })
+
+  describe('cash:get-current', () => {
+    it('always passes through (no params needed)', () => {
+      const result = validateIPC('cash:get-current', null)
+      expect(result.success).toBe(true)
+    })
+
+    it('passes with empty object', () => {
+      const result = validateIPC('cash:get-current', {})
+      expect(result.success).toBe(true)
+    })
+  })
+
+  describe('cash:get-history', () => {
+    it('accepts empty params', () => {
+      const result = validateIPC('cash:get-history', {})
+      expect(result.success).toBe(true)
+    })
+
+    it('accepts date range', () => {
+      const result = validateIPC('cash:get-history', { startDate: '2025-01-01', endDate: '2025-12-31' })
+      expect(result.success).toBe(true)
+    })
+
+    it('rejects invalid startDate type', () => {
+      const result = validateIPC('cash:get-history', { startDate: 123 })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects invalid endDate type', () => {
+      const result = validateIPC('cash:get-history', { endDate: 456 })
+      expect(result.success).toBe(false)
+    })
+  })
+
+  describe('cash:preview-close', () => {
+    it('accepts valid closing amount', () => {
+      const result = validateIPC('cash:preview-close', { closingAmount: 2000 })
+      expect(result.success).toBe(true)
+      expect(result.data.closingAmount).toBe(2000)
+    })
+
+    it('accepts zero closing amount', () => {
+      const result = validateIPC('cash:preview-close', { closingAmount: 0 })
+      expect(result.success).toBe(true)
+    })
+
+    it('rejects negative closing amount', () => {
+      const result = validateIPC('cash:preview-close', { closingAmount: -100 })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects missing closingAmount', () => {
+      const result = validateIPC('cash:preview-close', {})
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects null closingAmount', () => {
+      const result = validateIPC('cash:preview-close', { closingAmount: null })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects null data', () => {
+      const result = validateIPC('cash:preview-close', null)
+      expect(result.success).toBe(false)
+    })
   })
 
   describe('promotions:add', () => {
@@ -187,30 +315,6 @@ describe('validateIPC', () => {
 
     it('rejects invalid type', () => {
       const result = validateIPC('promotions:update', { id: 1, promo: { name: 'Off', type: 'INVALID', value: 10 } })
-      expect(result.success).toBe(false)
-    })
-  })
-
-  describe('inventory:add', () => {
-    it('accepts valid inventory data', () => {
-      const result = validateIPC('inventory:add', { productId: 1, quantity: 10, unit: 'kg', minQuantity: 2 })
-      expect(result.success).toBe(true)
-    })
-
-    it('rejects negative quantity', () => {
-      const result = validateIPC('inventory:add', { productId: 1, quantity: -1 })
-      expect(result.success).toBe(false)
-    })
-  })
-
-  describe('inventory:adjust', () => {
-    it('accepts valid adjustment', () => {
-      const result = validateIPC('inventory:adjust', { inventoryId: 1, delta: 5 })
-      expect(result.success).toBe(true)
-    })
-
-    it('rejects missing inventoryId', () => {
-      const result = validateIPC('inventory:adjust', { delta: 5 })
       expect(result.success).toBe(false)
     })
   })
@@ -549,32 +653,6 @@ describe('validateIPC', () => {
     })
     it('rejects undefined', () => {
       expect(validateIPC('users:toggle-active', undefined).success).toBe(false)
-    })
-  })
-
-  describe('inventory:update-quantity', () => {
-    it('accepts valid data', () => {
-      const result = validateIPC('inventory:update-quantity', { inventoryId: 1, newQuantity: 20 })
-      expect(result.success).toBe(true)
-    })
-    it('rejects negative quantity', () => {
-      const result = validateIPC('inventory:update-quantity', { inventoryId: 1, newQuantity: -1 })
-      expect(result.success).toBe(false)
-    })
-    it('rejects missing inventoryId', () => {
-      const result = validateIPC('inventory:update-quantity', { newQuantity: 20 })
-      expect(result.success).toBe(false)
-    })
-  })
-
-  describe('inventory:get-movements', () => {
-    it('accepts valid data', () => {
-      const result = validateIPC('inventory:get-movements', { inventoryId: 1 })
-      expect(result.success).toBe(true)
-    })
-    it('rejects missing inventoryId', () => {
-      const result = validateIPC('inventory:get-movements', {})
-      expect(result.success).toBe(false)
     })
   })
 

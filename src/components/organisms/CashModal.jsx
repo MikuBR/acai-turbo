@@ -9,6 +9,10 @@ export default function CashModal({ isOpen, onClose, getIPC }) {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  // Manual cash movement form state
+  const [movementType, setMovementType] = useState('ENTRADA');
+  const [movementAmount, setMovementAmount] = useState('');
+  const [movementDescription, setMovementDescription] = useState('');
 
   const ipc = getIPC?.();
 
@@ -19,7 +23,7 @@ export default function CashModal({ isOpen, onClose, getIPC }) {
       const currentRes = await ipc.invoke('cash:get-current');
       setCurrent(currentRes?.data || null);
       const historyRes = await ipc.invoke('cash:get-history', {});
-      setHistory(historyRes?.data || []);
+      setHistory(Array.isArray(historyRes?.data) ? historyRes.data : []);
     };
 
     refresh();
@@ -41,7 +45,7 @@ export default function CashModal({ isOpen, onClose, getIPC }) {
         const currentRes = await ipc.invoke('cash:get-current');
         setCurrent(currentRes?.data || null);
         const historyRes = await ipc.invoke('cash:get-history', {});
-        setHistory(historyRes?.data || []);
+        setHistory(Array.isArray(historyRes?.data) ? historyRes.data : []);
         setOpeningAmount('');
       } else {
         setError('Não foi possível abrir o caixa');
@@ -89,7 +93,7 @@ export default function CashModal({ isOpen, onClose, getIPC }) {
       if (res?.success) {
         setCurrent({ ...(res.session || current), status: 'CLOSED' });
         const historyRes = await ipc.invoke('cash:get-history', {});
-        setHistory(historyRes?.data || []);
+        setHistory(Array.isArray(historyRes?.data) ? historyRes.data : []);
         setClosingAmount('');
         setPreview(null);
       } else {
@@ -97,6 +101,42 @@ export default function CashModal({ isOpen, onClose, getIPC }) {
       }
     } catch (e) {
       setError(e?.message || 'Erro ao fechar caixa');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegisterMovement = async () => {
+    setError('');
+    const amount = Number(movementAmount);
+    if (isNaN(amount) || amount <= 0) {
+      setError('Informe um valor válido para o movimento');
+      return;
+    }
+    if (!movementDescription.trim()) {
+      setError('Informe uma descrição para o movimento');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await ipc.invoke('cash:register', {
+        type: movementType,
+        amount,
+        description: movementDescription.trim(),
+      });
+      if (res?.id) {
+        setMovementAmount('');
+        setMovementDescription('');
+        // Refresh current session and history
+        const currentRes = await ipc.invoke('cash:get-current');
+        setCurrent(currentRes?.data || null);
+        const historyRes = await ipc.invoke('cash:get-history', {});
+        setHistory(Array.isArray(historyRes?.data) ? historyRes.data : []);
+      } else {
+        setError('Não foi possível registrar o movimento');
+      }
+    } catch (e) {
+      setError(e?.message || 'Erro ao registrar movimento');
     } finally {
       setLoading(false);
     }
@@ -186,6 +226,43 @@ export default function CashModal({ isOpen, onClose, getIPC }) {
                 </div>
               </div>
             )}
+
+            {/* --- Registro de Movimentos Manuais --- */}
+            <div className="border-t border-border pt-4">
+              <div className="text-[10px] text-muted font-bold uppercase tracking-widest mb-3">Registro Manual</div>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <select
+                  value={movementType}
+                  onChange={e => setMovementType(e.target.value)}
+                  className="bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:border-primary/20 transition-all text-sm font-medium shadow-sm"
+                >
+                  <option value="ENTRADA">ENTRADA</option>
+                  <option value="SAIDA">SAÍDA</option>
+                </select>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={movementAmount}
+                  onChange={e => setMovementAmount(e.target.value)}
+                  className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:border-primary/20 transition-all text-lg text-center font-mono font-medium shadow-sm"
+                  placeholder="0.00"
+                />
+              </div>
+              <input
+                type="text"
+                value={movementDescription}
+                onChange={e => setMovementDescription(e.target.value)}
+                className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:border-primary/20 transition-all text-sm mb-3 shadow-sm"
+                placeholder="Descrição (ex: 'Compra de sacolas', 'Troco recebido')"
+              />
+              <button
+                onClick={handleRegisterMovement}
+                disabled={loading}
+                className="w-full bg-highlight hover:bg-highlight/90 py-3 rounded-xl font-bold text-xs uppercase tracking-widest text-white transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Wallet size={16}/> Registrar Movimento
+              </button>
+            </div>
           </div>
         ) : (
           <div className="space-y-4">

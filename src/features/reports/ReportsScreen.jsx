@@ -49,16 +49,13 @@ export default function ReportsScreen() {
       Promise.all([
         ipc.invoke('reports:by-period', reportPeriod),
         ipc.invoke('reports:store-info'),
-        ipc.invoke('reports:inventory-for-report'),
         ipc.invoke('reports:all-orders-for-period', reportPeriod),
         ipc.invoke('reports:promotions-for-period', reportPeriod),
         ipc.invoke('reports:cash-sessions', reportPeriod),
-      ]).then(([period, storeInfo, inventory, allOrders, promotions, cashSessions]) => {
+      ]).then(([period, storeInfo, allOrders, promotions, cashSessions]) => {
         if (period?.success) {
           const merged = { ...period.data };
           if (storeInfo?.success) merged.storeInfo = storeInfo.data;
-          if (inventory?.success) merged.inventory = inventory.data?.inventory || [];
-          merged.lowStock = inventory?.data?.lowStock || [];
           if (allOrders?.success) merged.allOrders = allOrders.data;
           if (promotions?.success) merged.promotions = promotions.data;
           if (cashSessions?.success && cashSessions.data?.length) {

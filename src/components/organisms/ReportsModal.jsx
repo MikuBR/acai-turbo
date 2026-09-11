@@ -426,26 +426,22 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
       const pdfMake = pdfMakeModule.default;
       pdfMake.vfs = pdfFontsModule.default;
 
-      pdfMake.createPdf(docDef).getBase64((base64, err) => {
-        if (err) {
-          addToast('Erro ao gerar PDF', 'error');
-          console.error('[pdf] Erro ao gerar PDF:', err);
-          return;
-        }
-        ipc.invoke('dialog:save-pdf', { data: base64, defaultName }).then(res => {
-          if (res.success) {
-            addToast(`PDF salvo em: ${res.path}`, 'success');
-          } else if (res.error) {
-            addToast(`Erro ao salvar PDF: ${res.error}`, 'error');
-          }
-        }).catch(err => {
-          addToast('Erro inesperado ao exportar PDF', 'error');
-          console.error('[pdf] Erro na invocação IPC:', err);
-        });
-      });
+      // pdfmake >= 0.3.x: getBase64() é async e retorna Promise (não usa callback)
+      const base64 = await pdfMake.createPdf(docDef).getBase64();
+      if (!base64) {
+        addToast('Erro ao gerar PDF', 'error');
+        return;
+      }
+
+      const res = await ipc.invoke('dialog:save-pdf', { data: base64, defaultName });
+      if (res?.success) {
+        addToast(`PDF salvo em: ${res.path}`, 'success');
+      } else if (res?.error) {
+        addToast(`Erro ao salvar PDF: ${res.error}`, 'error');
+      }
     } catch (e) {
-      addToast('Erro ao carregar gerador de PDF', 'error');
-      console.error('[pdf] Erro ao carregar pdfmake:', e);
+      addToast('Erro ao exportar PDF', 'error');
+      console.error('[pdf] Erro ao gerar/salvar PDF:', e);
     }
   };
 

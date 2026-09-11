@@ -1,22 +1,18 @@
 import { useState } from 'react';
-import { Pencil, Trash2, X, Check, FileText, ArrowUpCircle, Save } from 'lucide-react';
+import { Pencil, Trash2, X, Check, Save } from 'lucide-react';
 import useToastStore from '../../store/toastStore';
 import SettingsTabs from '../molecules/SettingsTabs';
 import ProductForm from '../forms/ProductForm';
 import PromotionForm from '../forms/PromotionForm';
 import UserForm from '../forms/UserForm';
-import InventoryForm from '../forms/InventoryForm';
 import FinancialForm from '../forms/FinancialForm';
 import ClientForm from '../forms/ClientForm';
 import CategoryForm from '../forms/CategoryForm';
 import { formatPromotionLabel } from '../../utils/promotion.js';
 
 
-export default function SettingsModal({ isOpen, onClose, settingsTab, setSettingsTab, safeCatalog, categories, newCatName, setNewCatName, newProd, setNewProd, newPromo, setNewPromo, users, newUser, setNewUser, inventory, inventoryForm, setInventoryForm, selectedInventoryItem, setSelectedInventoryItem, inventoryMovements, loadInventoryMovements, financialAccounts, financialForm, setFinancialForm, financialFilter, setFinancialFilter, clients, clientForm, setClientForm, selectedClientOrders, promotions, pwdForm, setPwdForm, syncDB, loadUsers, loadInventory, loadFinancialAccounts, loadClients, loadClientOrders, runWithAuth, getIPC, printerConfig, setPrinterConfig, savePrinterConfig, currentUser, ifoodConfig, setIfoodConfig, handleTestIfoodConnection, isTestingIfood, ifoodConnectionStatus, saveIfoodConfig }) {
+export default function SettingsModal({ isOpen, onClose, settingsTab, setSettingsTab, safeCatalog, categories, newCatName, setNewCatName, newProd, setNewProd, newPromo, setNewPromo, users, newUser, setNewUser, financialAccounts, financialForm, setFinancialForm, financialFilter, setFinancialFilter, clients, clientForm, setClientForm, selectedClientOrders, promotions, pwdForm, setPwdForm, syncDB, loadUsers, loadFinancialAccounts, loadClients, loadClientOrders, runWithAuth, getIPC, printerConfig, setPrinterConfig, savePrinterConfig, currentUser, ifoodConfig, setIfoodConfig, handleTestIfoodConnection, isTestingIfood, ifoodConnectionStatus, saveIfoodConfig }) {
   const addToast = useToastStore(s => s.addToast);
-  const [showAdjustModal, setShowAdjustModal] = useState(false);
-  const [adjustInventoryId, setAdjustInventoryId] = useState(null);
-  const [adjustDelta, setAdjustDelta] = useState('0');
   const [showResetAdminModal, setShowResetAdminModal] = useState(false);
   const [resetAdminForm, setResetAdminForm] = useState({ adminId: '', password: '', confirm: '' });
   const [resetAdminError, setResetAdminError] = useState('');
@@ -49,21 +45,6 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
         }
       });
     }
-  };
-
-  const handleAdjustConfirm = () => {
-    const ipc = getIPC();
-    if (!ipc || !adjustInventoryId) return;
-    const delta = parseFloat(adjustDelta);
-    if (isNaN(delta)) return;
-    ipc.invoke('inventory:adjust', { inventoryId: adjustInventoryId, delta, reason: 'Ajuste manual' })
-      .then(() => {
-        loadInventory();
-        setShowAdjustModal(false);
-        setAdjustInventoryId(null);
-        setAdjustDelta('0');
-      })
-      .catch(err => console.error(err));
   };
 
   const handleAddCategory = () => {
@@ -138,18 +119,6 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
       } else {
         ipc.invoke('users:add', payload).then(() => loadUsers());
       }
-    }
-  };
-
-  const handleInventorySubmit = (e) => {
-    e.preventDefault();
-    const ipc = getIPC();
-    if (ipc && inventoryForm.productId && inventoryForm.quantity) {
-      const payload = { productId: parseInt(inventoryForm.productId), quantity: parseFloat(inventoryForm.quantity), unit: inventoryForm.unit, minQuantity: parseFloat(inventoryForm.minQuantity) || 0 };
-      ipc.invoke('inventory:add', payload).then(() => {
-        setInventoryForm({ productId: '', quantity: '', unit: 'un', minQuantity: '' });
-        loadInventory();
-      });
     }
   };
 
@@ -310,46 +279,6 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                         <button onClick={() => setNewUser({ id: u.id, username: u.username, password: '', full_name: u.full_name, role: u.role })} className="p-2 bg-info/10 hover:bg-info/20 text-info rounded-lg transition-colors"><Pencil size={16} /></button>
                         <button onClick={() => { const ipc = getIPC(); if(window.confirm(`${u.is_active ? 'Desativar' : 'Ativar'} usuário ${u.full_name}?`) && ipc) { ipc.invoke('users:toggle-active', u.id).then(() => loadUsers()); } }} className={`p-2 rounded-lg transition-colors ${u.is_active ? 'bg-warning/10 hover:bg-warning/20 text-warning' : 'bg-success/10 hover:bg-success/20 text-success'}`}>{u.is_active ? <X size={16} /> : <Check size={16} />}</button>
                         <button onClick={() => { const ipc = getIPC(); if(window.confirm(`Excluir usuário ${u.full_name}?`) && ipc) { ipc.invoke('users:delete', u.id).then(() => loadUsers()); } }} className="p-2 bg-danger/10 hover:bg-danger/20 text-danger rounded-lg transition-colors"><Trash2 size={16} /></button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
-          {settingsTab === 'inventory' && (
-            <>
-              <div className="w-80 p-6 border-r border-border bg-surface overflow-y-auto custom-scrollbar">
-                <h3 className="text-[10px] font-bold text-success uppercase mb-4 tracking-widest border-b border-border pb-2">{selectedInventoryItem ? 'Editar Estoque' : 'Adicionar ao Estoque'}</h3>
-                <InventoryForm inventoryForm={inventoryForm} setInventoryForm={setInventoryForm} products={safeCatalog} onSubmit={handleInventorySubmit} />
-                {selectedInventoryItem && (
-                  <div className="mt-6">
-                    <h4 className="text-[9px] font-bold text-muted uppercase mb-2">Movimentações</h4>
-                    <div className="space-y-1 max-h-40 overflow-y-auto">
-                      {inventoryMovements.length === 0 && <div className="text-[9px] text-muted text-center py-4">Nenhuma movimentação registrada.</div>}
-                      {inventoryMovements.map((m, i) => (
-                        <div key={i} className="text-[8px] text-muted bg-surface-light p-2 rounded border border-border">
-                          {m.type === 'in' ? '+' : '-'}{m.quantity} {m.unit} - {m.reason || 'Ajuste'}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="flex-1 p-6 flex flex-col overflow-hidden">
-                <h3 className="text-[10px] font-bold text-muted uppercase mb-4 tracking-widest border-b border-border pb-2">Estoque Atual</h3>
-                <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
-                  {inventory.length === 0 && <div className="text-center text-muted text-xs mt-10">Nenhum item em estoque.</div>}
-                  {inventory.map(inv => (
-                    <div key={inv.id} className={`flex items-center justify-between bg-surface-light border p-3 rounded-lg ${inv.quantity <= inv.min_quantity ? 'border-warning bg-warning/10' : 'border-border'}`}>
-                      <div>
-                        <div className="font-bold text-xs uppercase text-primary">{inv.product_name}</div>
-                        <div className="text-[9px] text-muted uppercase">{inv.category} • {inv.quantity} {inv.unit}</div>
-                        {inv.quantity <= inv.min_quantity && <div className="text-[8px] text-warning font-bold uppercase mt-1">⚠️ Estoque Baixo</div>}
-                      </div>
-                      <div className="flex gap-2">
-                        <button onClick={() => { setSelectedInventoryItem(inv); loadInventoryMovements(inv.id); }} className="p-2 bg-info/10 hover:bg-info/20 text-info rounded-lg transition-colors" title="Ver Histórico"><FileText size={16} /></button>
-                        <button onClick={() => { setAdjustInventoryId(inv.id); setAdjustDelta('0'); setShowAdjustModal(true); }} className="p-2 bg-warning/10 hover:bg-warning/20 text-warning rounded-lg transition-colors" title="Ajustar Estoque"><ArrowUpCircle size={16} /></button>
                       </div>
                     </div>
                   ))}
@@ -577,33 +506,6 @@ export default function SettingsModal({ isOpen, onClose, settingsTab, setSetting
                 </div>
               </div>
             </>
-          )}
-          {showAdjustModal && adjustInventoryId && (
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1100] flex items-center justify-center p-4 animate-in fade-in duration-200">
-              <div className="bg-card w-full max-w-xs rounded-2xl border border-border p-6 shadow-modal">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xs font-bold uppercase text-muted">Ajustar Estoque</h3>
-                  <button onClick={() => { setShowAdjustModal(false); setAdjustInventoryId(null); setAdjustDelta('0'); }} className="p-1 hover:bg-danger/10 rounded text-muted hover:text-danger transition-all"><X size={16} /></button>
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-[10px] text-muted font-bold uppercase block mb-1">Quantidade</label>
-                    <input
-                      type="number"
-                      value={adjustDelta}
-                      onChange={e => setAdjustDelta(e.target.value)}
-                      placeholder="Quantidade a adicionar (positivo) ou remover (negativo)"
-                      className="bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm w-full"
-                      autoFocus
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => { setShowAdjustModal(false); setAdjustInventoryId(null); setAdjustDelta('0'); }} className="flex-1 bg-surface-light hover:bg-border py-2 rounded-lg font-bold text-[10px] uppercase">Cancelar</button>
-                    <button onClick={handleAdjustConfirm} className="flex-1 bg-warning hover:bg-warning py-2 rounded-lg font-bold text-[10px] uppercase text-white">Confirmar</button>
-                  </div>
-                </div>
-              </div>
-            </div>
           )}
           {showResetAdminModal && (
             <div className="fixed inset-0 bg-surface/80 z-[1200] flex items-center justify-center p-6 animate-in fade-in">

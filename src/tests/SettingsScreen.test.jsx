@@ -45,7 +45,7 @@ describe('SettingsScreen', () => {
 
     expect(screen.getByText('Produtos')).toBeInTheDocument();
     expect(screen.getByText('Promoções')).toBeInTheDocument();
-    expect(screen.getByText('Estoque')).toBeInTheDocument();
+    expect(screen.getByText('Usuários')).toBeInTheDocument();
   });
 
   it('navigates to /pdv when onClose is triggered', () => {

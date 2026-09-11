@@ -16,12 +16,11 @@ export default function SettingsScreen() {
   const { currentUser } = useAuthStore();
 
   const settingsLog = logger.withScope('settings');
-  const inventoryLog = logger.withScope('inventory');
   const financialLog = logger.withScope('financial');
-  const clientsLog = logger.withScope('clients');
+  const catalogLog = logger.withScope('catalog');
   const ifoodLog = logger.withScope('ifood');
   const usersLog = logger.withScope('users');
-  const catalogLog = logger.withScope('catalog');
+  const clientsLog = logger.withScope('clients');
 
   // Local settings state (migrated from App.jsx)
   const [categories, setCategories] = useState([]);
@@ -34,12 +33,6 @@ export default function SettingsScreen() {
   // Users
   const [users, setUsers] = useState([]);
   const [newUser, setNewUser] = useState({ id: null, username: '', password: '', full_name: '', role: 'operator' });
-
-  // Inventory
-  const [inventory, setInventory] = useState([]);
-  const [selectedInventoryItem, setSelectedInventoryItem] = useState(null);
-  const [inventoryMovements, setInventoryMovements] = useState([]);
-  const [inventoryForm, setInventoryForm] = useState({ productId: '', quantity: '', unit: 'un', minQuantity: '' });
 
   // Financial
   const [financialAccounts, setFinancialAccounts] = useState([]);
@@ -88,37 +81,6 @@ export default function SettingsScreen() {
       ipc.invoke('users:get').then(res => {
         if (res && res.success) { setUsers(res.data || []); usersLog.info('users loaded'); }
         else addToast('Erro ao carregar usuários', 'error');
-      });
-    }
-  };
-
-  const loadInventory = () => {
-    const ipc = getIPC();
-    if (ipc) {
-      setLoading('Carregando estoque...');
-      ipc.invoke('inventory:get').then(res => {
-        if (res && res.success) {
-          setInventory(res.data || []);
-          inventoryLog.info('inventory loaded');
-          const lowStock = res.data.filter(i => i.quantity <= i.min_quantity);
-          if (lowStock.length > 0) {
-            setTimeout(() => {
-              addToast(`${lowStock.length} produto(s) com estoque baixo.`, 'warning', 6000);
-            }, 500);
-          }
-        } else {
-          addToast('Erro ao carregar estoque', 'error');
-        }
-      }).finally(() => clearLoading());
-    }
-  };
-
-  const loadInventoryMovements = (inventoryId) => {
-    const ipc = getIPC();
-    if (ipc) {
-      ipc.invoke('inventory:get-movements', { inventoryId, limit: 50 }).then(res => {
-        if (res && res.success) setInventoryMovements(res.data || []);
-        else addToast('Erro ao carregar movimentações', 'error');
       });
     }
   };
@@ -290,7 +252,6 @@ export default function SettingsScreen() {
     loadPrinterConfig();
     loadIfoodConfig();
     loadUsers();
-    loadInventory();
     loadFinancialAccounts();
     loadClients();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -315,13 +276,6 @@ export default function SettingsScreen() {
       users={users}
       newUser={newUser}
       setNewUser={setNewUser}
-      inventory={inventory}
-      inventoryForm={inventoryForm}
-      setInventoryForm={setInventoryForm}
-      selectedInventoryItem={selectedInventoryItem}
-      setSelectedInventoryItem={setSelectedInventoryItem}
-      inventoryMovements={inventoryMovements}
-      loadInventoryMovements={loadInventoryMovements}
       financialAccounts={financialAccounts}
       financialForm={financialForm}
       setFinancialForm={setFinancialForm}
@@ -336,7 +290,6 @@ export default function SettingsScreen() {
       setPwdForm={setPwdForm}
       syncDB={syncDB}
       loadUsers={loadUsers}
-      loadInventory={loadInventory}
       loadFinancialAccounts={loadFinancialAccounts}
       loadClients={loadClients}
       loadClientOrders={loadClientOrders}

@@ -12,14 +12,13 @@ const {
   getUsers, getUserById, getUserByUsername, addUser, updateUser, deleteUser, toggleUserActive,
   createSession, getSession, deleteSession, cleanupExpiredSessions,
   createAuditLog, getAuditLogs,
-  getInventory, getInventoryByProductId, addInventory, updateInventoryQuantity, adjustInventory, getInventoryMovements, getLowStockItems,
   getFinancialAccounts, addFinancialAccount, updateFinancialAccount, deleteFinancialAccount, addFinancialTransaction, getFinancialTransactions, getFinancialSummary,
   getClients, addClient, updateClient, deleteClient, getClientById, getClientByPhone, getClientOrders, addClientOrder,
   getProductPriceHistory,
   addIfoodPendingOrder, getIfoodPendingOrders, getIfoodPendingOrderByOrderId,
   updateIfoodPendingOrderStatus, removeIfoodPendingOrder, countIfoodPendingOrders,
   getMigrationError,
-  getStoreInfo, getInventoryForReport, getAllOrdersForPeriod, getPromotionsForPeriod,
+  getStoreInfo, getAllOrdersForPeriod, getPromotionsForPeriod,
   db,
   checkVerifyPasswordRateLimit,
   resetVerifyPasswordRateLimit,
@@ -536,16 +535,22 @@ createHandler('orders:delete', async (id) => ({ count: deleteOrder(id) }));
 // ============================================================
 // CAIXA / RELATÓRIOS - IPC Handlers
 // ============================================================
-createHandler('cash:register', async (data) => ({ id: registerCashMovement(data) }));
-createHandler('cash:open', async (data) => ({ id: openCashSession(data.openingAmount, currentSession?.user?.id) }));
+createHandler('cash:register', async (data) => ({ id: registerCashMovement(data) }), { minRole: 'manager' });
+createHandler('cash:open', async (data) => ({ id: openCashSession(data.openingAmount, currentSession?.user?.id) }), { minRole: 'manager' });
+// Needs a helper to fetch a session by ID (including closed ones)
+function getCashSessionById(id) {
+  if (!id || isNaN(id)) return null;
+  return db.prepare('SELECT * FROM cash_sessions WHERE id = ?').get(id);
+}
+
 createHandler('cash:close', async (data) => {
   const session = getCurrentCashSession();
   if (!session) return { success: false, error: 'Nenhum caixa aberto' };
   const ok = closeCashSession(session.id, data.closingAmount, currentSession?.user?.id);
   if (!ok) return { success: false, error: 'Falha ao fechar caixa' };
-  const updated = getCurrentCashSession();
-  return { success: true, session: updated ? { ...updated, status: 'CLOSED' } : null };
-});
+  const closed = getCashSessionById(session.id);
+  return { success: true, session: closed ? { ...closed, status: 'CLOSED' } : null };
+}, { minRole: 'manager' });
 createHandler('cash:get-current', async () => ({ data: getCurrentCashSession() }));
 createHandler('cash:get-history', async (params) => ({ data: getCashSessions(params?.startDate, params?.endDate) }));
 createHandler('cash:preview-close', async (data) => {
@@ -558,8 +563,8 @@ createHandler('cash:preview-close', async (data) => {
   const exits = movements.filter(m => m.type === 'SAIDA').reduce((a, m) => a + Number(m.amount), 0);
   const expected = Number(session.opening_amount) + Number(salesCash) + entries - exits;
   const difference = closing - expected;
-  return { success: true, expected, difference, closingAmount: closing, openingAmount: session.opening_amount, salesCash: expected - Number(session.opening_amount) - entries + exits };
-});
+  return { success: true, expected, difference, closingAmount: closing, openingAmount: session.opening_amount, salesCash };
+}, { minRole: 'manager' });
 createHandler('reports:daily', async () => ({ data: getDailyReport() }));
 createHandler('reports:by-period', async ({ startDate, endDate }) => ({ data: getReportByPeriod(startDate, endDate) }));
 
@@ -1201,14 +1206,6 @@ createHandler('auth:reset-admin-password', async ({ adminId, newPassword }) => {
 // AUDITORIA - IPC Handlers
 // ============================================================
 createHandler('audit:get-logs', async (limit) => ({ data: getAuditLogs(limit) }), { minRole: 'manager' });
-
-// ============================================================
-// ESTOQUE - IPC Handlers
-// ============================================================
-createHandler('inventory:add', async (data) => ({ id: addInventory(data.productId, data.quantity, data.unit, data.minQuantity) }));
-createHandler('inventory:update-quantity', async ({ inventoryId, newQuantity }) => ({ count: updateInventoryQuantity(inventoryId, newQuantity) }));
-createHandler('inventory:adjust', async (data) => ({ data: adjustInventory(data.inventoryId, data.delta, data.reason) }));
-createHandler('inventory:get-movements', async ({ inventoryId, limit }) => ({ data: getInventoryMovements(inventoryId, limit) }));
 
 // ============================================================
 // FINANCEIRO - IPC Handlers

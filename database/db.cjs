@@ -756,79 +756,6 @@ function recordVerifyPasswordAttempt() {
   }
 }
 
-// --- EXPORTAÇÕES DE ESTOQUE ---
-const getInventory = () => {
-  const inventory = db.prepare(`
-    SELECT i.*, p.name as product_name, p.category
-    FROM inventory i
-    JOIN products p ON i.product_id = p.id
-    ORDER BY p.name ASC
-  `).all();
-  return inventory;
-};
-
-const getInventoryByProductId = (productId) => {
-  if (!productId || isNaN(productId)) {
-    throw new Error('Invalid product ID');
-  }
-  return db.prepare('SELECT * FROM inventory WHERE product_id = ?').get(productId);
-};
-
-const addInventory = (productId, quantity, unit = 'un', minQuantity = 0) => {
-  if (!productId || isNaN(productId) || quantity === undefined || isNaN(quantity) || quantity < 0) {
-    throw new Error('Invalid inventory data');
-  }
-  const stmt = db.prepare('INSERT INTO inventory (product_id, quantity, unit, min_quantity) VALUES (?, ?, ?, ?)');
-  return stmt.run(productId, quantity, unit || 'un', minQuantity || 0).lastInsertRowid;
-};
-
-const updateInventoryQuantity = (inventoryId, newQuantity) => {
-  if (!inventoryId || isNaN(inventoryId) || newQuantity === undefined || isNaN(newQuantity) || newQuantity < 0) {
-    throw new Error('Invalid inventory data');
-  }
-  const stmt = db.prepare('UPDATE inventory SET quantity = ?, last_updated = CURRENT_TIMESTAMP WHERE id = ?');
-  return stmt.run(newQuantity, inventoryId).changes > 0;
-};
-
-const adjustInventory = (inventoryId, delta, reason) => {
-  if (!inventoryId || isNaN(inventoryId) || delta === undefined || isNaN(delta)) {
-    throw new Error('Invalid inventory adjustment data');
-  }
-  const inventory = db.prepare('SELECT * FROM inventory WHERE id = ?').get(inventoryId);
-  if (!inventory) return false;
-
-  const newQuantity = Math.max(0, inventory.quantity + delta);
-  const transaction = db.transaction(() => {
-    db.prepare('UPDATE inventory SET quantity = ?, last_updated = CURRENT_TIMESTAMP WHERE id = ?').run(newQuantity, inventoryId);
-    db.prepare('INSERT INTO inventory_movements (inventory_id, type, quantity, reason) VALUES (?, ?, ?, ?)').run(inventoryId, delta >= 0 ? 'ENTRADA' : 'SAIDA', Math.abs(delta), reason || '');
-  });
-  transaction();
-
-  return true;
-};
-
-const getInventoryMovements = (inventoryId, limit = 50) => {
-  if (!inventoryId || isNaN(inventoryId)) {
-    throw new Error('Invalid inventory ID');
-  }
-  return db.prepare(`
-    SELECT * FROM inventory_movements
-    WHERE inventory_id = ?
-    ORDER BY created_at DESC
-    LIMIT ?
-  `).all(inventoryId, limit || 50);
-};
-
-const getLowStockItems = () => {
-  return db.prepare(`
-    SELECT i.*, p.name as product_name, p.category
-    FROM inventory i
-    JOIN products p ON i.product_id = p.id
-    WHERE i.quantity <= i.min_quantity
-    ORDER BY i.quantity ASC
-  `).all();
-};
-
 // --- EXPORTAÇÕES FINANCEIRAS ---
 const getFinancialAccounts = (type = null, status = null, startDate = null, endDate = null) => {
   let query = 'SELECT * FROM financial_accounts WHERE 1=1';
@@ -1027,34 +954,6 @@ const getStoreInfo = () => {
   return { name: name || 'Açaí Wave', cnpj: cnpj || null, ie: ie || null, address: address || null };
 };
 
-const getInventoryForReport = () => {
-  const inventory = db.prepare(`
-    SELECT i.*, p.name as product_name, p.category
-    FROM inventory i
-    JOIN products p ON i.product_id = p.id
-    ORDER BY p.name ASC
-  `).all();
-
-  const lowStock = db.prepare(`
-    SELECT i.*, p.name as product_name, p.category
-    FROM inventory i
-    JOIN products p ON i.product_id = p.id
-    WHERE i.quantity <= i.min_quantity
-    ORDER BY i.quantity ASC
-  `).all();
-
-  const inventoryMovements = db.prepare(`
-    SELECT im.*, p.name as product_name
-    FROM inventory_movements im
-    JOIN inventory i ON im.inventory_id = i.id
-    JOIN products p ON i.product_id = p.id
-    ORDER BY im.created_at DESC
-    LIMIT 50
-  `).all();
-
-  return { inventory, lowStock, inventoryMovements };
-};
-
 const getAllOrdersForPeriod = (startDate, endDate) => {
   const endDateTime = `${endDate} 23:59:59`;
   const orders = db.prepare(`
@@ -1100,7 +999,6 @@ module.exports = {
   getUsers, getUserById, getUserByUsername, addUser, updateUser, deleteUser, toggleUserActive,
   createSession, getSession, deleteSession, cleanupExpiredSessions,
   createAuditLog, getAuditLogs,
-  getInventory, getInventoryByProductId, addInventory, updateInventoryQuantity, adjustInventory, getInventoryMovements, getLowStockItems,
   getFinancialAccounts, addFinancialAccount, updateFinancialAccount, deleteFinancialAccount, addFinancialTransaction, getFinancialTransactions, getFinancialSummary,
   getClients, addClient, updateClient, deleteClient, getClientById, getClientByPhone, getClientOrders, addClientOrder,
   addIfoodPendingOrder, getIfoodPendingOrders, getIfoodPendingOrderByOrderId,
@@ -1108,7 +1006,6 @@ module.exports = {
   getStoreInfo,
   getPromotionsForPeriod,
   getAllOrdersForPeriod,
-  getInventoryForReport,
   checkVerifyPasswordRateLimit,
   resetVerifyPasswordRateLimit,
   recordVerifyPasswordAttempt

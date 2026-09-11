@@ -225,33 +225,6 @@ const validators = {
     return { success: true, data: Number(id) };
   },
 
-  'inventory:add': (data) => {
-    if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
-    if (!data.productId || isNaN(Number(data.productId))) return { success: false, error: 'Produto inválido' };
-    if (data.quantity === undefined || isNaN(Number(data.quantity)) || Number(data.quantity) < 0) return { success: false, error: 'Quantidade inválida' };
-    return { success: true, data: { ...data, productId: Number(data.productId), quantity: Number(data.quantity), minQuantity: Number(data.minQuantity) || 0 } };
-  },
-
-  'inventory:adjust': (data) => {
-    if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
-    if (!data.inventoryId || isNaN(Number(data.inventoryId))) return { success: false, error: 'ID do estoque inválido' };
-    if (data.delta === undefined || isNaN(Number(data.delta))) return { success: false, error: 'Delta inválido' };
-    return { success: true, data: { ...data, inventoryId: Number(data.inventoryId), delta: Number(data.delta) } };
-  },
-
-  'inventory:update-quantity': (data) => {
-    if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
-    if (!data.inventoryId || isNaN(Number(data.inventoryId))) return { success: false, error: 'ID do estoque inválido' };
-    if (data.newQuantity === undefined || isNaN(Number(data.newQuantity)) || Number(data.newQuantity) < 0) return { success: false, error: 'Quantidade inválida' };
-    return { success: true, data: { inventoryId: Number(data.inventoryId), newQuantity: Number(data.newQuantity) } };
-  },
-
-  'inventory:get-movements': (data) => {
-    if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
-    if (!data.inventoryId || isNaN(Number(data.inventoryId))) return { success: false, error: 'ID do estoque inválido' };
-    return { success: true, data: { inventoryId: Number(data.inventoryId), limit: data.limit || 50 } };
-  },
-
   'financial:add-account': (data) => {
     if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
     if (!data.type || !['payable', 'receivable'].includes(data.type)) return { success: false, error: 'Tipo de conta inválido' };
