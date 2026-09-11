@@ -38,7 +38,7 @@ export default function AcaiBuilderModal({ builder, onClose, setBuilder, acaiBas
               </section>
             )}
             <section className={!builder.base ? 'opacity-20 pointer-events-none' : ''}>
-              <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-3 border-l-2 border-warning pl-2">4. Notas e Ajuste</h3>
+              <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-3 border-l-2 border-warning pl-2">3. Notas e Ajuste</h3>
               <div className="space-y-3">
                 <input type="text" placeholder="Observação..." value={builder.obs} onChange={e => setBuilder({...builder, obs: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
                 <div className="bg-surface-light border border-border p-3 rounded-xl flex items-center justify-between">
@@ -50,7 +50,7 @@ export default function AcaiBuilderModal({ builder, onClose, setBuilder, acaiBas
             </section>
           </div>
           <div className={`flex-1 flex flex-col border-l border-border pl-6 ${!builder.base ? 'opacity-20 pointer-events-none' : ''}`}>
-            <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-4 border-l-2 border-primary pl-2">3. Adicionais Extras</h3>
+            <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-4 border-l-2 border-primary pl-2">Adicionais Extras</h3>
             <div className="flex-1 overflow-y-auto grid grid-cols-2 xl:grid-cols-3 gap-3 pr-2 custom-scrollbar">
               {availableAddons.map(a => {
                 const existing = builder.extras.find(e => e.id === a.id);
