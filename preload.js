@@ -75,6 +75,15 @@ const ALLOWED_CHANNELS = {
   'update:install': true,
   'update:status': true,
 
+  // Canais fire-and-forget (main → renderer) enviados pelo update-manager.cjs
+  // via notifyRenderer(). Se faltarem aqui, o legacyIpc.on do preload.js
+  // faz console.error silencioso e o listener nunca é registrado.
+  'update:available': true,
+  'update:downloading': true,
+  'update:downloaded': true,
+  'update:error': true,
+  'update:status-change': true,
+
   'ifood:test-connection': true,
   'ifood:poll': true,
   'ifood:start-preparation': true,

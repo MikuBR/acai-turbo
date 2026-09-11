@@ -19,7 +19,20 @@ export function UpdateManager() {
     const electron = window.electron;
     if (!electron) return;
 
-    // Escutar eventos do main process
+    // Canal de status genérico: update-manager.cjs envia este em TODA mudança
+    // (checking/available/downloading/downloaded/error/latest) com o shape
+    // { status, version?, percent? }. É o canal mais confiável porque traduz
+    // os eventos nativos do autoUpdater para um shape uniforme.
+    const unsubStatusChange = electron.ipcRenderer.on('update:status-change', (event, info) => {
+      if (!info) return;
+      setUpdateStatus(info.status || 'idle');
+      if (info.version) setUpdateInfo({ ...updateInfo, version: info.version });
+      if (typeof info.percent === 'number') setDownloadProgress(info.percent);
+    });
+
+    // Canais específicos (mantidos por redundância — o update-manager.cjs
+    // envia os eventos nativos do autoUpdater + o canal genérico).
+    // Os payload podem ser o info completo (updateInfo) ou a progress bar.
     const unsubAvailable = electron.ipcRenderer.on('update:available', (event, info) => {
       setUpdateStatus('available');
       setUpdateInfo(info);
@@ -27,7 +40,7 @@ export function UpdateManager() {
 
     const unsubDownloading = electron.ipcRenderer.on('update:downloading', (event, progress) => {
       setUpdateStatus('downloading');
-      setDownloadProgress(progress.percent || 0);
+      setDownloadProgress(progress?.percent || 0);
     });
 
     const unsubDownloaded = electron.ipcRenderer.on('update:downloaded', (event, info) => {
@@ -41,6 +54,7 @@ export function UpdateManager() {
     });
 
     return () => {
+      unsubStatusChange();
       unsubAvailable();
       unsubDownloading();
       unsubDownloaded();
