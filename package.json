@@ -45,7 +45,8 @@
     "react-dom": "^19.2.6",
     "react-router-dom": "^7.18.2",
     "winston": "^3.19.0",
-    "zustand": "^5.0.14"
+    "zustand": "^5.0.14",
+    "electron-updater": "^6.1.8"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.2.0",
@@ -101,6 +102,7 @@
       "main.cjs",
       "preload.js",
       "database/**/*",
+      "main/**/*",
       "package.json"
     ],
     "win": {
@@ -119,6 +121,11 @@
       "include": "build/custom.nsh",
       "license": "build/EULA.txt",
       "artifactName": "Açaí Wave Setup ${version}.exe"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "MikuBR",
+      "repo": "acai-turbo"
     }
   },
   "allowScripts": true

@@ -31,6 +31,9 @@ const { initLogger: initMainLogger, logger: getLogger } = require('./database/lo
 // database/logger.cjs exports logger as a getter function; materialize the winston instance once at load
 const logger = getLogger();
 
+// Initialize update manager
+require('./main/update-manager.cjs');
+
 console.log('[main] Database module loaded successfully');
 
 // ============================================================

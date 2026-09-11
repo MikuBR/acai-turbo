@@ -19,7 +19,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['database/migrations/*.cjs', 'database/adapters/*.cjs', 'database/migrate.cjs', 'database/db.cjs', 'database/validate.cjs', 'main.cjs', 'preload.js', 'scripts/*.cjs'],
+    files: ['database/migrations/*.cjs', 'database/adapters/*.cjs', 'database/migrate.cjs', 'database/db.cjs', 'database/validate.cjs', 'main.cjs', 'preload.js', 'main/*.cjs', 'scripts/*.cjs'],
     languageOptions: {
       globals: globals.node,
     },

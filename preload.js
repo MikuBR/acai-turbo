@@ -75,6 +75,11 @@ const ALLOWED_CHANNELS = {
 
   'dialog:save-pdf': true,
 
+  'update:check': true,
+  'update:download': true,
+  'update:install': true,
+  'update:status': true,
+
   'ifood:test-connection': true,
   'ifood:poll': true,
   'ifood:start-preparation': true,
@@ -189,6 +194,12 @@ const api = {
   recovery: {
     resetManagerPassword: (...args) => safeInvoke('auth:reset-manager-password', ...args),
     forceResetAdmin: (...args) => safeInvoke('auth:force-reset-admin', ...args),
+  },
+  update: {
+    check: (...args) => safeInvoke('update:check', ...args),
+    download: (...args) => safeInvoke('update:download', ...args),
+    install: (...args) => safeInvoke('update:install', ...args),
+    status: (...args) => safeInvoke('update:status', ...args),
   },
 };
 

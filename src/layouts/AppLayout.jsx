@@ -12,6 +12,7 @@ import ManagerAuthModal from '../components/organisms/ManagerAuthModal.jsx';
 import CashModal from '../components/organisms/CashModal.jsx';
 import ToastContainer from '../components/atoms/Toast';
 import LoadingOverlay from '../components/atoms/LoadingOverlay';
+import { UpdateManager } from '../components/organisms/UpdateManager.jsx';
 
 function playBeep() {
   try {
@@ -213,6 +214,7 @@ export default function AppLayout() {
       {/* Toasts + Loading overlay */}
       <ToastContainer />
       <LoadingOverlay />
+      <UpdateManager />
 
       {/* --- MODAIS --- */}
 

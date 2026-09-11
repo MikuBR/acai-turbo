@@ -173,7 +173,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          files: release/*.exe
+          files: |
+            release/*.exe
+            release/latest.yml
           tag_name: ${{ steps.refinfo.outputs.TAG }}
           name: "Açaí Wave ${{ steps.refinfo.outputs.TAG }}"
           body: |

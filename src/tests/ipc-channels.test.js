@@ -19,6 +19,7 @@ const read = (rel) => readFileSync(resolve(ROOT, rel), 'utf8');
 
 const preloadSrc = read('preload.js');
 const mainSrc = read('main.cjs');
+const updateMgrSrc = read('main/update-manager.cjs');
 
 const CHANNEL = String.raw`[a-z0-9]+(?::[a-z0-9-]+)+`;
 
@@ -38,10 +39,19 @@ const allowed = new Set(extractChannels(
 const handled = new Set([
   ...extractChannels(mainSrc, String.raw`createHandler\(\s*['"](${CHANNEL})['"]`),
   ...extractChannels(mainSrc, String.raw`ipcMain\.handle\(\s*['"](${CHANNEL})['"]`),
+  ...extractChannels(updateMgrSrc, String.raw`ipcMain\.handle\(\s*['"](${CHANNEL})['"]`),
 ]);
 
 // Canais push registrados no renderer via `on`/`once` (main → renderer).
-const PUSH_ONLY = new Set(['ifood:new-order', 'ifood:order-cancelled']);
+const PUSH_ONLY = new Set([
+  'ifood:new-order',
+  'ifood:order-cancelled',
+  'update:available',
+  'update:downloading',
+  'update:downloaded',
+  'update:error',
+  'update:status-change',
+]);
 const SOURCE_EXTENSIONS = /\.(js|jsx|ts|tsx)$/;
 
 const walk = (dir, rel = '', out = []) => {

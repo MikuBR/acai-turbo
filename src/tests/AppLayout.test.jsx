@@ -7,16 +7,21 @@ import { useStore } from '../store/useStore';
 
 // Mock window.electron for getIPC
 beforeEach(() => {
+  const onCallbacks = {};
   globalThis.window = {
     electron: {
       ipcRenderer: {
         invoke: vi.fn().mockResolvedValue({ success: true, data: [] }),
-        on: vi.fn(),
+        on: vi.fn((channel, callback) => {
+          onCallbacks[channel] = callback;
+          return () => { delete onCallbacks[channel]; };
+        }),
         once: vi.fn(),
         removeListener: vi.fn(),
       }
     }
   };
+  globalThis.window.__ipcOnCallbacks = onCallbacks;
 });
 
 describe('AppLayout', () => {

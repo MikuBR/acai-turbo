@@ -59,7 +59,7 @@ beforeAll(() => {
 })
 
 afterAll(() => {
-  db.close()
+  if (db) db.close()
 })
 
 beforeEach(() => {
