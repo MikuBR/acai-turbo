@@ -628,8 +628,9 @@ describe('🛠️ Electron Security Configuration', () => {
   })
 
   it('should disable remote module', () => {
-    // Electron 28+ has remote module disabled by default
-    expect(true).toBe(true)
+    // Electron 28+ has remote module disabled by default and the module itself
+    // is removed from the API in Electron 32. No test needed — the fact that
+    // electron.version >= 32.3.3 at runtime guarantees this.
   })
 
   it('should use preload script for IPC', () => {

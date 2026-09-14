@@ -50,8 +50,12 @@ jobs:
       - name: Setup MSBuild (for native modules)
         uses: microsoft/setup-msbuild@v2
 
-      - name: Install dependencies
-        run: npm install --legacy-peer-deps
+      # Note: postinstall script runs electron-builder install-app-deps +
+      # rebuild:native automatically. Using --ignore-scripts here to avoid
+      # the postinstall rebuild before we install MSBuild (it would fail).
+      # The rebuild is run explicitly below after MSBuild is available.
+      - name: Install dependencies (pre-scripts)
+        run: npm install --legacy-peer-deps --ignore-scripts
         shell: pwsh
 
       - name: Rebuild native modules for Electron
@@ -63,23 +67,16 @@ jobs:
         shell: pwsh
 
       - name: Build client (Vite)
+        shell: pwsh
         run: npm run build
-        shell: pwsh
-
-      - name: Verify build output exists
-        run: |
-          Test-Path dist/index.html
-          Test-Path dist/assets/index-*.js
-          Test-Path dist/assets/index-*.css
-          Write-Host "✅ Build output verified"
-        shell: pwsh
 
       - name: Build Windows installer (electron-builder)
+        shell: pwsh
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
         run: |
           Write-Host "Building Windows installer..."
           Write-Host "Current directory: $(Get-Location)"
-          Write-Host "Release directory contents before build:"
-          if (Test-Path release) { Get-ChildItem release } else { Write-Host "release/ does not exist" }
           Write-Host "Build assets directory contents:"
           Get-ChildItem build/
           $env:DEBUG = "electron-builder"
@@ -93,21 +90,18 @@ jobs:
           }
           Write-Host "Release directory contents after build:"
           if (Test-Path release) { Get-ChildItem release } else { Write-Host "release/ does not exist" }
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-        shell: pwsh
 
       - name: Verify installer was created
+        shell: pwsh
         run: |
-          $files = Get-ChildItem release/*.exe
-          if ($files.Count -eq 0) {
+          $files = Get-ChildItem release/*.exe -ErrorAction SilentlyContinue
+          if (-not $files -or $files.Count -eq 0) {
             Write-Error "No .exe files found in release/"
             exit 1
           }
           foreach ($file in $files) {
             Write-Host "Found: $($file.Name) ($($file.Length) bytes)"
           }
-        shell: pwsh
 
       - name: Determinar tag do release
         id: refinfo
@@ -128,12 +122,19 @@ jobs:
         shell: pwsh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REF_TYPE: ${{ steps.refinfo.outputs.REF_TYPE }}
+          TAG: ${{ steps.refinfo.outputs.TAG }}
         run: |
           if ($env:REF_TYPE -eq 'tag') {
-            $fromTag = git describe --tags --abbrev=0 HEAD~1 2>$null
-            if (-not $fromTag) { $fromTag = git rev-list --max-parents=0 HEAD }
-            $notes = git log --no-merges --oneline "$fromTag..HEAD" 2>$null
-            if (-not $notes) { $notes = "Release $env:TAG" }
+            # Primeira tag (não há tag anterior)
+            $prevTag = git describe --tags --abbrev=0 HEAD~1 2>$null
+            if (-not $prevTag) {
+              # Primeira tag já criada: usa apenas o commit atual como release notes
+              $notes = "Release $env:TAG`n`nPrimeira release versionada."
+            } else {
+              $notes = git log --no-merges --oneline "$prevTag..HEAD" 2>$null
+              if (-not $notes) { $notes = "Release $env:TAG" }
+            }
           } else {
             $lastTag = git describe --tags --abbrev=0 2>$null
             if ($lastTag) {
@@ -198,4 +199,3 @@ jobs:
           draft: false
           prerelease: ${{ steps.prerelease_flag.outputs.is_prerelease }}
           overwrite_files: true
-

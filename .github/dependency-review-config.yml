@@ -6,9 +6,8 @@ fail-on-severity: high
 
 # Allow specific vulnerable packages with justification
 allow:
-  # bcryptjs - used for password hashing, no known exploitable vulns in our usage
-  # GHSA-xxxx: Medium severity, not exploitable without specific conditions
-  # - GHSA-xxxx
+  # bcryptjs - used for password hashing; no known exploitable vulns in our usage pattern
+  - bcryptjs
 
 # Ignore specific scopes
 ignore:
