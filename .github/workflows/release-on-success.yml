@@ -55,8 +55,8 @@ jobs:
           set -euo pipefail
           COMMIT_SHA="${{ github.event.workflow_run.head_sha }}"
 
-          # Última release oficial (não pre-release)
-          last_official=$(gh release list --limit 1 --json tagName,prerelease --jq 'map(select(.prerelease == false)) | .[0].tagName' 2>/dev/null || true)
+          # Última release oficial (não pre-release) — buscar entre as 5 mais recentes
+          last_official=$(gh release list --limit 5 --json tagName,prerelease --jq 'map(select(.prerelease == false)) | .[0].tagName' 2>/dev/null || true)
           if [[ -z "$last_official" ]]; then
             last_official=$(git describe --tags --abbrev=0 2>/dev/null || true)
           fi
@@ -64,7 +64,7 @@ jobs:
           # Última release edge existente (para sobreposição)
           last_edge=""
           if gh release view edge-main --repo "${{ github.repository }}" &>/dev/null; then
-            last_edge=$(gh release view edge-main --repo "${{ github.repository }}" --json tagName --jq '.tagName')
+            last_edge=$(gh release view edge-main --repo "${{ github.repository }}" --json targetCommitish --jq '.targetCommitish')
           fi
 
           echo "last_official=$last_official"

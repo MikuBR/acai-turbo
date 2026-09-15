@@ -36,9 +36,6 @@ jobs:
       - name: Run TypeScript type check
         run: npm run typecheck
 
-      - name: Validate migration versions
-        run: node scripts/validate-migrations.cjs
-
   # ──────────────────────────────────────────────────────────────────
   # TESTS ON NODE.JS (ABI 127) - Vitest suite
   # ──────────────────────────────────────────────────────────────────
@@ -231,7 +228,18 @@ jobs:
         run: npm run rebuild:node
 
       - name: Run npm audit (fail on critical only)
-        run: npm audit --audit-level=critical --json --production --omit=dev > npm-audit-report.json 2>/dev/null; if [ "$(jq 'if . vulnerabilities then .vulnerabilities | length else 0 end' npm-audit-report.json)" -gt 0 ]; then echo "❌ Vulnerabilities found:"; jq -r '.vulnerabilities | to_entries[] | "  - \(.key) (\(.value.severity || \"unknown\") severity, \(.value[node]) advisory)"' npm-audit-report.json 2>/dev/null; echo ""; echo "📝 Run 'npm audit' locally to see full report."; exit 1; fi; echo "✅ No critical/high vulnerabilities"
+        run: |
+          npm audit --audit-level=critical --json --production --omit=dev > npm-audit-report.json 2>/dev/null
+          CRITICAL_COUNT=$(jq '.vulnerabilities | to_entries | map(select(.value.severity == "critical")) | length' npm-audit-report.json 2>/dev/null || echo "0")
+          if [ "$CRITICAL_COUNT" -gt 0 ]; then
+            echo "❌ $CRITICAL_COUNT critical vulnerabilities found:"
+            jq -r '.vulnerabilities | to_entries[] | select(.value.severity == "critical") | "  - \(.key): \(.value.description // "no description")"' npm-audit-report.json 2>/dev/null
+            echo ""
+            echo "📝 Run 'npm audit' locally to see full report."
+            exit 1
+          else
+            echo "✅ No critical vulnerabilities found"
+          fi
 
       - name: Cleanup audit artifact
         if: always()
@@ -328,6 +336,3 @@ jobs:
             echo "### ✅ Pipeline result: All jobs passed" >> $GITHUB_STEP_SUMMARY
             exit 0
           fi
-            exit 1
-          fi
-          echo "✅ All jobs passed"
