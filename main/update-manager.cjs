@@ -226,14 +226,6 @@ function setupIPCHandlers() {
     installUpdate();
     return { success: true };
   });
-
-  // Status da atualização
-  ipcMain.handle('update:status', () => {
-    return {
-      downloaded: isUpdateDownloaded,
-      progress: downloadProgress,
-    };
-  });
 }
 
 // Inicializar

@@ -5,7 +5,6 @@ const ALLOWED_CHANNELS = {
   'catalog:add-product': true,
   'catalog:update-product': true,
   'catalog:delete-product': true,
-  'catalog:get-price-history': true,
   'catalog:get-categories': true,
   'catalog:add-category': true,
   'catalog:delete-category': true,
@@ -34,12 +33,12 @@ const ALLOWED_CHANNELS = {
   'promotions:get-active': true,
 
   'auth:login': true,
-  'auth:verify-session': true,
   'auth:logout': true,
   'auth:verify-password': true,
   'auth:update-password': true,
   'auth:change-user-password': true,
   'auth:reset-admin-password': true,
+  'auth:reset-manager-password': true,
 
   'users:get': true,
   'users:add': true,
@@ -72,7 +71,6 @@ const ALLOWED_CHANNELS = {
   'update:check': true,
   'update:download': true,
   'update:install': true,
-  'update:status': true,
 
   // Canais fire-and-forget (main → renderer) enviados pelo update-manager.cjs
   // via notifyRenderer(). Se faltarem aqui, o legacyIpc.on do preload.js
@@ -92,8 +90,6 @@ const ALLOWED_CHANNELS = {
   'ifood:new-order': true,
   'ifood:order-cancelled': true,
 
-  'auth:reset-manager-password': true,
-  'auth:force-reset-admin': true,
   'logging:write': true,
 };
 
@@ -111,7 +107,6 @@ const api = {
     addProduct: (...args) => safeInvoke('catalog:add-product', ...args),
     updateProduct: (...args) => safeInvoke('catalog:update-product', ...args),
     deleteProduct: (...args) => safeInvoke('catalog:delete-product', ...args),
-    getPriceHistory: (...args) => safeInvoke('catalog:get-price-history', ...args),
     getCategories: (...args) => safeInvoke('catalog:get-categories', ...args),
     addCategory: (...args) => safeInvoke('catalog:add-category', ...args),
     deleteCategory: (...args) => safeInvoke('catalog:delete-category', ...args),
@@ -132,7 +127,10 @@ const api = {
   reports: {
     daily: (...args) => safeInvoke('reports:daily', ...args),
     byPeriod: (...args) => safeInvoke('reports:by-period', ...args),
-    exportPdf: (...args) => safeInvoke('dialog:save-pdf', ...args),
+    storeInfo: (...args) => safeInvoke('reports:store-info', ...args),
+    allOrdersForPeriod: (...args) => safeInvoke('reports:all-orders-for-period', ...args),
+    promotionsForPeriod: (...args) => safeInvoke('reports:promotions-for-period', ...args),
+    cashSessions: (...args) => safeInvoke('reports:cash-sessions', ...args),
   },
   promotions: {
     get: (...args) => safeInvoke('promotions:get', ...args),
@@ -143,7 +141,6 @@ const api = {
   },
   auth: {
     login: (...args) => safeInvoke('auth:login', ...args),
-    verifySession: (...args) => safeInvoke('auth:verify-session', ...args),
     logout: (...args) => safeInvoke('auth:logout', ...args),
     verifyPassword: (...args) => safeInvoke('auth:verify-password', ...args),
     updatePassword: (...args) => safeInvoke('auth:update-password', ...args),
@@ -190,13 +187,11 @@ const api = {
   },
   recovery: {
     resetManagerPassword: (...args) => safeInvoke('auth:reset-manager-password', ...args),
-    forceResetAdmin: (...args) => safeInvoke('auth:force-reset-admin', ...args),
   },
   update: {
     check: (...args) => safeInvoke('update:check', ...args),
     download: (...args) => safeInvoke('update:download', ...args),
     install: (...args) => safeInvoke('update:install', ...args),
-    status: (...args) => safeInvoke('update:status', ...args),
   },
 };
 
@@ -206,33 +201,41 @@ const legacyIpc = {
   invoke: (channel, ...args) => safeInvoke(channel, ...args),
   on: (channel, func) => {
     if (!ALLOWED_CHANNELS[channel]) {
-      console.error(`[preload] Channel '${channel}' is not in the allowlist`);
+      console.error(`[preload] Cannot register listener for disallowed channel '${channel}'`);
       return;
     }
-    ipcRenderer.on(channel, (event, ...args) => func(...args));
+    const listener = (event, ...args) => func(event, ...args);
+    ipcRenderer.on(channel, listener);
+    return () => {
+      ipcRenderer.removeListener(channel, listener);
+    };
   },
   once: (channel, func) => {
     if (!ALLOWED_CHANNELS[channel]) {
-      console.error(`[preload] Channel '${channel}' is not in the allowlist`);
+      console.error(`[preload] Cannot register once listener for disallowed channel '${channel}'`);
       return;
     }
-    ipcRenderer.once(channel, (event, ...args) => func(...args));
+    const listener = (event, ...args) => {
+      func(event, ...args);
+      ipcRenderer.removeListener(channel, listener);
+    };
+    ipcRenderer.once(channel, listener);
   },
   removeListener: (channel, func) => {
     if (!ALLOWED_CHANNELS[channel]) {
-      console.error(`[preload] Channel '${channel}' is not in the allowlist`);
+      console.error(`[preload] Cannot remove listener for disallowed channel '${channel}'`);
       return;
     }
     ipcRenderer.removeListener(channel, func);
   },
 };
 
-contextBridge.exposeInMainWorld('electron', {
+window.electron = {
   ipcRenderer: legacyIpc,
-  require: (module) => {
-    if (module === 'electron') {
-      return { ipcRenderer: legacyIpc };
+  require(moduleName) {
+    if (moduleName !== 'electron') {
+      throw new Error(`Access to module '${moduleName}' is not allowed`);
     }
-    throw new Error(`Module '${module}' is not allowed in renderer process`);
-  }
-});
+    return { ipcRenderer: legacyIpc };
+  },
+};

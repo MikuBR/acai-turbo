@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { X } from 'lucide-react';
 import useFocusTrap from '../../hooks/useFocusTrap';
+import { getIPC } from '../../services/ipc.js';
 
 export default function NewTableModal({ isOpen, onClose, tableType, setTableType, newTableName, setNewTableName, delivForm, setDelivForm, handleAddTable }) {
   const containerRef = useFocusTrap(isOpen);
@@ -19,9 +20,9 @@ export default function NewTableModal({ isOpen, onClose, tableType, setTableType
     let cancelled = false;
     const timer = setTimeout(async () => {
       try {
-        const ipc = window.api?.clients;
+        const ipc = getIPC();
         if (!ipc) return;
-        const result = await ipc.getByPhone(raw);
+        const result = await ipc.invoke('clients:get-by-phone', raw);
         if (cancelled) return;
         if (result?.data && !delivForm.name && !delivForm.address) {
           setDelivForm(prev => ({

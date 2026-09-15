@@ -374,13 +374,9 @@ const validators = {
     if (!data.newPassword || typeof data.newPassword !== 'string' || data.newPassword.length < 8) return { success: false, error: 'Senha deve ter no mínimo 8 caracteres' };
     return { success: true, data: { ...data, adminId: Number(data.adminId) } };
   },
+  'auth:reset-manager-password': () => ({ success: true, data: null }),
 
   'catalog:get-products': () => ({ success: true, data: null }),
-  'catalog:get-price-history': (data) => {
-    if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
-    if (!data.productId || isNaN(Number(data.productId))) return { success: false, error: 'ID do produto inválido' };
-    return { success: true, data: { productId: Number(data.productId) } };
-  },
   'cash:preview-close': (data) => {
     if (!data || typeof data !== 'object') return { success: false, error: 'Dados inválidos' };
     if (data.closingAmount === undefined || data.closingAmount === null) return { success: false, error: 'Valor de fechamento inválido' };
@@ -405,6 +401,10 @@ const validators = {
   'promotions:get-active': () => ({ success: true, data: null }),
   'users:get': () => ({ success: true, data: null }),
   'clients:get': () => ({ success: true, data: null }),
+  'update:check': () => ({ success: true, data: null }),
+  'update:download': () => ({ success: true, data: null }),
+  'update:install': () => ({ success: true, data: null }),
+
   'config:get-all': () => ({ success: true, data: null }),
 };
 

@@ -518,7 +518,6 @@ createHandler('catalog:get-products', async () => ({ data: getProducts() }));
 createHandler('catalog:add-product', async (p) => ({ id: addProduct(p) }));
 createHandler('catalog:update-product', async (data) => ({ count: updateProduct(data.id, data.product) }));
 createHandler('catalog:delete-product', async (id) => ({ count: deleteProduct(id) }));
-createHandler('catalog:get-price-history', async (productId) => ({ data: getProductPriceHistory(productId) }));
 
 // ============================================================
 // PEDIDOS - IPC Handlers
@@ -583,9 +582,13 @@ createHandler('reports:promotions-for-period', async ({ startDate, endDate }) =>
 createHandler('reports:cash-sessions', async (params) => ({
   data: getCashSessions(params?.startDate, params?.endDate)
 }));
-ipcMain.handle('dialog:save-pdf', async (event, { data, defaultName }) => {
+ipcMain.handle('dialog:save-pdf', async (event, data) => {
   try {
-    requireRole('manager');
+    const valid = validateIPC('dialog:save-pdf', data);
+    if (!valid.success) {
+      return { success: false, error: valid.error };
+    }
+    const { data: pdfData, defaultName } = valid.data;
     const result = await dialog.showSaveDialog(mainWindow, {
       defaultPath: defaultName || 'relatorio.pdf',
       filters: [{ name: 'PDF', extensions: ['pdf'] }],
@@ -1028,6 +1031,10 @@ createHandler('ifood:dispatch', async ({ orderId }) => {
 ipcMain.handle('auth:verify-password', async (e, password) => {
   try {
     const { checkVerifyPasswordRateLimit, resetVerifyPasswordRateLimit, recordVerifyPasswordAttempt } = require('./database/db.cjs');
+    const valid = validateIPC('auth:verify-password', password);
+    if (!valid.success) {
+      return { success: false, valid: false, error: valid.error };
+    }
     checkVerifyPasswordRateLimit();
     if (!password || typeof password !== 'string') {
       return { success: false, valid: false, error: 'Senha inválida' };
@@ -1131,23 +1138,12 @@ ipcMain.handle('auth:login', async (e, data) => {
   }
 });
 
-ipcMain.handle('auth:verify-session', async (e, token) => {
-  try {
-    cleanupExpiredSessions();
-    const sessionData = getSession(token);
-    if (!sessionData) {
-      return { success: false, error: 'Sessão inválida ou expirada' };
-    }
-    setSession(sessionData.user, token);
-    return { success: true, user: sessionData.user };
-  } catch (e) {
-    console.error('[auth:verify-session] Error:', e.message);
-    return { success: false, error: 'Erro ao verificar sessão.' };
-  }
-});
-
 ipcMain.handle('auth:logout', async (e, { token, userId }) => {
   try {
+    const valid = validateIPC('auth:logout', { token, userId });
+    if (!valid.success) {
+      return { success: false, error: valid.error };
+    }
     deleteSession(token);
     createAuditLog(userId, 'LOGOUT', null, null, 'User logged out');
     clearSession();
@@ -1201,6 +1197,25 @@ createHandler('auth:reset-admin-password', async ({ adminId, newPassword }) => {
   return { success: true };
 });
 
+ipcMain.handle('auth:reset-manager-password', async (e, data) => {
+  try {
+    requireRole('admin');
+    const admin = currentSession ? currentSession.user : null;
+    checkResetRateLimit(admin?.id);
+
+    const tempPassword = crypto.randomBytes(4).toString('hex');
+    const hash = bcrypt.hashSync(tempPassword, 10);
+    updateConfig('manager_password', hash);
+    createAuditLog(admin?.id, 'MANAGER_PASSWORD_RESET', 'config', 'manager_password', 'Manager password reset by admin');
+
+    recordResetAttempt(admin?.id);
+    return { success: true, tempPassword };
+  } catch (e) {
+    console.error('[auth:reset-manager-password] Error:', e.message);
+    return { success: false, error: e.message };
+  }
+});
+
 // ============================================================
 // AUDITORIA - IPC Handlers
 // ============================================================
@@ -1250,57 +1265,6 @@ function recordResetAttempt(userId) {
   }
 }
 
-ipcMain.handle('auth:reset-manager-password', async (e, data) => {
-  try {
-    requireRole('admin');
-    const admin = currentSession ? currentSession.user : null;
-    checkResetRateLimit(admin?.id);
-
-    const tempPassword = crypto.randomBytes(4).toString('hex');
-    const hash = bcrypt.hashSync(tempPassword, 10);
-    updateConfig('manager_password', hash);
-    createAuditLog(admin?.id, 'MANAGER_PASSWORD_RESET', 'config', 'manager_password', 'Manager password reset by admin');
-
-    recordResetAttempt(admin?.id);
-    return { success: true, tempPassword };
-  } catch (e) {
-    console.error('[auth:reset-manager-password] Error:', e.message);
-    return { success: false, error: e.message };
-  }
-});
-
-ipcMain.handle('auth:force-reset-admin', async (e, { adminId, newPassword }) => {
-  try {
-    const adminUser = currentSession?.user;
-    if (!adminUser || adminUser.role !== 'admin') {
-      throw new Error('A1 entrada inválida. Permissão necessária');
-    }
-    checkResetRateLimit(adminUser.id);
-
-    const target = getUserById(adminId);
-    if (!target || target.role !== 'admin') {
-      return { success: false, error: 'Administrador não encontrado' };
-    }
-    if (target.id === adminUser.id) {
-      return { success: false, error: 'Use a opção de trocar sua própria senha' };
-    }
-    if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 8) {
-      return { success: false, error: 'A nova senha deve ter no mínimo 8 caracteres' };
-    }
-    const newHash = bcrypt.hashSync(newPassword, 10);
-    db.prepare('UPDATE users SET password_hash = ?, must_change_password = 1 WHERE id = ?').run(newHash, adminId);
-    createAuditLog(adminUser.id, 'ADMIN_PASSWORD_RESET', 'users', adminId, `Admin password reset by ${adminUser.username}`);
-    recordResetAttempt(adminUser.id);
-    return { success: true };
-  } catch (e) {
-    console.error('[auth:force-reset-admin] Error:', e.message);
-    return { success: false, error: e.message };
-  }
-});
-
-// ============================================================
-// CONFIGURAÇÕES - IPC Handlers (printer, etc.)
-// ============================================================
 createHandler('config:get-all', async () => ({ data: getAllConfigs() }), { minRole: 'manager' });
 createHandler('config:update', async ({ key, value }) => {
   updateConfig(key, value);
