@@ -298,30 +298,27 @@ jobs:
           FAILED_JOBS=""
           TOTAL_JOBS=0
 
-          jobs=(
-            "Lint & TypeCheck:lint-and-typecheck"
-            "Tests (Node.js ABI 127):test-node"
-            "Electron ABI Check (ABI 128):test-electron"
-            "Build Production (Vite):build"
-            "ABI Regression Guard:abi-guard"
-            "Security Audit:security-audit"
-          )
+          check_result() {
+            local job_name="$1"
+            local job_result="$2"
+            echo "| $job_name | $job_result |" >> $GITHUB_STEP_SUMMARY
+            if [[ "$job_result" != "success" ]]; then
+              FAILED_JOBS="$FAILED_JOBS  - $job_name ($job_result)"$'\n'
+              TOTAL_JOBS=$((TOTAL_JOBS + 1))
+            fi
+          }
 
           echo "## CI Pipeline Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Job | Result |" >> $GITHUB_STEP_SUMMARY
           echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
 
-          for entry in "${jobs[@]}"; do
-            IFS=':' read -r job_name job_key <<< "$entry"
-            result="${{ needs.$job_key.result }}"
-            echo "| $job_name | ${{ needs.$job_key.result }} |" >> $GITHUB_STEP_SUMMARY
-
-            if [[ "$result" != "success" ]]; then
-              FAILED_JOBS="$FAILED_JOBS  - $job_name (${result})"$'\n'
-              TOTAL_JOBS=$((TOTAL_JOBS + 1))
-            fi
-          done
+          check_result "Lint & TypeCheck" "${{ needs.lint-and-typecheck.result }}"
+          check_result "Tests (Node.js ABI 127)" "${{ needs.test-node.result }}"
+          check_result "Electron ABI Check (ABI 128)" "${{ needs.test-electron.result }}"
+          check_result "Build Production (Vite)" "${{ needs.build.result }}"
+          check_result "ABI Regression Guard" "${{ needs.abi-guard.result }}"
+          check_result "Security Audit" "${{ needs.security-audit.result }}"
 
           echo "" >> $GITHUB_STEP_SUMMARY
 
