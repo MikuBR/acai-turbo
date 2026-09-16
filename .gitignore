@@ -45,4 +45,6 @@ AGENTS.md
 *.db-wal
 
 # Test coverage
-coverage/
+coverage/# Build artifacts (Windows installer) — não commitar
+Acai.Wave.Setup*.exe
+release/
