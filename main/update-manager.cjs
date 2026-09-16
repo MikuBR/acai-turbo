@@ -1,6 +1,6 @@
-/**
+/** 
  * Update Manager - gerencia auto-update com segurança para dados locais
- *
+ * 
  * Funcionalidades:
  * 1. Verificação periódica de atualizações (em produção)
  * 2. Backup automático do banco de dados antes de atualizar
@@ -14,22 +14,28 @@ const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
 const { getDbPath } = require('../database/db.cjs');
-const logger = require('../database/logger.cjs').logger();
+const loggerModule = require('../database/logger.cjs');
 
 let isUpdateDownloaded = false;
 let downloadProgress = null;
 
-// Configurar logger — apenas se o transport file estiver disponível
-if (logger && logger.transports && logger.transports.file) {
-  autoUpdater.logger = logger;
-  autoUpdater.logger.transports.file.level = 'info';
-} else {
-  // Fallback: logger mínimo que electron-updater aceita
-  autoUpdater.logger = {
-    info: (msg, meta) => console.log('[autoUpdater]', msg, meta || ''),
-    warn: (msg, meta) => console.warn('[autoUpdater]', msg, meta || ''),
-    error: (msg, meta) => console.error('[autoUpdater]', msg, meta || ''),
-  };
+// Logger do autoUpdater é configurado lazy, após app.ready,
+// para garantir que o logger winston já está inicializado
+// e com transports file disponíveis quando usamos o logger principal,
+// ou usamos fallback de console quando não está.
+function configureAutoUpdaterLogger() {
+  const logger = loggerModule.logger();
+  if (logger && logger.transports && logger.transports.file) {
+    autoUpdater.logger = logger;
+    autoUpdater.logger.transports.file.level = 'info';
+  } else {
+    // Fallback: logger mínimo compatível com electron-updater
+    autoUpdater.logger = {
+      info: (msg, meta) => console.log('[autoUpdater]', msg, meta || ''),
+      warn: (msg, meta) => console.warn('[autoUpdater]', msg, meta || ''),
+      error: (msg, meta) => console.error('[autoUpdater]', msg, meta || ''),
+    };
+  }
 }
 
 // Configurar feed de atualização (GitHub Releases)
@@ -67,7 +73,7 @@ function backupDatabase() {
 
     // Copiar o banco principal
     fs.copyFileSync(dbPath, backupPath);
-    logger.info('[update] Backup criado:', backupPath);
+    loggerModule.logger().info('[update] Backup criado:', backupPath);
 
     // Copiar WAL e SHM se existirem
     const walPath = dbPath + '-wal';
@@ -75,16 +81,16 @@ function backupDatabase() {
 
     if (fs.existsSync(walPath)) {
       fs.copyFileSync(walPath, backupPath + '-wal');
-      logger.info('[update] Backup WAL criado');
+      loggerModule.logger().info('[update] Backup WAL criado');
     }
     if (fs.existsSync(shmPath)) {
       fs.copyFileSync(shmPath, backupPath + '-shm');
-      logger.info('[update] Backup SHM criado');
+      loggerModule.logger().info('[update] Backup SHM criado');
     }
 
     return { success: true, backupPath };
   } catch (error) {
-    logger.error('[update] Falha ao criar backup:', error.message);
+    loggerModule.logger().error('[update] Falha ao criar backup:', error.message);
     return { success: false, error: error.message };
   }
 }
@@ -97,7 +103,7 @@ function verifyDatabaseIntegrity(db) {
     const result = db.prepare('PRAGMA integrity_check').get();
     return result.result === 'ok';
   } catch (error) {
-    logger.error('[update] Erro na verificação de integridade:', error.message);
+    loggerModule.logger().error('[update] Erro na verificação de integridade:', error.message);
     return false;
   }
 }
@@ -107,19 +113,19 @@ function verifyDatabaseIntegrity(db) {
  */
 function checkForUpdates() {
   if (!app.isPackaged) {
-    logger.info('[update] Desabilitado em desenvolvimento');
+    loggerModule.logger().info('[update] Desabilitado em desenvolvimento');
     return;
   }
 
-  logger.info('[update] Verificando atualizações...');
+  loggerModule.logger().info('[update] Verificando atualizações...');
   notifyRenderer('update:status-change', { status: 'checking' });
 
   autoUpdater.checkForUpdates()
     .then((result) => {
-      logger.info('[update] Verificação concluída:', result?.updateInfo?.version || 'N/A');
+      loggerModule.logger().info('[update] Verificação concluída:', result?.updateInfo?.version || 'N/A');
     })
     .catch((error) => {
-      logger.error('[update] Erro na verificação:', error.message);
+      loggerModule.logger().error('[update] Erro na verificação:', error.message);
       notifyRenderer('update:error', { message: error.message });
       notifyRenderer('update:status-change', { status: 'error' });
     });
@@ -138,12 +144,12 @@ async function downloadUpdate() {
   }
 
   try {
-    logger.info('[update] Iniciando download...');
+    loggerModule.logger().info('[update] Iniciando download...');
     notifyRenderer('update:status-change', { status: 'downloading' });
     await autoUpdater.downloadUpdate();
     return { success: true, message: 'Download concluído' };
   } catch (error) {
-    logger.error('[update] Falha no download:', error.message);
+    loggerModule.logger().error('[update] Falha no download:', error.message);
     notifyRenderer('update:error', { message: error.message });
     notifyRenderer('update:status-change', { status: 'error' });
     return { success: false, error: error.message };
@@ -162,12 +168,12 @@ function installUpdate() {
   const backup = backupDatabase();
 
   if (!backup.success) {
-    logger.error('[update] Não foi possível criar backup. Cancelando instalação.');
+    loggerModule.logger().error('[update] Não foi possível criar backup. Cancelando instalação.');
     notifyRenderer('update:error', { message: 'Falha ao criar backup: ' + backup.error });
     return;
   }
 
-  logger.info('[update] Instalando atualização...');
+  loggerModule.logger().info('[update] Instalando atualização...');
   isUpdateDownloaded = false;
   autoUpdater.quitAndInstall(true, true);
 }
@@ -179,37 +185,37 @@ function setupUpdateListeners() {
   if (!app.isPackaged) return;
 
   autoUpdater.on('checking-for-update', () => {
-    logger.info('[update] Verificando atualizações...');
+    loggerModule.logger().info('[update] Verificando atualizações...');
     notifyRenderer('update:status-change', { status: 'checking' });
   });
 
   autoUpdater.on('update-available', (info) => {
-    logger.info('[update] Atualização disponível:', info.version);
+    loggerModule.logger().info('[update] Atualização disponível:', info.version);
     notifyRenderer('update:available', info);
     notifyRenderer('update:status-change', { status: 'available', version: info.version });
   });
 
   autoUpdater.on('update-not-available', () => {
-    logger.info('[update] Já está na última versão');
+    loggerModule.logger().info('[update] Já está na última versão');
     notifyRenderer('update:status-change', { status: 'latest' });
   });
 
   autoUpdater.on('download-progress', (progress) => {
     downloadProgress = progress;
-    logger.info(`[update] Progresso: ${progress.percent}%`);
+    loggerModule.logger().info(`[update] Progresso: ${progress.percent}%`);
     notifyRenderer('update:downloading', { percent: progress.percent });
     notifyRenderer('update:status-change', { status: 'downloading', percent: progress.percent });
   });
 
   autoUpdater.on('update-downloaded', (info) => {
     isUpdateDownloaded = true;
-    logger.info('[update] Download concluído:', info.version);
+    loggerModule.logger().info('[update] Download concluído:', info.version);
     notifyRenderer('update:downloaded', info);
     notifyRenderer('update:status-change', { status: 'downloaded', version: info.version });
   });
 
   autoUpdater.on('error', (error) => {
-    logger.error('[update] Erro:', error.message);
+    loggerModule.logger().error('[update] Erro:', error.message);
     notifyRenderer('update:error', { message: error.message });
     notifyRenderer('update:status-change', { status: 'error' });
   });
@@ -237,20 +243,24 @@ function setupIPCHandlers() {
   });
 }
 
-// Inicializar
+// Inicializa listeners e handlers IPC (sem tocar no logger do autoUpdater ainda)
 setupUpdateListeners();
 setupIPCHandlers();
 
-// Verificar automaticamente ao iniciar (com delay para não bloquear startup)
+// Configura logger do autoUpdater e agenda verificação apenas após app.ready
+// Isso garante que o logger winston já está inicializado com transports file,
+// evitando "Cannot set properties of undefined (setting 'level')" no startup.
 if (app.isPackaged) {
-  setTimeout(() => {
-    checkForUpdates();
-  }, 5000);
+  app.whenReady().then(() => {
+    configureAutoUpdaterLogger();
+    setTimeout(() => {
+      checkForUpdates();
+    }, 5000);
 
-  // Verificar a cada hora
-  setInterval(() => {
-    checkForUpdates();
-  }, 60 * 60 * 1000);
+    setInterval(() => {
+      checkForUpdates();
+    }, 60 * 60 * 1000);
+  });
 }
 
 module.exports = {
