@@ -589,12 +589,32 @@ ipcMain.handle('dialog:save-pdf', async (event, data) => {
       return { success: false, error: valid.error };
     }
     const { data: pdfData, defaultName } = valid.data;
+
+    // Validação de integridade do base64 antes de salvar
+    if (typeof pdfData !== 'string' || pdfData.length === 0) {
+      return { success: false, error: 'Dados PDF inválidos (empty ou não-string)' };
+    }
+    // Tenta decodificar para verificar se o base64 é válido
+    let buffer;
+    try {
+      buffer = Buffer.from(pdfData, 'base64');
+    } catch (decodeErr) {
+      return { success: false, error: `Base64 inválido: ${decodeErr.message}` };
+    }
+    // Verifica se o buffer tem tamanho razoável para um PDF (mínimo 1KB, máximo 50MB)
+    const bufferSize = buffer.length;
+    if (bufferSize < 1024) {
+      return { success: false, error: 'PDF gerado está muito pequeno (possivelmente corrompido)' };
+    }
+    if (bufferSize > 50 * 1024 * 1024) {
+      return { success: false, error: 'PDF gerado excede o tamanho máximo permitido (50MB)' };
+    }
+
     const result = await dialog.showSaveDialog(mainWindow, {
       defaultPath: defaultName || 'relatorio.pdf',
       filters: [{ name: 'PDF', extensions: ['pdf'] }],
     });
     if (result.canceled) return { success: false, canceled: true };
-    const buffer = Buffer.from(data, 'base64');
     fs.writeFileSync(result.filePath, buffer);
     return { success: true, path: result.filePath };
   } catch (e) {

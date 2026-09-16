@@ -2,11 +2,15 @@ import { X, Trash2, ArrowUpCircle, ArrowDownCircle, DollarSign, FileDown } from 
 import useToastStore from '../../store/toastStore';
 
 function generatePDF(data, isPeriodView, financialSummary, reportPeriod, storeInfo, allOrders, promotions) {
-  const salesTotal = (data?.sales || []).reduce((a, c) => a + Number(c.total_amount || 0), 0);
-  const entradasTotal = (data?.movements || []).reduce((a, m) => m.type === 'ENTRADA' ? a + m.total_amount : a, 0);
-  const sangriasTotal = (data?.movements || []).reduce((a, m) => m.type === 'SAIDA' ? a + m.total_amount : a, 0);
+  const salesTotal = (data?.sales || []).reduce((a, c) => a + Number(c?.total_amount ?? 0), 0);
+  const entradasTotal = (data?.movements || [])
+    .filter(m => m?.type === 'ENTRADA')
+    .reduce((a, m) => a + Number(m?.total_amount ?? 0), 0);
+  const sangriasTotal = (data?.movements || [])
+    .filter(m => m?.type === 'SAIDA')
+    .reduce((a, m) => a + Number(m?.total_amount ?? 0), 0);
   const saldoFinal = salesTotal + entradasTotal - sangriasTotal;
-  const totalOrders = (data?.sales || []).reduce((a, c) => a + Number(c.order_count || 0), 0);
+  const totalOrders = (data?.sales || []).reduce((a, c) => a + Number(c?.order_count ?? 0), 0);
 
   const now = new Date();
   const dateStr = now.toLocaleDateString('pt-BR');
@@ -17,20 +21,20 @@ function generatePDF(data, isPeriodView, financialSummary, reportPeriod, storeIn
 
   const salesRows = (data?.sales || []).map(s => [
     s.payment_method || 'N/A',
-    { text: String(s.order_count || '-'), alignment: 'center' },
-    { text: `R$ ${Number(s.total_amount).toFixed(2)}`, alignment: 'right' },
+    { text: String(s?.order_count ?? 0), alignment: 'center' },
+    { text: `R$ ${Number(s?.total_amount ?? 0).toFixed(2)}`, alignment: 'right' },
   ]);
 
   const movementRows = (data?.movements || [])
-    .filter(m => m.type === 'ENTRADA' || m.type === 'SAIDA')
+    .filter(m => m?.type === 'ENTRADA' || m?.type === 'SAIDA')
     .map(m => [
       {
-        text: m.type === 'ENTRADA' ? 'ENTRADA' : 'SAÍDA',
-        color: m.type === 'ENTRADA' ? '#16a34a' : '#dc2626',
+        text: m?.type === 'ENTRADA' ? 'ENTRADA' : 'SAÍDA',
+        color: m?.type === 'ENTRADA' ? '#16a34a' : '#dc2626',
         bold: true,
       },
-      m.description || '-',
-      { text: `R$ ${Number(m.total_amount).toFixed(2)}`, alignment: 'right' },
+      m?.description || '-',
+      { text: `R$ ${Number(m?.total_amount ?? 0).toFixed(2)}`, alignment: 'right' },
     ]);
 
   const fin = financialSummary || {};
@@ -114,18 +118,18 @@ function generatePDF(data, isPeriodView, financialSummary, reportPeriod, storeIn
           ],
           [
             { text: 'Pendente' },
-            { text: `R$ ${(fin.payable?.pending || 0).toFixed(2)}`, alignment: 'right' },
-            { text: `R$ ${(fin.receivable?.pending || 0).toFixed(2)}`, alignment: 'right' },
+            { text: `R$ ${Number(fin.payable?.pending ?? 0).toFixed(2)}`, alignment: 'right' },
+            { text: `R$ ${Number(fin.receivable?.pending ?? 0).toFixed(2)}`, alignment: 'right' },
           ],
           [
             { text: 'Pago' },
-            { text: `R$ ${(fin.payable?.paid || 0).toFixed(2)}`, alignment: 'right' },
-            { text: `R$ ${(fin.receivable?.paid || 0).toFixed(2)}`, alignment: 'right' },
+            { text: `R$ ${Number(fin.payable?.paid ?? 0).toFixed(2)}`, alignment: 'right' },
+            { text: `R$ ${Number(fin.receivable?.paid ?? 0).toFixed(2)}`, alignment: 'right' },
           ],
           [
             { text: 'Total', style: 'totalRow' },
-            { text: `R$ ${(fin.payable?.total || 0).toFixed(2)}`, style: 'totalRow', alignment: 'right' },
-            { text: `R$ ${(fin.receivable?.total || 0).toFixed(2)}`, style: 'totalRow', alignment: 'right' },
+            { text: `R$ ${Number(fin.payable?.total ?? 0).toFixed(2)}`, style: 'totalRow', alignment: 'right' },
+            { text: `R$ ${Number(fin.receivable?.total ?? 0).toFixed(2)}`, style: 'totalRow', alignment: 'right' },
           ],
         ],
       },
@@ -134,11 +138,11 @@ function generatePDF(data, isPeriodView, financialSummary, reportPeriod, storeIn
   }
 
   if (data?.exchanges && data.exchanges.length > 0) {
-    const exchangeTotal = data.exchanges.reduce((a, e) => a + Number(e.total || 0), 0);
+    const exchangeTotal = data.exchanges.reduce((a, e) => a + Number(e?.total ?? 0), 0);
     const exchangeRows = data.exchanges.map(ex => [
       { text: ex.customer_name || 'Permuta', fontSize: 8 },
       { text: ex.exchange_for || '(não informado)', fontSize: 8 },
-      { text: `R$ ${Number(ex.total).toFixed(2)}`, alignment: 'right', fontSize: 8 },
+      { text: `R$ ${Number(ex?.total ?? 0).toFixed(2)}`, alignment: 'right', fontSize: 8 },
     ]);
     content.push({ text: 'PERMUTAS (NÃO INCLUI EM VENDAS)', style: 'sectionTitle', margin: [0, 20, 0, 5], color: '#d97706' });
     content.push({
@@ -167,7 +171,7 @@ function generatePDF(data, isPeriodView, financialSummary, reportPeriod, storeIn
   if (isPeriodView && data) {
     content.push({ text: '5. METRICAS DO PERIODO', style: 'sectionTitle', margin: [0, 20, 0, 5] });
 
-    if (data.ticketAverage !== undefined) {
+    if (data.ticketAverage != null) {
       content.push({
         columns: [
           { width: '*', text: '' },
@@ -175,7 +179,7 @@ function generatePDF(data, isPeriodView, financialSummary, reportPeriod, storeIn
             width: 'auto',
             stack: [
               { text: 'Ticket Médio', fontSize: 9, color: '#555' },
-              { text: `R$ ${Number(data.ticketAverage).toFixed(2)}`, fontSize: 16, bold: true, alignment: 'center', color: '#16a34a', margin: [0, 5, 0, 15] },
+              { text: `R$ ${Number(data.ticketAverage ?? 0).toFixed(2)}`, fontSize: 16, bold: true, alignment: 'center', color: '#16a34a', margin: [0, 5, 0, 15] },
             ],
             alignment: 'center',
           },
@@ -200,9 +204,9 @@ function generatePDF(data, isPeriodView, financialSummary, reportPeriod, storeIn
             ],
             ...data.topProducts.map(p => [
               p.product_name,
-              { text: String(p.qty), alignment: 'center' },
-              { text: `R$ ${Number(p.total_revenue || 0).toFixed(2)}`, alignment: 'right' },
-              { text: `R$ ${Number(p.avg_price || 0).toFixed(2)}`, alignment: 'right' },
+              { text: String(p?.qty ?? 0), alignment: 'center' },
+              { text: `R$ ${Number(p?.total_revenue ?? 0).toFixed(2)}`, alignment: 'right' },
+              { text: `R$ ${Number(p?.avg_price ?? 0).toFixed(2)}`, alignment: 'right' },
             ]),
           ],
         },
@@ -224,9 +228,9 @@ function generatePDF(data, isPeriodView, financialSummary, reportPeriod, storeIn
               { text: 'Valor', style: 'tableHeader', alignment: 'right' },
             ],
             ...data.peakHours.map(h => [
-              { text: `${h.hour}:00`, alignment: 'center' },
-              { text: String(h.order_count), alignment: 'center' },
-              { text: `R$ ${Number(h.total_amount || 0).toFixed(2)}`, alignment: 'right' },
+              { text: `${h?.hour || '??'}:00`, alignment: 'center' },
+              { text: String(h?.order_count ?? 0), alignment: 'center' },
+              { text: `R$ ${Number(h?.total_amount ?? 0).toFixed(2)}`, alignment: 'right' },
             ]),
           ],
         },
@@ -240,13 +244,13 @@ function generatePDF(data, isPeriodView, financialSummary, reportPeriod, storeIn
     content.push({ text: '5. SESSÕES DE CAIXA', style: 'sectionTitle', margin: [0, 20, 0, 5] });
     const sessionRows = data.cashSessions.map(cs => [
       { text: cs.opened_at ? new Date(cs.opened_at + 'Z').toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-', fontSize: 8 },
-      { text: `R$ ${Number(cs.opening_amount || 0).toFixed(2)}`, alignment: 'right', fontSize: 8 },
+      { text: `R$ ${Number(cs?.opening_amount ?? 0).toFixed(2)}`, alignment: 'right', fontSize: 8 },
       cs.closed_at
-        ? { text: `R$ ${Number(cs.closing_amount || 0).toFixed(2)}`, alignment: 'right', fontSize: 8, color: (cs.difference !== undefined && Math.abs(cs.difference) > 0.01) ? '#dc2626' : '#16a34a' }
+        ? { text: `R$ ${Number(cs?.closing_amount ?? 0).toFixed(2)}`, alignment: 'right', fontSize: 8, color: (cs?.difference != null && Math.abs(cs.difference) > 0.01) ? '#dc2626' : '#16a34a' }
         : { text: 'ABERTO', alignment: 'right', fontSize: 8, color: '#d97706', bold: true },
       cs.user_full_name || '-',
-      cs.difference !== undefined && Math.abs(cs.difference) > 0.01
-        ? { text: `DÉBITO: R$ ${Number(cs.difference).toFixed(2)}`, alignment: 'right', fontSize: 8, color: '#dc2626', bold: true }
+      cs.difference != null && Math.abs(cs.difference) > 0.01
+        ? { text: `DÉBITO: R$ ${Number(cs.difference ?? 0).toFixed(2)}`, alignment: 'right', fontSize: 8, color: '#dc2626', bold: true }
         : '-',
     ]);
     content.push({
@@ -305,9 +309,9 @@ function generatePDF(data, isPeriodView, financialSummary, reportPeriod, storeIn
           ],
           ...promotions.map(p => [
             p.name,
-            { text: `${p.type === 'percentage' ? '%' : 'R$'} ${Number(p.value).toFixed(p.type === 'percentage' ? 0 : 2)}`, alignment: 'right' },
+            { text: `${p?.type === 'percentage' ? '%' : 'R$'} ${Number(p?.value ?? 0).toFixed(p?.type === 'percentage' ? 0 : 2)}`, alignment: 'right' },
             p.applies_to,
-            { text: `${p.start_date} → ${p.end_date}`, fontSize: 8 },
+            { text: `${p?.start_date || '?'} → ${p?.end_date || '?'}`, fontSize: 8 },
           ]),
         ],
       },
@@ -318,10 +322,10 @@ function generatePDF(data, isPeriodView, financialSummary, reportPeriod, storeIn
   // SEÇÃO 8: RESUMO GERAL DE PEDIDOS
   (allOrders && allOrders.length > 0) && (() => {
     const totalPedidos = allOrders.length;
-    const totalValor = allOrders.reduce((a, o) => a + Number(o.total || 0), 0);
-    const totalItens = allOrders.reduce((a, o) => a + (o.items ? o.items.length : 0), 0);
-    const entregas = allOrders.filter(o => o.is_delivery).length;
-    const retiradas = allOrders.filter(o => !o.is_delivery).length;
+    const totalValor = allOrders.reduce((a, o) => a + Number(o?.total ?? 0), 0);
+    const totalItens = allOrders.reduce((a, o) => a + (o?.items ? o.items.length : 0), 0);
+    const entregas = allOrders.filter(o => o?.is_delivery).length;
+    const retiradas = allOrders.filter(o => !o?.is_delivery).length;
 
     content.push({ text: '8. RESUMO GERAL DE PEDIDOS', style: 'sectionTitle', margin: [0, 20, 0, 5] });
     content.push({
@@ -387,9 +391,13 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
   const isPeriodView = !!advancedReportData;
   const data = isPeriodView ? advancedReportData : reportData;
 
-  const salesTotal = (data?.sales || []).reduce((a, c) => a + Number(c.total_amount || 0), 0);
-  const entradasTotal = (data?.movements || []).reduce((a, m) => m.type === 'ENTRADA' ? a + m.total_amount : a, 0);
-  const sangriasTotal = (data?.movements || []).reduce((a, m) => m.type === 'SAIDA' ? a + m.total_amount : a, 0);
+  const salesTotal = (data?.sales || []).reduce((a, c) => a + Number(c?.total_amount ?? 0), 0);
+  const entradasTotal = (data?.movements || [])
+    .filter(m => m?.type === 'ENTRADA')
+    .reduce((a, m) => a + Number(m?.total_amount ?? 0), 0);
+  const sangriasTotal = (data?.movements || [])
+    .filter(m => m?.type === 'SAIDA')
+    .reduce((a, m) => a + Number(m?.total_amount ?? 0), 0);
   const saldoFinal = salesTotal + entradasTotal - sangriasTotal;
 
   const handleExportPDF = async () => {
@@ -402,6 +410,20 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
       ipc.invoke('reports:all-orders-for-period', reportPeriod),
       ipc.invoke('reports:promotions-for-period', reportPeriod),
     ]);
+
+    // Verifica se as chamadas extras retornaram sucesso
+    if (!resStoreInfo?.success) {
+      addToast('Erro ao carregar dados da loja', 'error');
+      return;
+    }
+    if (!resOrders?.success) {
+      addToast('Erro ao carregar pedidos do período', 'error');
+      return;
+    }
+    if (!resPromos?.success) {
+      addToast('Erro ao carregar promoções do período', 'error');
+      return;
+    }
 
     const storeInfo = resStoreInfo?.data || {};
     const allOrders = resOrders?.data || [];
@@ -429,7 +451,13 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
       // pdfmake >= 0.3.x: getBase64() é async e retorna Promise (não usa callback)
       const base64 = await pdfMake.createPdf(docDef).getBase64();
       if (!base64) {
-        addToast('Erro ao gerar PDF', 'error');
+        addToast('Erro ao gerar PDF: documento vazio', 'error');
+        return;
+      }
+
+      // Verifica tamanho do base64 para evitar IPC overflow (limite ~1MB de string)
+      if (base64.length > 2_000_000) {
+        addToast('PDF muito grande para exportar (limite 2MB)', 'error');
         return;
       }
 
@@ -438,9 +466,19 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
         addToast(`PDF salvo em: ${res.path}`, 'success');
       } else if (res?.error) {
         addToast(`Erro ao salvar PDF: ${res.error}`, 'error');
+      } else if (res?.canceled) {
+        addToast('Salvamento de PDF cancelado', 'info');
+      } else {
+        addToast('Erro desconhecido ao salvar PDF', 'error');
       }
     } catch (e) {
-      addToast('Erro ao exportar PDF', 'error');
+      if (e.code === 'MODULE_NOT_FOUND' || e.message?.includes('pdfmake')) {
+        addToast('Erro de configuração: pdfmake não disponível', 'error');
+      } else if (e.message?.includes('PDFDocumentInvalid') || e.message?.includes('invalid')) {
+        addToast('Erro ao gerar PDF: estrutura inválida', 'error');
+      } else {
+        addToast('Erro ao exportar PDF', 'error');
+      }
       console.error('[pdf] Erro ao gerar/salvar PDF:', e);
     }
   };
@@ -499,15 +537,15 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                 <div className="space-y-3 mb-6">
                   <div className="bg-success/10 border border-success/30 p-4 rounded-lg">
                     <span className="text-[9px] text-muted font-bold uppercase block">Ticket Médio</span>
-                    <span className="text-2xl font-bold text-success font-mono">R$ {advancedReportData.ticketAverage.toFixed(2)}</span>
+                    <span className="text-2xl font-bold text-success font-mono">R$ {Number(advancedReportData?.ticketAverage ?? 0).toFixed(2)}</span>
                   </div>
                   <div className="bg-info/10 border border-info/30 p-4 rounded-lg">
                     <span className="text-[9px] text-muted font-bold uppercase block">Horários de Pico</span>
                     <div className="mt-2 space-y-1">
-                      {advancedReportData.peakHours.slice(0, 3).map((h, i) => (
+                      {advancedReportData?.peakHours?.slice(0, 3).map((h, i) => (
                         <div key={i} className="flex justify-between text-xs">
-                          <span className="text-primary">{h.hour}:00</span>
-                          <span className="font-bold text-info">{h.order_count} pedidos</span>
+                          <span className="text-primary">{h?.hour || '?'}:00</span>
+                          <span className="font-bold text-info">{(h?.order_count ?? 0)} pedidos</span>
                         </div>
                       ))}
                     </div>
@@ -519,21 +557,21 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                   {(data?.sales || []).map((s, i) => (
                     <div key={i} className="flex justify-between items-center bg-surface-light p-3 rounded-lg border border-border">
                       <span className="text-xs font-bold text-primary">{s.payment_method}</span>
-                      <span className="font-mono text-success font-bold">R$ {s.total_amount.toFixed(2)}</span>
+                      <span className="font-mono text-success font-bold">R$ {Number(s?.total_amount ?? 0).toFixed(2)}</span>
                     </div>
                   ))}
                   <div className="flex justify-between items-center bg-surface-light p-3 rounded-lg border border-border mt-2">
                     <span className="text-xs font-bold text-primary uppercase tracking-widest">Total Vendas</span>
                     <span className="font-mono text-success font-bold text-lg">R$ {salesTotal.toFixed(2)}</span>
                   </div>
-                  {(data?.movements || []).filter(m => m.type === 'ENTRADA' || m.type === 'SAIDA').map((m, i) => (
-                    <div key={m.id || i} className={`flex justify-between items-center p-3 rounded-lg border ${m.type === 'ENTRADA' ? 'bg-success/5 border-success/20' : 'bg-danger/5 border-danger/20'}`}>
+                  {(data?.movements || []).filter(m => m?.type === 'ENTRADA' || m?.type === 'SAIDA').map((m, i) => (
+                    <div key={m.id || i} className={`flex justify-between items-center p-3 rounded-lg border ${m?.type === 'ENTRADA' ? 'bg-success/5 border-success/20' : 'bg-danger/5 border-danger/20'}`}>
                       <div className="flex flex-col">
-                        <span className="text-xs font-bold text-primary">{m.type === 'ENTRADA' ? '➕ Entrada' : '➖ Sangria'}</span>
-                        <span className="text-[10px] text-muted">{m.description}</span>
-                        <span className="text-[9px] text-muted/60">{m.created_at ? new Date(m.created_at + 'Z').toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                        <span className="text-xs font-bold text-primary">{m?.type === 'ENTRADA' ? '➕ Entrada' : '➖ Sangria'}</span>
+                        <span className="text-[10px] text-muted">{m?.description || '-'}</span>
+                        <span className="text-[9px] text-muted/60">{m?.created_at ? new Date(m.created_at + 'Z').toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
                       </div>
-                      <span className={`font-mono font-bold ${m.type === 'ENTRADA' ? 'text-success' : 'text-danger'}`}>R$ {m.total_amount.toFixed(2)}</span>
+                      <span className={`font-mono font-bold ${m?.type === 'ENTRADA' ? 'text-success' : 'text-danger'}`}>R$ {Number(m?.total_amount ?? 0).toFixed(2)}</span>
                     </div>
                   ))}
                   <div className="flex justify-between items-center bg-primary/10 border border-primary/20 p-3 rounded-lg mt-2">
@@ -549,21 +587,21 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                   {(reportData?.sales || []).map((s, i) => (
                     <div key={i} className="flex justify-between items-center bg-surface-light p-3 rounded-lg border border-border">
                       <span className="text-xs font-bold text-primary">{s.payment_method}</span>
-                      <span className="font-mono text-success font-bold">R$ {s.total_amount.toFixed(2)}</span>
+                      <span className="font-mono text-success font-bold">R$ {Number(s?.total_amount ?? 0).toFixed(2)}</span>
                     </div>
                   ))}
                   <div className="flex justify-between items-center bg-surface-light p-3 rounded-lg border border-border mt-2">
                     <span className="text-xs font-bold text-primary uppercase tracking-widest">Total Vendas</span>
                     <span className="font-mono text-success font-bold text-lg">R$ {salesTotal.toFixed(2)}</span>
                   </div>
-                  {(data?.movements || []).filter(m => m.type === 'ENTRADA' || m.type === 'SAIDA').map((m, i) => (
-                    <div key={m.id || i} className={`flex justify-between items-center p-3 rounded-lg border ${m.type === 'ENTRADA' ? 'bg-success/5 border-success/20' : 'bg-danger/5 border-danger/20'}`}>
+                  {(data?.movements || []).filter(m => m?.type === 'ENTRADA' || m?.type === 'SAIDA').map((m, i) => (
+                    <div key={m.id || i} className={`flex justify-between items-center p-3 rounded-lg border ${m?.type === 'ENTRADA' ? 'bg-success/5 border-success/20' : 'bg-danger/5 border-danger/20'}`}>
                       <div className="flex flex-col">
-                        <span className="text-xs font-bold text-primary">{m.type === 'ENTRADA' ? '➕ Entrada' : '➖ Sangria'}</span>
-                        <span className="text-[10px] text-muted">{m.description}</span>
-                        <span className="text-[9px] text-muted/60">{m.created_at ? new Date(m.created_at + 'Z').toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                        <span className="text-xs font-bold text-primary">{m?.type === 'ENTRADA' ? '➕ Entrada' : '➖ Sangria'}</span>
+                        <span className="text-[10px] text-muted">{m?.description || '-'}</span>
+                        <span className="text-[9px] text-muted/60">{m?.created_at ? new Date(m.created_at + 'Z').toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
                       </div>
-                      <span className={`font-mono font-bold ${m.type === 'ENTRADA' ? 'text-success' : 'text-danger'}`}>R$ {m.total_amount.toFixed(2)}</span>
+                      <span className={`font-mono font-bold ${m?.type === 'ENTRADA' ? 'text-success' : 'text-danger'}`}>R$ {Number(m?.total_amount ?? 0).toFixed(2)}</span>
                     </div>
                   ))}
                   <div className="flex justify-between items-center bg-primary/10 border border-primary/20 p-3 rounded-lg mt-2">
@@ -584,19 +622,19 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-warning/10 border border-warning/30 p-3 rounded-lg">
                     <span className="text-[9px] text-muted font-bold uppercase block">A Pagar (Total)</span>
-                    <span className="text-lg font-bold text-warning font-mono">R$ {financialSummary.payable?.total?.toFixed(2) || '0.00'}</span>
+                    <span className="text-lg font-bold text-warning font-mono">R$ {Number(financialSummary?.payable?.total ?? 0).toFixed(2)}</span>
                   </div>
                   <div className="bg-success/10 border border-success/30 p-3 rounded-lg">
                     <span className="text-[9px] text-muted font-bold uppercase block">A Receber (Total)</span>
-                    <span className="text-lg font-bold text-success font-mono">R$ {financialSummary.receivable?.total?.toFixed(2) || '0.00'}</span>
+                    <span className="text-lg font-bold text-success font-mono">R$ {Number(financialSummary?.receivable?.total ?? 0).toFixed(2)}</span>
                   </div>
                   <div className="bg-danger/10 border border-danger/30 p-3 rounded-lg">
                     <span className="text-[9px] text-muted font-bold uppercase block">A Pagar (Pendente)</span>
-                    <span className="text-lg font-bold text-danger font-mono">R$ {financialSummary.payable?.pending?.toFixed(2) || '0.00'}</span>
+                    <span className="text-lg font-bold text-danger font-mono">R$ {Number(financialSummary?.payable?.pending ?? 0).toFixed(2)}</span>
                   </div>
                   <div className="bg-info/10 border border-info/30 p-3 rounded-lg">
                     <span className="text-[9px] text-muted font-bold uppercase block">A Receber (Pendente)</span>
-                    <span className="text-lg font-bold text-info font-mono">R$ {financialSummary.receivable?.pending?.toFixed(2) || '0.00'}</span>
+                    <span className="text-lg font-bold text-info font-mono">R$ {Number(financialSummary?.receivable?.pending ?? 0).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -616,7 +654,7 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                           <span className="text-xs font-bold text-primary">{ex.customer_name || 'Permuta'}</span>
                           <span className="text-[10px] text-muted">{ex.created_at ? new Date(ex.created_at + 'Z').toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}</span>
                         </div>
-                        <span className="font-mono font-bold text-warning">R$ {Number(ex.total).toFixed(2)}</span>
+                        <span className="font-mono font-bold text-warning">R$ {Number(ex?.total ?? 0).toFixed(2)}</span>
                       </div>
                       <div className="text-[10px] text-muted bg-surface-light p-2 rounded border border-border">
                         <span className="font-bold uppercase">Trocado por:</span> <span className="text-primary">{ex.exchange_for || '(não informado)'}</span>
@@ -626,7 +664,7 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                           {ex.items.map((it, j) => (
                             <div key={it.id || j} className="flex justify-between text-[10px] text-muted">
                               <span>1x {it.product_name}</span>
-                              <span className="font-mono">R$ {Number(it.price).toFixed(2)}</span>
+                              <span className="font-mono">R$ {Number(it?.price ?? 0).toFixed(2)}</span>
                             </div>
                           ))}
                         </div>
@@ -635,7 +673,7 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                   ))}
                   <div className="flex justify-between items-center bg-warning/10 border border-warning/30 p-3 rounded-lg mt-2">
                     <span className="text-xs font-bold text-primary uppercase tracking-widest">Total Permutas</span>
-                    <span className="font-mono font-bold text-warning text-lg">R$ {data.exchanges.reduce((a, e) => a + Number(e.total || 0), 0).toFixed(2)}</span>
+                    <span className="font-mono font-bold text-warning text-lg">R$ {data.exchanges.reduce((a, e) => a + Number(e?.total ?? 0), 0).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -684,10 +722,10 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                   <div key={i} className="bg-surface-light border border-border rounded-xl p-4 flex items-center justify-between">
                     <div>
                       <div className="font-bold text-sm text-primary">{p.product_name}</div>
-                      <div className="text-[10px] text-muted">{p.qty} vendidos • média R$ {Number(p.avg_price || 0).toFixed(2)}</div>
+                      <div className="text-[10px] text-muted">{p?.qty ?? 0} vendidos • média R$ {Number(p?.avg_price ?? 0).toFixed(2)}</div>
                     </div>
                     <div className="text-right">
-                      <div className="font-mono font-bold text-success">R$ {p.total_revenue.toFixed(2)}</div>
+                      <div className="font-mono font-bold text-success">R$ {Number(p?.total_revenue ?? 0).toFixed(2)}</div>
                     </div>
                   </div>
                 ))
@@ -700,7 +738,7 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                         <span className="text-[10px] bg-surface-light px-2 py-1 rounded text-muted uppercase">{o.payment_method}</span>
                       </div>
                       <div className="flex items-center gap-4">
-                        <span className="font-mono font-bold text-lg text-success">R$ {o.total.toFixed(2)}</span>
+                        <span className="font-mono font-bold text-lg text-success">R$ {Number(o?.total ?? 0).toFixed(2)}</span>
                         <button
                           onClick={() => runWithAuth(() => {
                             const ipc = getIPC();
@@ -722,7 +760,7 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                       {o.items.map(i => (
                         <div key={i.id} className="flex justify-between text-[10px] text-muted">
                           <span>1x {i.product_name} <span className="text-muted/70 italic ml-1">{i.notes ? `(${i.notes})` : ''}</span></span>
-                          <span className="font-mono">R$ {i.price.toFixed(2)}</span>
+                          <span className="font-mono">R$ {Number(i?.price ?? 0).toFixed(2)}</span>
                         </div>
                       ))}
                     </div>
