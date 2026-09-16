@@ -1,12 +1,17 @@
-/** 
+/**
  * Update Manager - gerencia auto-update com segurança para dados locais
- * 
+ *
  * Funcionalidades:
  * 1. Verificação periódica de atualizações (em produção)
  * 2. Backup automático do banco de dados antes de atualizar
  * 3. Download em background com tracking de progresso
  * 4. Notificações ao usuário via IPC
  * 5. Reinicialização segura após update
+ *
+ * Notas de segurança:
+ * - logger do electron-updater é configurado APENAS após app.ready
+ * - usa console ou winston sem depender de estrutura interna (transports.file etc.)
+ * - fallback automático se logger não estiver disponível
  */
 
 const { app, ipcMain, BrowserWindow } = require('electron');
@@ -19,23 +24,27 @@ const loggerModule = require('../database/logger.cjs');
 let isUpdateDownloaded = false;
 let downloadProgress = null;
 
-// Logger do autoUpdater é configurado lazy, após app.ready,
-// para garantir que o logger winston já está inicializado
-// e com transports file disponíveis quando usamos o logger principal,
-// ou usamos fallback de console quando não está.
-function configureAutoUpdaterLogger() {
-  const logger = loggerModule.logger();
-  if (logger && logger.transports && logger.transports.file) {
-    autoUpdater.logger = logger;
-    autoUpdater.logger.transports.file.level = 'info';
-  } else {
-    // Fallback: logger mínimo compatível com electron-updater
-    autoUpdater.logger = {
-      info: (msg, meta) => console.log('[autoUpdater]', msg, meta || ''),
-      warn: (msg, meta) => console.warn('[autoUpdater]', msg, meta || ''),
-      error: (msg, meta) => console.error('[autoUpdater]', msg, meta || ''),
-    };
+// Logger compatível com electron-updater (interface: info/warn/error msg-only ou msg+meta)
+// Usa console por padrão; se winston estiver com file transport, usa winston.
+// NUNCA acessa props internas como .transports.file.level — o electron-updater
+// espera apenas os métodos info/warn/error, e o NoOpLogger dele não tem transports.
+function makeUpdaterLogger() {
+  const winstonLogger = loggerModule.logger();
+  // Detecta se é um logger com método info e (opcionalmente) warn/error
+  if (winstonLogger && typeof winstonLogger.info === 'function') {
+    // Winston: tem info/warn/error. Use-o.
+    return winstonLogger;
   }
+  // Fallback: console tem info/warn/error? Sim, console tem .info/.warn/.error em Electron.
+  if (typeof console.info === 'function') {
+    return console;
+  }
+  // Ultimo recurso: NoOpLogger estilo electron-updater
+  return {
+    info: () => {},
+    warn: () => {},
+    error: () => {},
+  };
 }
 
 // Configurar feed de atualização (GitHub Releases)
@@ -247,12 +256,12 @@ function setupIPCHandlers() {
 setupUpdateListeners();
 setupIPCHandlers();
 
-// Configura logger do autoUpdater e agenda verificação apenas após app.ready
-// Isso garante que o logger winston já está inicializado com transports file,
-// evitando "Cannot set properties of undefined (setting 'level')" no startup.
+// Configura o logger do autoUpdater e agenda verificação apenas após app.ready
+// Usa console ou winston — nunca acessa props internas como .transports.file.level
+// que o electron-updater não espera e que causam TypeError no startup.
 if (app.isPackaged) {
   app.whenReady().then(() => {
-    configureAutoUpdaterLogger();
+    autoUpdater.logger = makeUpdaterLogger();
     setTimeout(() => {
       checkForUpdates();
     }, 5000);
