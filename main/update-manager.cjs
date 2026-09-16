@@ -19,9 +19,18 @@ const logger = require('../database/logger.cjs').logger();
 let isUpdateDownloaded = false;
 let downloadProgress = null;
 
-// Configurar logger
-autoUpdater.logger = logger;
-autoUpdater.logger.transports.file.level = 'info';
+// Configurar logger — apenas se o transport file estiver disponível
+if (logger && logger.transports && logger.transports.file) {
+  autoUpdater.logger = logger;
+  autoUpdater.logger.transports.file.level = 'info';
+} else {
+  // Fallback: logger mínimo que electron-updater aceita
+  autoUpdater.logger = {
+    info: (msg, meta) => console.log('[autoUpdater]', msg, meta || ''),
+    warn: (msg, meta) => console.warn('[autoUpdater]', msg, meta || ''),
+    error: (msg, meta) => console.error('[autoUpdater]', msg, meta || ''),
+  };
+}
 
 // Configurar feed de atualização (GitHub Releases)
 if (app.isPackaged) {
