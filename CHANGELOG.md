@@ -6,6 +6,14 @@ This project adheres to [Semantic Versioning](https://semver.org/lang/pt-br/).
 
 ---
 
+## [1.3.6] — 2026-09-17
+
+### Corrigido
+
+- **Login falho**: `preload.js` usava `legacyIpc` antes de ser definido — com `contextIsolation: true`, `window.electron.ipcRenderer` era `undefined`, `getIPC()` retornava `null`, e o login nunca disparava. Movido `contextBridge.exposeInMainWorld('electron', ...)` para depois da definição de `legacyIpc`.
+
+---
+
 ## [1.3.5] — 2026-09-16
 
 ### Corrigido

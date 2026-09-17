@@ -196,7 +196,6 @@ const api = {
 };
 
 contextBridge.exposeInMainWorld('api', api);
-contextBridge.exposeInMainWorld('electron', { ipcRenderer: legacyIpc });
 
 const legacyIpc = {
   invoke: (channel, ...args) => safeInvoke(channel, ...args),
@@ -229,4 +228,6 @@ const legacyIpc = {
     }
     ipcRenderer.removeListener(channel, func);
   },
-}
+};
+
+contextBridge.exposeInMainWorld('electron', { ipcRenderer: legacyIpc });
