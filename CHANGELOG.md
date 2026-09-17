@@ -6,6 +6,25 @@ This project adheres to [Semantic Versioning](https://semver.org/lang/pt-br/).
 
 ---
 
+## [1.3.7] — 2026-09-17
+
+### Adicionado
+
+- **Relatório por Produto**: nova seção no relatório financeiro em PDF (Seção 9) com ficha do produto (qtde vendida, receita total, preço médio, participação no total), evolução diária, formas de pagamento e pedidos que contêm o produto (até 50 pedidos). Modal dedicado com KPIs, tabelas de evolução diária, pagamento e pedidos.
+- **Backend para relatório por produto**: 5 novas consultas SQL em `database/db.cjs` — `getProductSalesReport`, `getProductSalesByDay`, `getOrdersContainingProduct`, `getProductById`, `getTopCategories`.
+- **IPC para relatório por produto**: 5 novos handlers em `main.cjs` (`reports:product-sales`, `reports:product-daily`, `reports:product-orders`, `reports:daily-for-date`, `reports:top-categories`) e exposição via `contextBridge` em `preload.js`.
+
+### Melhorado
+
+- **Exportação PDF**: `handleExportPDF` busca dados do produto via IPC quando um produto está selecionado, antes de montar o documento.
+- **Carregamento do catálogo**: catálogo de produtos carregado via IPC ao abrir o modal de relatórios para alimentar o seletor de produto.
+
+### Notas
+
+- As funções `getProductById` e `getTopCategories` foram implementadas no backend mas não são ainda consumidas pelo frontend neste release (prontas para uso futuro).
+
+---
+
 ## [1.3.6] — 2026-09-17
 
 ### Corrigido

@@ -1,7 +1,8 @@
-import { X, Trash2, ArrowUpCircle, ArrowDownCircle, DollarSign, FileDown } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { X, Trash2, ArrowUpCircle, ArrowDownCircle, DollarSign, FileDown, PackageIcon, TrendingUp, Clock } from 'lucide-react';
 import useToastStore from '../../store/toastStore';
 
-function generatePDF(data, isPeriodView, financialSummary, reportPeriod, storeInfo, allOrders, promotions) {
+function generatePDF(data, isPeriodView, financialSummary, reportPeriod, storeInfo, allOrders, promotions, productReport) {
   const salesTotal = (data?.sales || []).reduce((a, c) => a + Number(c?.total_amount ?? 0), 0);
   const entradasTotal = (data?.movements || [])
     .filter(m => m?.type === 'ENTRADA')
@@ -344,6 +345,102 @@ function generatePDF(data, isPeriodView, financialSummary, reportPeriod, storeIn
     });
   })();
 
+  // SEÇÃO 9: RELATÓRIO DE PRODUTO (nova feature v1.3.7)
+  if (productReport) {
+    content.push({ text: '9. RELATÓRIO DE PRODUTO', style: 'sectionTitle', margin: [0, 20, 0, 5] });
+    content.push({
+      style: 'table',
+      table: {
+        headerRows: 0,
+        body: [
+          [{ text: 'Produto:', bold: true }, productReport.productName],
+          [{ text: 'Quantidade Vendida:', bold: true }, String(productReport.qty)],
+          [{ text: 'Receita Total:', bold: true }, { text: `R$ ${productReport.totalRevenue.toFixed(2)}`, alignment: 'right' }],
+          [{ text: 'Preço Médio:', bold: true }, { text: `R$ ${productReport.avgPrice.toFixed(2)}`, alignment: 'right' }],
+          [{ text: 'Participação no Total:', bold: true }, { text: `${productReport.percentage.toFixed(1)}%`, alignment: 'right' }],
+        ],
+      },
+      layout: 'lightHorizontalLines',
+      margin: [0, 0, 0, 10],
+    });
+    if (productReport.dailyData && productReport.dailyData.length > 0) {
+      content.push({ text: 'Evolução Diária', fontSize: 10, bold: true, margin: [0, 10, 0, 5] });
+      const dailyRows = productReport.dailyData.map(d => [
+        { text: d.day || '-', fontSize: 8 },
+        { text: String(d.qty ?? 0), alignment: 'center', fontSize: 8 },
+        { text: `R$ ${Number(d.revenue ?? 0).toFixed(2)}`, alignment: 'right', fontSize: 8 },
+      ]);
+      content.push({
+        style: 'table',
+        table: {
+          headerRows: 1,
+          widths: ['auto', 'auto', 'auto'],
+          body: [
+            [
+              { text: 'Data', style: 'tableHeader', fontSize: 8 },
+              { text: 'Qtd', style: 'tableHeader', alignment: 'center', fontSize: 8 },
+              { text: 'Receita', style: 'tableHeader', alignment: 'right', fontSize: 8 },
+            ],
+            ...dailyRows,
+          ],
+        },
+        layout: 'lightHorizontalLines',
+      });
+    }
+    if (productReport.payments && productReport.payments.length > 0) {
+      content.push({ text: 'Formas de Pagamento', fontSize: 10, bold: true, margin: [0, 15, 0, 5] });
+      const paymentRows = productReport.payments.map(p => [
+        p.payment_method || 'N/A',
+        { text: String(p.orders_count ?? 0), alignment: 'center' },
+        { text: `R$ ${Number(p.revenue ?? 0).toFixed(2)}`, alignment: 'right' },
+      ]);
+      content.push({
+        style: 'table',
+        table: {
+          headerRows: 1,
+          widths: ['*', 'auto', 'auto'],
+          body: [
+            [
+              { text: 'Forma de Pagamento', style: 'tableHeader', fontSize: 8 },
+              { text: 'Pedidos', style: 'tableHeader', alignment: 'center', fontSize: 8 },
+              { text: 'Receita', style: 'tableHeader', alignment: 'right', fontSize: 8 },
+            ],
+            ...paymentRows,
+          ],
+        },
+        layout: 'lightHorizontalLines',
+      });
+    }
+    if (productReport.orders && productReport.orders.length > 0) {
+      content.push({ text: 'Pedidos que Contêm Este Produto', fontSize: 10, bold: true, margin: [0, 15, 0, 5] });
+      const orderRows = productReport.orders.slice(0, 20).map(o => [
+        { text: String(o.order_id), fontSize: 8 },
+        { text: o.customer_name || '-', fontSize: 8 },
+        { text: o.payment_method || '-', fontSize: 8 },
+        { text: o.created_at ? new Date(o.created_at + 'Z').toLocaleDateString('pt-BR') : '-', fontSize: 8 },
+        { text: `R$ ${Number(o.order_total ?? 0).toFixed(2)}`, alignment: 'right', fontSize: 8 },
+      ]);
+      content.push({
+        style: 'table',
+        table: {
+          headerRows: 1,
+          widths: ['auto', '*', 'auto', 'auto', 'auto'],
+          body: [
+            [
+              { text: '#', style: 'tableHeader', fontSize: 8 },
+              { text: 'Cliente', style: 'tableHeader', fontSize: 8 },
+              { text: 'Pagamento', style: 'tableHeader', fontSize: 8 },
+              { text: 'Data', style: 'tableHeader', fontSize: 8 },
+              { text: 'Total', style: 'tableHeader', alignment: 'right', fontSize: 8 },
+            ],
+            ...orderRows,
+          ],
+        },
+        layout: 'lightHorizontalLines',
+      });
+    }
+  }
+
   content.push({ text: `Gerado em: ${dateStr} as ${timeStr}`, style: 'footerNote', margin: [0, 30, 0, 0] });
   content.push({ text: 'Acai Wave - PDV', style: 'footerNote' });
 
@@ -400,15 +497,96 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
     .reduce((a, m) => a + Number(m?.total_amount ?? 0), 0);
   const saldoFinal = salesTotal + entradasTotal - sangriasTotal;
 
-  const handleExportPDF = async () => {
+  // --- Relatório por produto (nova feature v1.3.7) ---
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [productReportData, setProductReportData] = useState(null);
+  const [catalogProducts, setCatalogProducts] = useState([]);
+  const [isLoadingProduct, setIsLoadingProduct] = useState(false);
+
+  const loadCatalogProducts = () => {
+    const ipc = getIPC();
+    if (!ipc) return;
+    ipc.invoke('catalog:get-products').then(res => {
+      if (res?.success && Array.isArray(res.data)) {
+        setCatalogProducts(res.data);
+      }
+    }).catch(() => {});
+  };
+
+  const loadProductReport = () => {
+    if (!selectedProduct) {
+      setProductReportData(null);
+      return;
+    }
     const ipc = getIPC();
     if (!ipc) { addToast('Sem conexao com o sistema', 'error'); return; }
+    setIsLoadingProduct(true);
+    const name = selectedProduct.name;
+    const { startDate, endDate } = reportPeriod;
+    Promise.all([
+      ipc.invoke('reports:product-sales', { productName: name, startDate, endDate }),
+      ipc.invoke('reports:product-daily', { productName: name, startDate, endDate }),
+      ipc.invoke('reports:product-orders', { productName: name, startDate, endDate }),
+    ]).then(([salesRes, dailyRes, ordersRes]) => {
+      if (!salesRes?.success) {
+        addToast('Erro ao carregar relatório do produto', 'error');
+        setIsLoadingProduct(false);
+        return;
+      }
+      if (!dailyRes?.success) {
+        addToast('Erro ao carregar evolução diária do produto', 'error');
+        setIsLoadingProduct(false);
+        return;
+      }
+      if (!ordersRes?.success) {
+        addToast('Erro ao carregar pedidos do produto', 'error');
+        setIsLoadingProduct(false);
+        return;
+      }
+      const qty = Number(salesRes.data?.qty ?? 0);
+      const totalRevenue = Number(salesRes.data?.totalRevenue ?? 0);
+      const avgPrice = Number(salesRes.data?.avgPrice ?? 0);
+      const dailyData = dailyRes.data || [];
+      const payments = salesRes.data?.payments || [];
+      const orders = (ordersRes.data || []).slice(0, 50);
+      let totalGeral = 0;
+      if (isPeriodView && advancedReportData?.allOrders) {
+        totalGeral = advancedReportData.allOrders.reduce((s, o) => s + Number(o?.total ?? 0), 0);
+      } else if (!isPeriodView && data?.sales) {
+        totalGeral = data.sales.reduce((s, sRow) => s + Number(sRow?.total_amount ?? 0), 0);
+      }
+      const percentage = totalGeral > 0 ? (totalRevenue / totalGeral) * 100 : 0;
+      setProductReportData({ qty, totalRevenue, avgPrice, dailyData, payments, orders, percentage });
+    }).catch(() => {
+      addToast('Erro ao carregar relatório do produto', 'error');
+    }).finally(() => setIsLoadingProduct(false));
+  };
 
-    // Buscar dados extras necessários para o PDF expandido
-    const [resStoreInfo, resOrders, resPromos] = await Promise.all([
+  useEffect(() => {
+    loadCatalogProducts();
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (selectedProduct) loadProductReport();
+  }, [reportPeriod.startDate, reportPeriod.endDate]);
+
+  const handleExportPDF = async () => {
+
+    // Buscar dados extras necessárias para o PDF expandido
+    // Se um produto está selecionado, também buscar os dados dele
+    const productReportPromise = selectedProduct
+      ? Promise.all([
+          ipc.invoke('reports:product-sales', { productName: selectedProduct.name, startDate: reportPeriod.startDate, endDate: reportPeriod.endDate }),
+          ipc.invoke('reports:product-daily', { productName: selectedProduct.name, startDate: reportPeriod.startDate, endDate: reportPeriod.endDate }),
+          ipc.invoke('reports:product-orders', { productName: selectedProduct.name, startDate: reportPeriod.startDate, endDate: reportPeriod.endDate }),
+        ])
+      : Promise.resolve([null, null, null]);
+
+    const [resStoreInfo, resOrders, resPromos, productResults] = await Promise.all([
       ipc.invoke('reports:store-info'),
       ipc.invoke('reports:all-orders-for-period', reportPeriod),
       ipc.invoke('reports:promotions-for-period', reportPeriod),
+      productReportPromise,
     ]);
 
     // Verifica se as chamadas extras retornaram sucesso
@@ -429,6 +607,25 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
     const allOrders = resOrders?.data || [];
     const promotions = resPromos?.data || [];
 
+    // Montar objeto de relatório do produto, se um produto está selecionado
+    let productReport = null;
+    if (selectedProduct && productResults[0]?.success && productResults[1]?.success && productResults[2]?.success) {
+      const qty = Number(productResults[0].data?.qty ?? 0);
+      const totalRevenue = Number(productResults[0].data?.totalRevenue ?? 0);
+      const avgPrice = Number(productResults[0].data?.avgPrice ?? 0);
+      const dailyData = productResults[1].data || [];
+      const payments = productResults[0].data?.payments || [];
+      const orders = (productResults[2].data || []).slice(0, 50);
+      let totalGeral = 0;
+      if (isPeriodView && advancedReportData?.allOrders) {
+        totalGeral = advancedReportData.allOrders.reduce((s, o) => s + Number(o?.total ?? 0), 0);
+      } else if (!isPeriodView && data?.sales) {
+        totalGeral = data.sales.reduce((s, sRow) => s + Number(sRow?.total_amount ?? 0), 0);
+      }
+      const percentage = totalGeral > 0 ? (totalRevenue / totalGeral) * 100 : 0;
+      productReport = { productName: selectedProduct.name, qty, totalRevenue, avgPrice, dailyData, payments, orders, percentage };
+    }
+
     const docDef = generatePDF(
       data,
       isPeriodView,
@@ -437,6 +634,7 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
       storeInfo,
       allOrders,
       promotions,
+      productReport,
     );
     const now = new Date();
     const datePart = now.toISOString().split('T')[0];
@@ -533,6 +731,69 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                   </div>
                 </div>
 
+              </>
+            ) : (
+              <>
+                <div className="mb-4 p-4 bg-surface-light rounded-xl border border-border">
+                  <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-2">Filtrar por Data</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Data</label>
+                      <input type="date" value={reportPeriod.startDate} onChange={e => setReportPeriod({...reportPeriod, startDate: e.target.value, endDate: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
+                    </div>
+                    <button onClick={loadReports} className="w-full bg-success hover:bg-success py-2 rounded-lg font-bold text-xs uppercase tracking-widest text-white transition-all">Atualizar</button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Seletor de Produto */}
+            <div className="mb-6">
+              <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-3">Relatório por Produto</h3>
+              <div className="space-y-2">
+                <div>
+                  <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Selecione</label>
+                  <select
+                    value={selectedProduct?.name || ''}
+                    onChange={e => {
+                      const product = catalogProducts.find(p => p.name === e.target.value);
+                      if (product) setSelectedProduct(product);
+                    }}
+                    disabled={catalogProducts.length === 0 || isLoadingProduct}
+                    className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-xs disabled:opacity-50"
+                  >
+                    <option value="">-- Selecione um produto --</option>
+                    {catalogProducts.map(p => (
+                      <option key={p.id} value={p.name}>{p.name} — R$ {Number(p.price).toFixed(2)}</option>
+                    ))}
+                  </select>
+                </div>
+                {selectedProduct && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        if (!isLoadingProduct) loadProductReport();
+                      }}
+                      disabled={isLoadingProduct}
+                      className="flex-1 bg-info hover:bg-info py-2 rounded-lg font-bold text-xs uppercase tracking-widest text-white transition-all disabled:opacity-50"
+                    >
+                      {isLoadingProduct ? 'Carregando...' : 'CARREGAR RELATÓRIO'}
+                    </button>
+                    <button
+                      onClick={() => { setSelectedProduct(null); setProductReportData(null); }}
+                      className="p-2 bg-danger/10 hover:bg-danger/20 rounded-lg text-danger transition-colors"
+                      title="Fechar"
+                    >
+                      <X size={16}/>
+                    </button>
+                  </div>
+                )}
+                {isLoadingProduct && (
+                  <div className="text-[10px] text-muted italic text-center py-1">Carregando dados do produto...</div>
+                )}
+              </div>
+            </div>
+
                 <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-4 border-b border-border pb-2">Métricas Avançadas</h3>
                 <div className="space-y-3 mb-6">
                   <div className="bg-success/10 border border-success/30 p-4 rounded-lg">
@@ -579,9 +840,9 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                     <span className={`font-mono font-bold text-lg ${saldoFinal >= 0 ? 'text-success' : 'text-danger'}`}>R$ {saldoFinal.toFixed(2)}</span>
                   </div>
                 </div>
-              </>
-            ) : (
-              <>
+
+
+
                 <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-4 border-b border-border pb-2">Resumo de Vendas</h3>
                 <div className="space-y-2 mb-8">
                   {(reportData?.sales || []).map((s, i) => (
@@ -609,8 +870,8 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                     <span className={`font-mono font-bold text-lg ${saldoFinal >= 0 ? 'text-success' : 'text-danger'}`}>R$ {saldoFinal.toFixed(2)}</span>
                   </div>
                 </div>
-              </>
-            )}
+
+
 
             {/* Financial Summary - Today */}
             {financialSummary && (
@@ -712,10 +973,10 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
             </div>
           </div>
 
-          <div className="flex-1 p-6 flex flex-col overflow-hidden bg-surface">
-            <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-4 border-b border-border pb-2">
-              {advancedReportData ? 'Produtos Mais Vendidos (Período)' : 'Histórico de Pedidos (Estorno)'}
-            </h3>
+              <div className="flex-1 p-6 flex flex-col overflow-hidden bg-surface">
+              <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-4 border-b border-border pb-2">
+                {advancedReportData ? 'Produtos Mais Vendidos (Período)' : 'Histórico de Pedidos (Estorno)'}
+              </h3>
             <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-2">
               {advancedReportData ? (
                 advancedReportData.topProducts.map((p, i) => (
@@ -772,7 +1033,144 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
             </div>
           </div>
         </div>
-      </div>
+
+        {/* Modal de Relatório por Produto (v1.3.7) */}
+        {selectedProduct && productReportData && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-card rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
+              <div className="p-4 bg-surface-light border-b border-border flex justify-between items-center">
+                <h3 className="text-sm font-bold text-primary uppercase tracking-wider">
+                  Relatório: {productReportData.productName}
+                </h3>
+                <button
+                  onClick={() => { setSelectedProduct(null); setProductReportData(null); }}
+                  className="p-2 hover:bg-danger/20 rounded-lg text-muted hover:text-danger transition-all"
+                >
+                  <X size={20}/>
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                {/* KPIs */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-surface-light rounded-xl p-4 border border-border text-center">
+                    <div className="text-[10px] text-muted font-bold uppercase tracking-widest mb-1">Qtde Vendida</div>
+                    <div className="text-2xl font-bold text-primary">{productReportData.qty}</div>
+                    <div className="text-[10px] text-muted">unidades</div>
+                  </div>
+                  <div className="bg-surface-light rounded-xl p-4 border border-border text-center">
+                    <div className="text-[10px] text-muted font-bold uppercase tracking-widest mb-1">Receita Total</div>
+                    <div className="text-2xl font-bold text-success">R$ {productReportData.totalRevenue.toFixed(2)}</div>
+                  </div>
+                  <div className="bg-surface-light rounded-xl p-4 border border-border text-center">
+                    <div className="text-[10px] text-muted font-bold uppercase tracking-widest mb-1">Preço Médio</div>
+                    <div className="text-2xl font-bold text-primary">R$ {productReportData.avgPrice.toFixed(2)}</div>
+                  </div>
+                  <div className="bg-surface-light rounded-xl p-4 border border-border text-center">
+                    <div className="text-[10px] text-muted font-bold uppercase tracking-widest mb-1">% do Total</div>
+                    <div className="text-2xl font-bold text-info">{productReportData.percentage.toFixed(1)}%</div>
+                  </div>
+                </div>
+
+                {/* Evolução Diária */}
+                <div>
+                  <h4 className="text-[10px] text-muted font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <TrendingUp size={14}/> Evolução Diária
+                  </h4>
+                  <div className="bg-surface-light rounded-xl border border-border overflow-hidden">
+                    <table className="w-full text-xs">
+                      <thead className="bg-surface border-b border-border">
+                        <tr>
+                          <th className="p-3 text-left font-bold text-muted uppercase">Dia</th>
+                          <th className="p-3 text-center font-bold text-muted uppercase">Qtde</th>
+                          <th className="p-3 text-right font-bold text-muted uppercase">Receita</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {productReportData.dailyData.map((d, i) => (
+                          <tr key={i}>
+                            <td className="p-3 text-primary font-medium">{d.day}</td>
+                            <td className="p-3 text-center">{d.qty}</td>
+                            <td className="p-3 text-right font-mono text-success">R$ {d.revenue.toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {productReportData.dailyData.length === 0 && (
+                      <div className="text-center text-muted text-xs py-8">Nenhum dado diário disponível.</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Formas de Pagamento */}
+                <div>
+                  <h4 className="text-[10px] text-muted font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <Clock size={14}/> Formas de Pagamento
+                  </h4>
+                  <div className="bg-surface-light rounded-xl border border-border overflow-hidden">
+                    <table className="w-full text-xs">
+                      <thead className="bg-surface border-b border-border">
+                        <tr>
+                          <th className="p-3 text-left font-bold text-muted uppercase">Forma de Pagamento</th>
+                          <th className="p-3 text-center font-bold text-muted uppercase">Pedidos</th>
+                          <th className="p-3 text-right font-bold text-muted uppercase">Receita</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {productReportData.payments.map((p, i) => (
+                          <tr key={i}>
+                            <td className="p-3 text-primary font-medium">{p.payment_method}</td>
+                            <td className="p-3 text-center">{p.orders_count}</td>
+                            <td className="p-3 text-right font-mono text-success">R$ {p.revenue.toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {productReportData.payments.length === 0 && (
+                      <div className="text-center text-muted text-xs py-8">Sem dados de pagamento.</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Pedidos que Contêm o Produto */}
+                <div>
+                  <h4 className="text-[10px] text-muted font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <PackageIcon size={14}/> Pedidos que Contêm o Produto
+                  </h4>
+                  <div className="bg-surface-light rounded-xl border border-border overflow-hidden">
+                    <table className="w-full text-xs">
+                      <thead className="bg-surface border-b border-border">
+                        <tr>
+                          <th className="p-3 text-left font-bold text-muted uppercase">Nº Pedido</th>
+                          <th className="p-3 text-left font-bold text-muted uppercase">Cliente</th>
+                          <th className="p-3 text-center font-bold text-muted uppercase">Data</th>
+                          <th className="p-3 text-left font-bold text-muted uppercase">Pagamento</th>
+                          <th className="p-3 text-right font-bold text-muted uppercase">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {productReportData.orders.map((o, i) => (
+                          <tr key={i}>
+                            <td className="p-3 font-mono font-bold text-primary">#{o.order_id}</td>
+                            <td className="p-3 text-primary">{o.customer_name || '-'}</td>
+                            <td className="p-3 text-center text-muted">
+                              {o.created_at ? new Date(o.created_at + 'Z').toLocaleDateString('pt-BR') : '-'}
+                            </td>
+                            <td className="p-3 text-muted">{o.payment_method || '-'}</td>
+                            <td className="p-3 text-right font-mono text-success">R$ {Number(o.order_total ?? 0).toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {productReportData.orders.length === 0 && (
+                      <div className="text-center text-muted text-xs py-8">Nenhum pedido encontrado.</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
     </div>
+  </div>
   );
 }

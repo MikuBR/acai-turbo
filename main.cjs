@@ -582,6 +582,48 @@ createHandler('reports:promotions-for-period', async ({ startDate, endDate }) =>
 createHandler('reports:cash-sessions', async (params) => ({
   data: getCashSessions(params?.startDate, params?.endDate)
 }));
+
+// --- Novos endpoints para relatório expandido: produtoss/datas específicas ---
+createHandler('reports:daily-for-date', async ({ date }) => {
+  try {
+    const r = db.getDailyReportForDate(date);
+    return { success: true, data: r };
+  } catch (msg) {
+    return { success: false, error: msg };
+  }
+});
+createHandler('reports:top-categories', async ({ startDate, endDate }) => {
+  try {
+    const r = db.getTopCategories(startDate, endDate);
+    return { success: true, data: r };
+  } catch (msg) {
+    return { success: false, error: msg };
+  }
+});
+createHandler('reports:product-sales', async ({ productName, startDate, endDate }) => {
+  try {
+    const r = db.getProductSalesReport(productName, startDate, endDate);
+    return { success: true, data: r };
+  } catch (msg) {
+    return { success: false, error: msg };
+  }
+});
+createHandler('reports:product-daily', async ({ productName, startDate, endDate }) => {
+  try {
+    const r = db.getProductSalesByDay(productName, startDate, endDate);
+    return { success: true, data: r };
+  } catch (msg) {
+    return { success: false, error: msg };
+  }
+});
+createHandler('reports:product-orders', async ({ productName, startDate, endDate }) => {
+  try {
+    const r = db.getOrdersContainingProduct(productName, startDate, endDate);
+    return { success: true, data: r };
+  } catch (msg) {
+    return { success: false, error: msg };
+  }
+});
 ipcMain.handle('dialog:save-pdf', async (event, data) => {
   try {
     const valid = validateIPC('dialog:save-pdf', data);

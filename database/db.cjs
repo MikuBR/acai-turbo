@@ -582,6 +582,203 @@ function getReportByPeriod(startDate, endDate) {
   return { sales, exchanges: exchangesWithItems, movements, topProducts, peakHours, ticketAverage: ticketAverage?.avg_ticket || 0, deliveryStats, cashSessions };
 }
 
+/**
+ * Retorna relatório diário completo para uma data específica.
+ * Mesmo shape de getDailyReport(): { sales, exchanges, movements, topProducts, peakHours, ticketAverage, deliveryStats, cashSessions }.
+ */
+function getDailyReportForDate(dateStr) {
+  const endOfDay = `${dateStr} 23:59:59`;
+
+  const sales = db.prepare(`
+    SELECT payment_method, is_delivery, SUM(total) as total_amount, COUNT(*) as order_count
+    FROM orders
+    WHERE datetime(created_at, 'localtime') >= datetime(?, 'localtime')
+      AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
+      AND is_exchange = 0
+    GROUP BY payment_method, is_delivery
+  `).all(dateStr, endOfDay);
+
+  const exchanges = db.prepare(`
+    SELECT id, customer_name, exchange_for, total, created_at
+    FROM orders
+    WHERE is_exchange = 1 AND date(created_at, 'localtime') = date(?, 'localtime')
+    ORDER BY created_at DESC
+  `).all(dateStr);
+
+  const getItems = db.prepare('SELECT * FROM order_items WHERE order_id = ?');
+  const exchangesWithItems = exchanges.map(e => ({ ...e, items: getItems.all(e.id) }));
+
+  const movements = db.prepare(`
+    SELECT id, type, amount as total_amount, description, created_at
+    FROM cash_movements
+    WHERE date(created_at, 'localtime') = date(?, 'localtime')
+    ORDER BY created_at DESC
+  `).all(dateStr);
+
+  const topProducts = db.prepare(`
+    SELECT product_name, COUNT(*) as qty, SUM(price) as total_revenue, AVG(price) as avg_price
+    FROM order_items JOIN orders ON order_items.order_id = orders.id
+    WHERE datetime(orders.created_at, 'localtime') >= datetime(?, 'localtime')
+      AND datetime(orders.created_at, 'localtime') <= datetime(?, 'localtime')
+      AND orders.is_exchange = 0
+    GROUP BY product_name
+    ORDER BY qty DESC
+    LIMIT 5
+  `).all(dateStr, endOfDay);
+
+  const ticketAvg = db.prepare(`
+    SELECT AVG(total) as avg_ticket
+    FROM orders
+    WHERE datetime(created_at, 'localtime') >= datetime(?, 'localtime')
+      AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
+      AND is_exchange = 0
+  `).get(dateStr, endOfDay);
+
+  const peakHours = db.prepare(`
+    SELECT strftime('%H', created_at) as hour, COUNT(*) as order_count, SUM(total) as total_amount
+    FROM orders
+    WHERE datetime(created_at, 'localtime') >= datetime(?, 'localtime')
+      AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
+      AND is_exchange = 0
+    GROUP BY hour
+    ORDER BY order_count DESC
+  `).all(dateStr, endOfDay);
+
+  const deliveryStats = db.prepare(`
+    SELECT
+      SUM(CASE WHEN is_delivery = 1 THEN 1 ELSE 0 END) as deliveries,
+      SUM(CASE WHEN is_delivery = 0 THEN 1 ELSE 0 END) as pickups,
+      SUM(CASE WHEN is_delivery = 1 THEN total ELSE 0 END) as delivery_total,
+      SUM(CASE WHEN is_delivery = 0 THEN total ELSE 0 END) as pickup_total
+    FROM orders
+    WHERE datetime(created_at, 'localtime') >= datetime(?, 'localtime')
+      AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
+      AND is_exchange = 0
+  `).get(dateStr, endOfDay);
+
+  const cashSessions = db.prepare(`
+    SELECT cs.*, u.full_name as user_full_name
+    FROM cash_sessions cs
+    LEFT JOIN users u ON cs.user_id = u.id
+    WHERE date(cs.opened_at) = date(?, 'localtime')
+    ORDER BY cs.opened_at DESC
+  `).all(dateStr);
+
+  return {
+    sales,
+    exchanges: exchangesWithItems,
+    movements,
+    topProducts,
+    peakHours,
+    ticketAverage: ticketAvg?.avg_ticket || 0,
+    deliveryStats,
+    cashSessions,
+  };
+}
+
+/**
+ * Retorna top categorias por faturamento no período. [{ category, qty, total_revenue, avg_price }] ORDER BY total_revenue DESC.
+ */
+function getTopCategories(startDate, endDate) {
+  let query = `
+    SELECT oi.category, COUNT(*) as qty, SUM(oi.price) as total_revenue, AVG(oi.price) as avg_price
+    FROM order_items oi
+    JOIN orders o ON oi.order_id = o.id
+    WHERE oi.category != ''
+      AND o.is_exchange = 0
+  `;
+  const params = [];
+  if (startDate) {
+    query += ` AND datetime(o.created_at, 'localtime') >= datetime(?, 'localtime')`;
+    params.push(startDate);
+  }
+  if (endDate) {
+    query += ` AND datetime(o.created_at, 'localtime') <= datetime(?, 'localtime')`;
+    params.push(`${endDate} 23:59:59`);
+  }
+  query += ` GROUP BY oi.category ORDER BY total_revenue DESC`;
+  return db.prepare(query).all(...params);
+}
+
+/**
+ * Retorna { qty, totalRevenue, avgPrice } para um produto no período.
+ */
+function getProductSalesReport(productName, startDate, endDate) {
+  let query = `
+    SELECT COUNT(*) as qty, SUM(oi.price) as totalRevenue, AVG(oi.price) as avgPrice
+    FROM order_items oi
+    JOIN orders o ON oi.order_id = o.id
+    WHERE oi.product_name = ?
+      AND o.is_exchange = 0
+  `;
+  const params = [productName];
+  if (startDate) {
+    query += ` AND datetime(o.created_at, 'localtime') >= datetime(?, 'localtime')`;
+    params.push(startDate);
+  }
+  if (endDate) {
+    query += ` AND datetime(o.created_at, 'localtime') <= datetime(?, 'localtime')`;
+    params.push(`${endDate} 23:59:59`);
+  }
+  return db.prepare(query).get(...params);
+}
+
+/**
+ * Retorna [{ day, qty, revenue }] vendas diárias de um produto no período, ORDER BY day ASC.
+ */
+function getProductSalesByDay(productName, startDate, endDate) {
+  let query = `
+    SELECT date(o.created_at, 'localtime') as day, COUNT(*) as qty, SUM(oi.price) as revenue
+    FROM order_items oi
+    JOIN orders o ON oi.order_id = o.id
+    WHERE oi.product_name = ?
+      AND o.is_exchange = 0
+  `;
+  const params = [productName];
+  if (startDate) {
+    query += ` AND datetime(o.created_at, 'localtime') >= datetime(?, 'localtime')`;
+    params.push(startDate);
+  }
+  if (endDate) {
+    query += ` AND datetime(o.created_at, 'localtime') <= datetime(?, 'localtime')`;
+    params.push(`${endDate} 23:59:59`);
+  }
+  query += ` GROUP BY day ORDER BY day ASC`;
+  return db.prepare(query).all(...params);
+}
+
+/**
+ * Retorna [{ order_id, customer_name, payment_method, created_at, order_total }] pedidos que contêm o produto, ORDER BY created_at DESC.
+ */
+function getOrdersContainingProduct(productName, startDate, endDate) {
+  let query = `
+    SELECT DISTINCT o.id as order_id, o.customer_name, o.payment_method, o.created_at, o.total as order_total
+    FROM orders o
+    JOIN order_items oi ON oi.order_id = o.id
+    WHERE oi.product_name = ?
+      AND o.is_exchange = 0
+  `;
+  const params = [productName];
+  if (startDate) {
+    query += ` AND datetime(o.created_at, 'localtime') >= datetime(?, 'localtime')`;
+    params.push(startDate);
+  }
+  if (endDate) {
+    query += ` AND datetime(o.created_at, 'localtime') <= datetime(?, 'localtime')`;
+    params.push(`${endDate} 23:59:59`);
+  }
+  query += ` ORDER BY o.created_at DESC`;
+  return db.prepare(query).all(...params);
+}
+
+/**
+ * Retorna o produto pelo ID ou undefined.
+ */
+function getProductById(id) {
+  if (!id || isNaN(id)) return undefined;
+  return db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+}
+
 // --- EXPORTAÇÕES DE PROMOÇÕES ---
 const getPromotions = () => db.prepare('SELECT * FROM promotions ORDER BY created_at DESC').all();
 const addPromotion = (promo) => {
@@ -995,7 +1192,7 @@ module.exports = {
   getOrdersHistory, deleteOrder,
   registerCashMovement,
   getCurrentCashSession, openCashSession, closeCashSession, getCashSessions,
-  getDailyReport, getReportByPeriod,
+  getDailyReport, getDailyReportForDate, getReportByPeriod,
   getPromotions, addPromotion, updatePromotion, deletePromotion, getActivePromotions,
   getUsers, getUserById, getUserByUsername, addUser, updateUser, deleteUser, toggleUserActive,
   createSession, getSession, deleteSession, cleanupExpiredSessions,
@@ -1005,6 +1202,11 @@ module.exports = {
   addIfoodPendingOrder, getIfoodPendingOrders, getIfoodPendingOrderByOrderId,
   updateIfoodPendingOrderStatus, removeIfoodPendingOrder, countIfoodPendingOrders,
   getStoreInfo,
+  getTopCategories,
+  getProductSalesReport,
+  getProductSalesByDay,
+  getOrdersContainingProduct,
+  getProductById,
   getPromotionsForPeriod,
   getAllOrdersForPeriod,
   checkVerifyPasswordRateLimit,

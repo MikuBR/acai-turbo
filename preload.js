@@ -25,6 +25,11 @@ const ALLOWED_CHANNELS = {
   'reports:all-orders-for-period': true,
   'reports:promotions-for-period': true,
   'reports:cash-sessions': true,
+  'reports:daily-for-date': true,
+  'reports:top-categories': true,
+  'reports:product-sales': true,
+  'reports:product-daily': true,
+  'reports:product-orders': true,
 
   'promotions:get': true,
   'promotions:add': true,
@@ -131,6 +136,11 @@ const api = {
     allOrdersForPeriod: (...args) => safeInvoke('reports:all-orders-for-period', ...args),
     promotionsForPeriod: (...args) => safeInvoke('reports:promotions-for-period', ...args),
     cashSessions: (...args) => safeInvoke('reports:cash-sessions', ...args),
+    dailyForDate: (...args) => safeInvoke('reports:daily-for-date', ...args),
+    topCategories: (...args) => safeInvoke('reports:top-categories', ...args),
+    productSales: (...args) => safeInvoke('reports:product-sales', ...args),
+    productDaily: (...args) => safeInvoke('reports:product-daily', ...args),
+    productOrders: (...args) => safeInvoke('reports:product-orders', ...args),
   },
   promotions: {
     get: (...args) => safeInvoke('promotions:get', ...args),
