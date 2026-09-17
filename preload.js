@@ -196,6 +196,7 @@ const api = {
 };
 
 contextBridge.exposeInMainWorld('api', api);
+contextBridge.exposeInMainWorld('electron', { ipcRenderer: legacyIpc });
 
 const legacyIpc = {
   invoke: (channel, ...args) => safeInvoke(channel, ...args),
@@ -228,14 +229,4 @@ const legacyIpc = {
     }
     ipcRenderer.removeListener(channel, func);
   },
-};
-
-window.electron = {
-  ipcRenderer: legacyIpc,
-  require(moduleName) {
-    if (moduleName !== 'electron') {
-      throw new Error(`Access to module '${moduleName}' is not allowed`);
-    }
-    return { ipcRenderer: legacyIpc };
-  },
-};
+}

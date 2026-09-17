@@ -92,7 +92,12 @@ export function UpdateManager() {
   };
 
   const handleInstallUpdate = async () => {
-    await window.electron.ipcRenderer.invoke('update:install');
+    try {
+      await window.electron.ipcRenderer.invoke('update:install');
+    } catch (err) {
+      setError(err.message);
+      setUpdateStatus('error');
+    }
   };
 
   const handleClose = () => {
