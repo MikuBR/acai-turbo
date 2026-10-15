@@ -47,6 +47,10 @@ AGENTS.md
 # Test coverage
 coverage/
 
+# E2E (Playwright) — relatórios e artefatos gerados
+e2e-report/
+e2e/test-results/
+
 # Build artifacts (Windows installer) — não commitar
 Acai.Wave.Setup*.exe
 release/
