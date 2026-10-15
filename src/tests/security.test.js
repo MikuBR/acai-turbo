@@ -472,19 +472,50 @@ describe('🖨️ Printer Security', () => {
 
 describe('💾 Data Encryption (crypto.cjs)', () => {
   it('should encrypt sensitive config values', () => {
-    // Test that crypto module exports encrypt/decrypt
-    // This is a placeholder - actual test would import crypto.cjs
-    const testData = 'ifood_client_secret_super_secret'
-    
-    // AES-256-GCM encryption should produce different ciphertext each time
-    // due to random IV
-    expect(testData).toBeDefined()
+    // Verify crypto module actually encrypts config secrets
+    // Mock Electron deps since crypto.cjs requires them
+    const Module = require('module');
+    const origRequire = Module.prototype.require;
+    Module.prototype.require = function(id) {
+      if (id === 'electron') return { app: { getPath: () => '/tmp' }, safeStorage: { isEncryptionAvailable: () => false } };
+      return origRequire.apply(this, arguments);
+    };
+    const crypto = require('../../database/crypto.cjs');
+    crypto.initMasterKey({ isEncryptionAvailable: () => false });
+    const testData = 'ifood_client_secret_super_secret';
+    const encrypted = crypto.encrypt(testData);
+    // Encrypted output must NOT contain the plaintext
+    expect(encrypted).not.toContain(testData);
+    // Ciphertext should be different each time (random IV)
+    const encrypted2 = crypto.encrypt(testData);
+    expect(encrypted).not.toEqual(encrypted2);
+    // Round-trip
+    expect(crypto.decrypt(encrypted)).toBe(testData);
+    Module.prototype.require = origRequire;
   })
 
   it('should use authenticated encryption (GCM)', () => {
     // GCM provides both confidentiality and integrity
     // Tampered ciphertext should fail to decrypt
-    expect(true).toBe(true) // Placeholder
+    const Module = require('module');
+    const origRequire = Module.prototype.require;
+    Module.prototype.require = function(id) {
+      if (id === 'electron') return { app: { getPath: () => '/tmp' }, safeStorage: { isEncryptionAvailable: () => false } };
+      return origRequire.apply(this, arguments);
+    };
+    const crypto = require('../../database/crypto.cjs');
+    crypto.initMasterKey({ isEncryptionAvailable: () => false });
+    const plaintext = 'test-secret-data';
+    const encrypted = crypto.encrypt(plaintext);
+    // Ciphertext must differ each call (random IV)
+    const encrypted2 = crypto.encrypt(plaintext);
+    expect(encrypted).not.toEqual(encrypted2);
+    // Round-trip decrypts correctly
+    expect(crypto.decrypt(encrypted)).toBe(plaintext);
+    // Tampered ciphertext should fail (not silently succeed)
+    const tampered = encrypted.slice(0, -4) + 'AAAA';
+    expect(() => crypto.decrypt(tampered)).toThrow();
+    Module.prototype.require = origRequire;
   })
 })
 
@@ -608,16 +639,18 @@ describe('🔍 Input Sanitization', () => {
 
 describe('🛠️ Electron Security Configuration', () => {
   it('should have contextIsolation enabled', () => {
-    // From main.cjs: contextIsolation: true
-    expect(true).toBe(true) // Verified in main.cjs line 236
+    // Verified reading main.cjs source
+    const mainSrc = require('fs').readFileSync(require.resolve('../../main.cjs'), 'utf8');
+    expect(mainSrc).toMatch(/contextIsolation:\s*true/);
   })
 
   it('should have nodeIntegration disabled', () => {
-    // From main.cjs: nodeIntegration: false
-    expect(true).toBe(true) // Verified in main.cjs line 235
+    const mainSrc = require('fs').readFileSync(require.resolve('../../main.cjs'), 'utf8');
+    expect(mainSrc).toMatch(/nodeIntegration:\s*false/);
   })
 
   it('should have strict CSP headers', () => {
+    // ...existing CSP assertions...
     // From main.cjs: Content-Security-Policy configured
     const cspPackaged = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'"
     const cspDev = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:5173; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' http://localhost:5173 ws://localhost:5173"
@@ -634,7 +667,8 @@ describe('🛠️ Electron Security Configuration', () => {
   })
 
   it('should use preload script for IPC', () => {
-    // From main.cjs: preload: path.join(__dirname, 'preload.js')
-    expect(true).toBe(true) // Verified in main.cjs line 238
+    // Verified reading main.cjs source
+    const mainSrc = require('fs').readFileSync(require.resolve('../../main.cjs'), 'utf8');
+    expect(mainSrc).toMatch(/preload:\s*path\.join\(__dirname,\s*['"]preload\.js['"]\)/);
   })
 })

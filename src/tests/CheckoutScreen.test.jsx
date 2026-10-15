@@ -9,15 +9,14 @@ const mockInvoke = vi.fn();
 
 beforeEach(() => {
   mockInvoke.mockReset();
-  globalThis.window = {
-    electron: {
-      ipcRenderer: {
-        invoke: mockInvoke,
-        on: vi.fn(),
-        once: vi.fn(),
-        removeListener: vi.fn(),
-      }
-    }
+  // Use Object.assign-style assignment to preserve jsdom's window
+  window.electron = {
+    ipcRenderer: {
+      invoke: mockInvoke,
+      on: vi.fn(),
+      once: vi.fn(),
+      removeListener: vi.fn(),
+    },
   };
 });
 
@@ -26,7 +25,7 @@ describe('CheckoutScreen', () => {
     localStorage.clear();
     useAuthStore.setState({
       currentUser: { id: 1, username: 'admin', full_name: 'Admin', role: 'admin', must_change_password: 0 },
-      authToken: 'fake-token',
+      isAuthenticated: true,
       authTime: Date.now(),
     });
     useStore.setState({

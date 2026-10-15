@@ -5,13 +5,16 @@ const { execSync } = require('child_process');
 
 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
 const electronVersion = pkg.devDependencies.electron || pkg.devDependencies.electronVersion;
-const nativeFile = path.join(__dirname, '..', 'node_modules', 'better-sqlite3', 'build', 'Release', 'better_sqlite3.node');
+const releaseDir = path.join(__dirname, '..', 'node_modules', 'better-sqlite3', 'build', 'Release');
+// O binário padrão é sempre o build Node; o binding do Electron é o arquivo
+// com sufixo -electron.node (resolvido em runtime por database/db-binding.cjs).
+const nativeFile = path.join(releaseDir, 'better_sqlite3.node-electron.node');
 
 console.log('[check-abi] Electron version:', electronVersion);
 console.log('[check-abi] Expected native binary:', nativeFile);
 
 if (!fs.existsSync(nativeFile)) {
-  console.error('[check-abi] FAIL: Native binary not found.');
+  console.error('[check-abi] FAIL: Electron native binary not found.');
   console.error('[check-abi] Run: npm run rebuild:native');
   process.exit(1);
 }

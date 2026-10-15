@@ -1,9 +1,9 @@
 name: Release on CI Success
 
 # Gera uma Release na aba "Releases" do GitHub automaticamente quando o CI
-# passa em pushes de main. Cada push de main cria uma release distinta
-# (tag edge-<sha-short>, marcada como pre-release) com changelog gerado pelo
-# diff de commits desde a última release/edge ou última tag git.
+# passa em pushes de main. A release é contínua (rolling): usa a tag fixa
+# edge-main, marcada como pre-release, e é sobrescrita a cada push de main
+# com o changelog gerado pelo diff de commits desde a última release/tag.
 #
 # Não interfere no release.yml existente (que cria releases de installer
 # Windows a partir de tags v* via workflow_dispatch/tags).
@@ -140,7 +140,7 @@ jobs:
             ${{ steps.changelog.outputs.commits }}
           draft: false
           prerelease: true
-          allow_overwrite: true
+          overwrite_files: true
 
       - name: Resumo final
         run: |

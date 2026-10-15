@@ -5,11 +5,11 @@ import { useAuthStore } from '../store/authStore';
 import router from '../router/index.jsx';
 
 // Helper: build a memory router for a given initial route
-function buildRouter(initialEntries) {
-  // Reset auth state
-  useAuthStore.setState({
+function buildRouter(initialEntries, authState) {
+  // Reset auth state (or set to provided state)
+  useAuthStore.setState(authState || {
     currentUser: null,
-    authToken: null,
+    isAuthenticated: false,
     authTime: 0,
   });
 
@@ -45,10 +45,9 @@ describe('router', () => {
   });
 
   afterEach(() => {
-    localStorage.clear();
     useAuthStore.setState({
       currentUser: null,
-      authToken: null,
+      isAuthenticated: false,
       authTime: 0,
     });
   });
@@ -66,9 +65,12 @@ describe('router', () => {
     });
   });
 
-  it('requiresAuth allows / when token present', async () => {
-    localStorage.setItem('authToken', 'fake-token');
-    const testRouter = buildRouter(['/']);
+  it('requiresAuth allows / when authenticated', async () => {
+    const testRouter = buildRouter(['/'], {
+      currentUser: { id: 1, username: 'admin', full_name: 'Admin', role: 'admin', must_change_password: 0 },
+      isAuthenticated: true,
+      authTime: Date.now(),
+    });
 
     render(<RouterProvider router={testRouter} />);
 

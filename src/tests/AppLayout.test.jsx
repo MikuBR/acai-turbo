@@ -5,23 +5,22 @@ import AppLayout from '../layouts/AppLayout.jsx';
 import { useAuthStore } from '../store/authStore';
 import { useStore } from '../store/useStore';
 
-// Mock window.electron for getIPC
+// Mock window.electron for getIPC — use Object.assign to preserve jsdom's
+// window (addEventListener, document, etc.) rather than replacing it wholesale
 beforeEach(() => {
   const onCallbacks = {};
-  globalThis.window = {
-    electron: {
-      ipcRenderer: {
-        invoke: vi.fn().mockResolvedValue({ success: true, data: [] }),
-        on: vi.fn((channel, callback) => {
-          onCallbacks[channel] = callback;
-          return () => { delete onCallbacks[channel]; };
-        }),
-        once: vi.fn(),
-        removeListener: vi.fn(),
-      }
+  window.electron = {
+    ipcRenderer: {
+      invoke: vi.fn().mockResolvedValue({ success: true, data: [] }),
+      on: vi.fn((channel, callback) => {
+        onCallbacks[channel] = callback;
+        return () => { delete onCallbacks[channel]; };
+      }),
+      once: vi.fn(),
+      removeListener: vi.fn(),
     }
   };
-  globalThis.window.__ipcOnCallbacks = onCallbacks;
+  window.__ipcOnCallbacks = onCallbacks;
 });
 
 describe('AppLayout', () => {
@@ -29,7 +28,7 @@ describe('AppLayout', () => {
     localStorage.clear();
     useAuthStore.setState({
       currentUser: { id: 1, username: 'admin', full_name: 'Admin', role: 'admin', must_change_password: 0 },
-      authToken: 'fake-token',
+      isAuthenticated: true,
       authTime: Date.now(),
     });
     useStore.setState({

@@ -1,0 +1,1302 @@
+import { useEffect, useState } from 'react'
+import { X, Trash2, ArrowUpCircle, ArrowDownCircle, DollarSign, FileDown, PackageIcon, TrendingUp, Clock } from 'lucide-react'
+import useToastStore from '../../store/toastStore'
+import { getProducts } from '../../services/productCache.js'
+
+interface Sale {
+  payment_method: string
+  order_count: number
+  total_amount: number
+}
+
+interface Movement {
+  id?: number
+  type: 'ENTRADA' | 'SAIDA'
+  description: string
+  total_amount: number
+  created_at?: string
+}
+
+interface Exchange {
+  id: number
+  customer_name: string
+  exchange_for: string
+  total: number
+  created_at: string
+  items?: Array<{ id: number; product_name: string; price: number }>
+}
+
+interface CashSession {
+  opened_at: string
+  closed_at?: string
+  closing_amount?: number
+  opening_amount: number
+  difference?: number
+  user_full_name: string
+}
+
+interface TopProduct {
+  product_name: string
+  qty: number
+  total_revenue: number
+  avg_price: number
+}
+
+interface PeakHour {
+  hour: number
+  order_count: number
+  total_amount: number
+}
+
+interface ReportData {
+  sales: Sale[]
+  movements: Movement[]
+  exchanges?: Exchange[]
+  cashSessions?: CashSession[]
+  ticketAverage?: number
+  topProducts?: TopProduct[]
+  peakHours?: PeakHour[]
+  allOrders?: Order[]
+  storeInfo?: StoreInfo
+  promotions?: Promotion[]
+}
+
+interface FinancialSummary {
+  payable: { pending: number; paid: number; total: number }
+  receivable: { pending: number; paid: number; total: number }
+}
+
+interface StoreInfo {
+  name: string
+  cnpj: string
+  ie: string
+  address: string
+}
+
+interface Promotion {
+  id: number
+  name: string
+  type: string
+  value: number
+  applies_to: string
+  start_date: string
+  end_date: string
+}
+
+interface Order {
+  id: number
+  customer_name: string
+  total: number
+  is_delivery: boolean
+  payment_method: string
+  created_at: string
+  items?: Array<{ id: number; product_name: string; price: number; notes?: string }>
+}
+
+interface ProductReport {
+  productName: string
+  qty: number
+  totalRevenue: number
+  avgPrice: number
+  percentage: number
+  dailyData: Array<{ day: string; qty: number; revenue: number }>
+  payments: Array<{ payment_method: string; orders_count: number; revenue: number }>
+  orders: Array<{ order_id: number; customer_name: string; payment_method: string; created_at: string; order_total: number }>
+}
+
+interface CashMove {
+  type: 'ENTRADA' | 'SAIDA'
+  amount: string
+  description: string
+}
+
+interface ReportPeriod {
+  startDate: string
+  endDate: string
+}
+
+interface ReportsModalProps {
+  isOpen: boolean
+  onClose: () => void
+  advancedReportData: ReportData | null
+  setAdvancedReportData: (data: ReportData | null) => void
+  reportData: ReportData
+  reportPeriod: ReportPeriod
+  setReportPeriod: (period: ReportPeriod) => void
+  ordersHistory: Order[]
+  cashMove: CashMove
+  setCashMove: (move: CashMove) => void
+  loadReports: () => void
+  loadAdvancedReport: () => void
+  runWithAuth: (callback: () => void, permission?: string) => void
+  getIPC: () => any
+  financialSummary: FinancialSummary
+}
+
+function generatePDF(data: ReportData, isPeriodView: boolean, financialSummary: FinancialSummary, reportPeriod: ReportPeriod, storeInfo: StoreInfo, allOrders: Order[], promotions: Promotion[], productReport: ProductReport | null) {
+  const salesTotal = (data?.sales || []).reduce((a, c) => a + Number(c?.total_amount ?? 0), 0);
+  const entradasTotal = (data?.movements || [])
+    .filter(m => m?.type === 'ENTRADA')
+    .reduce((a, m) => a + Number(m?.total_amount ?? 0), 0);
+  const sangriasTotal = (data?.movements || [])
+    .filter(m => m?.type === 'SAIDA')
+    .reduce((a, m) => a + Number(m?.total_amount ?? 0), 0);
+  const saldoFinal = salesTotal + entradasTotal - sangriasTotal;
+  const totalOrders = (data?.sales || []).reduce((a, c) => a + Number(c?.order_count ?? 0), 0);
+
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('pt-BR');
+  const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const periodLabel = isPeriodView
+    ? `Período: ${reportPeriod.startDate} a ${reportPeriod.endDate}`
+    : `Data: ${dateStr}`;
+
+  const salesRows = (data?.sales || []).map(s => [
+    s.payment_method || 'N/A',
+    { text: String(s?.order_count ?? 0), alignment: 'center' as const },
+    { text: `R$ ${Number(s?.total_amount ?? 0).toFixed(2)}`, alignment: 'right' as const },
+  ]);
+
+  const movementRows = (data?.movements || [])
+    .filter(m => m?.type === 'ENTRADA' || m?.type === 'SAIDA')
+    .map(m => [
+      {
+        text: m?.type === 'ENTRADA' ? 'ENTRADA' : 'SAÍDA',
+        color: m?.type === 'ENTRADA' ? '#16a34a' : '#dc2626',
+        bold: true,
+      },
+      m?.description || '-',
+      { text: `R$ ${Number(m?.total_amount ?? 0).toFixed(2)}`, alignment: 'right' as const },
+    ]);
+
+  const fin = financialSummary || {};
+  const content: any[] = [
+    { text: 'AÇAÍ WAVE', style: 'title' },
+    { text: 'RELATÓRIO FINANCEIRO', style: 'subtitle', margin: [0, 0, 0, 10] },
+    { text: periodLabel, style: 'date', margin: [0, 0, 0, 20] },
+
+    { text: '1. RESUMO DE VENDAS', style: 'sectionTitle' },
+    {
+      style: 'table',
+      table: {
+        headerRows: 1,
+        widths: ['*', 'auto', 'auto'],
+        body: [
+          [
+            { text: 'Forma de Pagamento', style: 'tableHeader' },
+            { text: 'Pedidos', style: 'tableHeader', alignment: 'center' },
+            { text: 'Total', style: 'tableHeader', alignment: 'right' },
+          ],
+          ...salesRows,
+          [
+            { text: 'TOTAL', style: 'totalRow' },
+            { text: String(totalOrders), style: 'totalRow', alignment: 'center' },
+            { text: `R$ ${salesTotal.toFixed(2)}`, style: 'totalRow', alignment: 'right' },
+          ],
+        ],
+      },
+      layout: 'lightHorizontalLines',
+    },
+
+    { text: '2. MOVIMENTAÇÕES DE GAVETA', style: 'sectionTitle', margin: [0, 20, 0, 5] },
+    movementRows.length > 0
+      ? {
+          style: 'table',
+          table: {
+            headerRows: 1,
+            widths: ['auto', '*', 'auto'],
+            body: [
+              [
+                { text: 'Tipo', style: 'tableHeader' },
+                { text: 'Descrição', style: 'tableHeader' },
+                { text: 'Valor', style: 'tableHeader', alignment: 'right' },
+              ],
+              ...movementRows,
+            ],
+          },
+          layout: 'lightHorizontalLines',
+        }
+      : { text: 'Nenhuma movimentação registrada.', italics: true, color: '#888', margin: [0, 5, 0, 5] },
+    { text: `Total Entradas: R$ ${entradasTotal.toFixed(2)}`, margin: [0, 10, 0, 2], color: '#16a34a', bold: true },
+    { text: `Total Saídas:   R$ ${sangriasTotal.toFixed(2)}`, margin: [0, 0, 0, 2], color: '#dc2626', bold: true },
+
+    { text: '3. SALDO DO CAIXA', style: 'sectionTitle', margin: [0, 20, 0, 5] },
+    {
+      text: `Vendas (R$ ${salesTotal.toFixed(2)}) + Entradas (R$ ${entradasTotal.toFixed(2)}) - Saídas (R$ ${sangriasTotal.toFixed(2)})`,
+      fontSize: 9,
+      color: '#555',
+      margin: [0, 0, 0, 5],
+    },
+    {
+      text: `= R$ ${saldoFinal.toFixed(2)}`,
+      style: 'balanceValue',
+      color: saldoFinal >= 0 ? '#16a34a' : '#dc2626',
+      margin: [0, 0, 0, 20],
+    },
+  ];
+
+  if (fin.payable) {
+    content.push({ text: '4. RESUMO FINANCEIRO', style: 'sectionTitle' });
+    content.push({
+      style: 'table',
+      table: {
+        headerRows: 1,
+        widths: ['*', 'auto', 'auto'],
+        body: [
+          [
+            { text: '', style: 'tableHeader' },
+            { text: 'A Pagar', style: 'tableHeader', alignment: 'right' },
+            { text: 'A Receber', style: 'tableHeader', alignment: 'right' },
+          ],
+          [
+            { text: 'Pendente' },
+            { text: `R$ ${Number(fin.payable?.pending ?? 0).toFixed(2)}`, alignment: 'right' },
+            { text: `R$ ${Number(fin.receivable?.pending ?? 0).toFixed(2)}`, alignment: 'right' },
+          ],
+          [
+            { text: 'Pago' },
+            { text: `R$ ${Number(fin.payable?.paid ?? 0).toFixed(2)}`, alignment: 'right' },
+            { text: `R$ ${Number(fin.receivable?.paid ?? 0).toFixed(2)}`, alignment: 'right' },
+          ],
+          [
+            { text: 'Total', style: 'totalRow' },
+            { text: `R$ ${Number(fin.payable?.total ?? 0).toFixed(2)}`, style: 'totalRow', alignment: 'right' },
+            { text: `R$ ${Number(fin.receivable?.total ?? 0).toFixed(2)}`, style: 'totalRow', alignment: 'right' },
+          ],
+        ],
+      },
+      layout: 'lightHorizontalLines',
+    });
+  }
+
+  if (data?.exchanges && data.exchanges.length > 0) {
+    const exchangeTotal = data.exchanges.reduce((a, e) => a + Number(e?.total ?? 0), 0);
+    const exchangeRows = data.exchanges.map(ex => [
+      { text: ex.customer_name || 'Permuta', fontSize: 8 },
+      { text: ex.exchange_for || '(não informado)', fontSize: 8 },
+      { text: `R$ ${Number(ex?.total ?? 0).toFixed(2)}`, alignment: 'right', fontSize: 8 },
+    ]);
+    content.push({ text: 'PERMUTAS (NÃO INCLUI EM VENDAS)', style: 'sectionTitle', margin: [0, 20, 0, 5], color: '#d97706' });
+    content.push({
+      style: 'table',
+      table: {
+        headerRows: 1,
+        widths: ['auto', '*', 'auto'],
+        body: [
+          [
+            { text: 'Cliente', style: 'tableHeader' },
+            { text: 'Trocado Por', style: 'tableHeader' },
+            { text: 'Valor', style: 'tableHeader', alignment: 'right' },
+          ],
+          ...exchangeRows,
+          [
+            { text: 'TOTAL', style: 'totalRow' },
+            { text: '', style: 'totalRow' },
+            { text: `R$ ${exchangeTotal.toFixed(2)}`, style: 'totalRow', alignment: 'right' },
+          ],
+        ],
+      },
+      layout: 'lightHorizontalLines',
+    });
+  }
+
+  if (isPeriodView && data) {
+    content.push({ text: '5. METRICAS DO PERIODO', style: 'sectionTitle', margin: [0, 20, 0, 5] });
+
+    if (data.ticketAverage != null) {
+      content.push({
+        columns: [
+          { width: '*', text: '' },
+          {
+            width: 'auto',
+            stack: [
+              { text: 'Ticket Médio', fontSize: 9, color: '#555' },
+              { text: `R$ ${Number(data.ticketAverage ?? 0).toFixed(2)}`, fontSize: 16, bold: true, alignment: 'center', color: '#16a34a', margin: [0, 5, 0, 15] },
+            ],
+            alignment: 'center',
+          },
+          { width: '*', text: '' },
+        ],
+      });
+    }
+
+    if (data.topProducts && data.topProducts.length > 0) {
+      content.push({ text: 'Produtos Mais Vendidos', fontSize: 10, bold: true, margin: [0, 10, 0, 5] });
+      content.push({
+        style: 'table',
+        table: {
+          headerRows: 1,
+          widths: ['*', 'auto', 'auto'],
+          body: [
+            [
+              { text: 'Produto', style: 'tableHeader' },
+              { text: 'Qtd', style: 'tableHeader', alignment: 'center' },
+              { text: 'Receita', style: 'tableHeader', alignment: 'right' },
+              { text: 'Média', style: 'tableHeader', alignment: 'right' },
+            ],
+            ...data.topProducts.map(p => [
+              p.product_name,
+              { text: String(p?.qty ?? 0), alignment: 'center' },
+              { text: `R$ ${Number(p?.total_revenue ?? 0).toFixed(2)}`, alignment: 'right' },
+              { text: `R$ ${Number(p?.avg_price ?? 0).toFixed(2)}`, alignment: 'right' },
+            ]),
+          ],
+        },
+        layout: 'lightHorizontalLines',
+      });
+    }
+
+    if (data.peakHours && data.peakHours.length > 0) {
+      content.push({ text: 'Horários de Pico', fontSize: 10, bold: true, margin: [0, 15, 0, 5] });
+      content.push({
+        style: 'table',
+        table: {
+          headerRows: 1,
+          widths: ['auto', 'auto', 'auto'],
+          body: [
+            [
+              { text: 'Hora', style: 'tableHeader' },
+              { text: 'Pedidos', style: 'tableHeader', alignment: 'center' },
+              { text: 'Valor', style: 'tableHeader', alignment: 'right' },
+            ],
+            ...data.peakHours.map(h => [
+              { text: `${h?.hour || '??'}:00`, alignment: 'center' },
+              { text: String(h?.order_count ?? 0), alignment: 'center' },
+              { text: `R$ ${Number(h?.total_amount ?? 0).toFixed(2)}`, alignment: 'right' },
+            ]),
+          ],
+        },
+        layout: 'lightHorizontalLines',
+      });
+    }
+  }
+
+  // SEÇÃO 5: SESSÕES DE CAIXA
+  (data?.cashSessions || []).length > 0 && (() => {
+    content.push({ text: '5. SESSÕES DE CAIXA', style: 'sectionTitle', margin: [0, 20, 0, 5] });
+    const sessionRows = data.cashSessions.map(cs => [
+      { text: cs.opened_at ? new Date(cs.opened_at + 'Z').toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-', fontSize: 8 },
+      { text: `R$ ${Number(cs?.opening_amount ?? 0).toFixed(2)}`, alignment: 'right', fontSize: 8 },
+      cs.closed_at
+        ? { text: `R$ ${Number(cs?.closing_amount ?? 0).toFixed(2)}`, alignment: 'right', fontSize: 8, color: (cs?.difference != null && Math.abs(cs.difference) > 0.01) ? '#dc2626' : '#16a34a' }
+        : { text: 'ABERTO', alignment: 'right', fontSize: 8, color: '#d97706', bold: true },
+      cs.user_full_name || '-',
+      cs.difference != null && Math.abs(cs.difference) > 0.01
+        ? { text: `DÉBITO: R$ ${Number(cs.difference ?? 0).toFixed(2)}`, alignment: 'right', fontSize: 8, color: '#dc2626', bold: true }
+        : '-',
+    ]);
+    content.push({
+      style: 'table',
+      table: {
+        headerRows: 1,
+        widths: ['auto', 'auto', 'auto', '*', 'auto'],
+        body: [
+          [
+            { text: 'Abertura', style: 'tableHeader', fontSize: 8 },
+            { text: 'Abertura', style: 'tableHeader', alignment: 'right', fontSize: 8 },
+            { text: 'Fechamento', style: 'tableHeader', alignment: 'right', fontSize: 8 },
+            { text: 'Operador', style: 'tableHeader', fontSize: 8 },
+            { text: 'Diferença', style: 'tableHeader', alignment: 'right', fontSize: 8 },
+          ],
+          ...sessionRows,
+        ],
+      },
+      layout: 'lightHorizontalLines',
+    });
+  })();
+
+  // SEÇÃO 6: DADOS DA LOJA
+  content.push({ text: '6. DADOS DA LOJA', style: 'sectionTitle', margin: [0, 20, 0, 5] });
+  const si = storeInfo || {};
+  content.push({
+    style: 'table',
+    table: {
+      headerRows: 0,
+      body: [
+        [{ text: 'Loja:', bold: true }, si.name || 'Açaí Wave'],
+        [{ text: 'CNPJ:', bold: true }, si.cnpj || '-'],
+        [{ text: 'IE:', bold: true }, si.ie || '-'],
+        [{ text: 'Endereço:', bold: true }, si.address || '-'],
+        [{ text: 'Gerado em:', bold: true }, `${dateStr} as ${timeStr}`],
+      ],
+    },
+    layout: 'lightHorizontalLines',
+    margin: [0, 0, 0, 15],
+  });
+
+  // SEÇÃO 7: PROMOÇÕES ATIVAS NO PERÍODO
+  (promotions || []).length > 0 && (() => {
+    content.push({ text: '7. PROMOÇÕES ATIVAS', style: 'sectionTitle', margin: [0, 20, 0, 5] });
+    content.push({
+      style: 'table',
+      table: {
+        headerRows: 1,
+        widths: ['*', 'auto', '*', 'auto'],
+        body: [
+          [
+            { text: 'Nome', style: 'tableHeader' },
+            { text: 'Valor', style: 'tableHeader', alignment: 'right' },
+            { text: 'Aplica-se a', style: 'tableHeader' },
+            { text: 'Período', style: 'tableHeader', fontSize: 8 },
+          ],
+          ...promotions.map(p => [
+            p.name,
+            { text: `${p?.type === 'percentage' ? '%' : 'R$'} ${Number(p?.value ?? 0).toFixed(p?.type === 'percentage' ? 0 : 2)}`, alignment: 'right' },
+            p.applies_to,
+            { text: `${p?.start_date || '?'} → ${p?.end_date || '?'}`, fontSize: 8 },
+          ]),
+        ],
+      },
+      layout: 'lightHorizontalLines',
+    });
+  })();
+
+  // SEÇÃO 8: RESUMO GERAL DE PEDIDOS
+  (allOrders && allOrders.length > 0) && (() => {
+    const totalPedidos = allOrders.length;
+    const totalValor = allOrders.reduce((a, o) => a + Number(o?.total ?? 0), 0);
+    const totalItens = allOrders.reduce((a, o) => a + (o?.items ? o.items.length : 0), 0);
+    const entregas = allOrders.filter(o => o?.is_delivery).length;
+    const retiradas = allOrders.filter(o => !o?.is_delivery).length;
+
+    content.push({ text: '8. RESUMO GERAL DE PEDIDOS', style: 'sectionTitle', margin: [0, 20, 0, 5] });
+    content.push({
+      style: 'table',
+      table: {
+        headerRows: 0,
+        body: [
+          [{ text: 'Total de Pedidos', bold: true }, { text: String(totalPedidos), alignment: 'right' }],
+          [{ text: 'Total em Vendas', bold: true }, { text: `R$ ${totalValor.toFixed(2)}`, alignment: 'right' }],
+          [{ text: 'Total de Itens', bold: true }, { text: String(totalItens), alignment: 'right' }],
+          [{ text: 'Entregas', bold: true }, { text: String(entregas), alignment: 'right' }],
+          [{ text: 'Retiradas', bold: true }, { text: String(retiradas), alignment: 'right' }],
+        ],
+      },
+      layout: 'lightHorizontalLines',
+    });
+  })();
+
+  // SEÇÃO 9: RELATÓRIO DE PRODUTO (nova feature v1.3.7)
+  if (productReport) {
+    content.push({ text: '9. RELATÓRIO DE PRODUTO', style: 'sectionTitle', margin: [0, 20, 0, 5] });
+    content.push({
+      style: 'table',
+      table: {
+        headerRows: 0,
+        body: [
+          [{ text: 'Produto:', bold: true }, productReport.productName],
+          [{ text: 'Quantidade Vendida:', bold: true }, String(productReport.qty)],
+          [{ text: 'Receita Total:', bold: true }, { text: `R$ ${productReport.totalRevenue.toFixed(2)}`, alignment: 'right' }],
+          [{ text: 'Preço Médio:', bold: true }, { text: `R$ ${productReport.avgPrice.toFixed(2)}`, alignment: 'right' }],
+          [{ text: 'Participação no Total:', bold: true }, { text: `${productReport.percentage.toFixed(1)}%`, alignment: 'right' }],
+        ],
+      },
+      layout: 'lightHorizontalLines',
+      margin: [0, 0, 0, 10],
+    });
+    if (productReport.dailyData && productReport.dailyData.length > 0) {
+      content.push({ text: 'Evolução Diária', fontSize: 10, bold: true, margin: [0, 10, 0, 5] });
+      const dailyRows = productReport.dailyData.map(d => [
+        { text: d.day || '-', fontSize: 8 },
+        { text: String(d.qty ?? 0), alignment: 'center', fontSize: 8 },
+        { text: `R$ ${Number(d.revenue ?? 0).toFixed(2)}`, alignment: 'right', fontSize: 8 },
+      ]);
+      content.push({
+        style: 'table',
+        table: {
+          headerRows: 1,
+          widths: ['auto', 'auto', 'auto'],
+          body: [
+            [
+              { text: 'Data', style: 'tableHeader', fontSize: 8 },
+              { text: 'Qtd', style: 'tableHeader', alignment: 'center', fontSize: 8 },
+              { text: 'Receita', style: 'tableHeader', alignment: 'right', fontSize: 8 },
+            ],
+            ...dailyRows,
+          ],
+        },
+        layout: 'lightHorizontalLines',
+      });
+    }
+    if (productReport.payments && productReport.payments.length > 0) {
+      content.push({ text: 'Formas de Pagamento', fontSize: 10, bold: true, margin: [0, 15, 0, 5] });
+      const paymentRows = productReport.payments.map(p => [
+        p.payment_method || 'N/A',
+        { text: String(p.orders_count ?? 0), alignment: 'center' },
+        { text: `R$ ${Number(p.revenue ?? 0).toFixed(2)}`, alignment: 'right' },
+      ]);
+      content.push({
+        style: 'table',
+        table: {
+          headerRows: 1,
+          widths: ['*', 'auto', 'auto'],
+          body: [
+            [
+              { text: 'Forma de Pagamento', style: 'tableHeader', fontSize: 8 },
+              { text: 'Pedidos', style: 'tableHeader', alignment: 'center', fontSize: 8 },
+              { text: 'Receita', style: 'tableHeader', alignment: 'right', fontSize: 8 },
+            ],
+            ...paymentRows,
+          ],
+        },
+        layout: 'lightHorizontalLines',
+      });
+    }
+    if (productReport.orders && productReport.orders.length > 0) {
+      content.push({ text: 'Pedidos que Contêm Este Produto', fontSize: 10, bold: true, margin: [0, 15, 0, 5] });
+      const orderRows = productReport.orders.slice(0, 20).map(o => [
+        { text: String(o.order_id), fontSize: 8 },
+        { text: o.customer_name || '-', fontSize: 8 },
+        { text: o.payment_method || '-', fontSize: 8 },
+        { text: o.created_at ? new Date(o.created_at + 'Z').toLocaleDateString('pt-BR') : '-', fontSize: 8 },
+        { text: `R$ ${Number(o.order_total ?? 0).toFixed(2)}`, alignment: 'right', fontSize: 8 },
+      ]);
+      content.push({
+        style: 'table',
+        table: {
+          headerRows: 1,
+          widths: ['auto', '*', 'auto', 'auto', 'auto'],
+          body: [
+            [
+              { text: '#', style: 'tableHeader', fontSize: 8 },
+              { text: 'Cliente', style: 'tableHeader', fontSize: 8 },
+              { text: 'Pagamento', style: 'tableHeader', fontSize: 8 },
+              { text: 'Data', style: 'tableHeader', fontSize: 8 },
+              { text: 'Total', style: 'tableHeader', alignment: 'right', fontSize: 8 },
+            ],
+            ...orderRows,
+          ],
+        },
+        layout: 'lightHorizontalLines',
+      });
+    }
+  }
+
+  content.push({ text: `Gerado em: ${dateStr} as ${timeStr}`, style: 'footerNote', margin: [0, 30, 0, 0] });
+  content.push({ text: 'Acai Wave - PDV', style: 'footerNote' });
+
+  return {
+    info: {
+      title: `Relatorio Financeiro - ${periodLabel}`,
+      author: 'Acai Wave',
+      subject: 'Relatorio Financeiro',
+    },
+    pageSize: 'A4',
+    pageMargins: [40, 50, 40, 50],
+    header: () => ({
+      text: 'Acai Wave - Relatorio Financeiro',
+      alignment: 'center',
+      fontSize: 8,
+      color: '#888888',
+      margin: [40, 10, 40, 0],
+    }),
+    footer: (currentPage: number, pageCount: number) => ({
+      text: `Pagina ${currentPage} de ${pageCount}`,
+      alignment: 'center',
+      fontSize: 8,
+      color: '#888888',
+      margin: [0, 10, 0, 0],
+    }),
+    content,
+    styles: {
+      title: { fontSize: 20, bold: true, alignment: 'center', color: '#1a1a1a' },
+      subtitle: { fontSize: 13, alignment: 'center', color: '#444444' },
+      date: { fontSize: 10, alignment: 'center', color: '#666666' },
+      sectionTitle: { fontSize: 12, bold: true, margin: [0, 15, 0, 5], color: '#1a56db' },
+      tableHeader: { bold: true, fontSize: 9, fillColor: '#f3f4f6', color: '#374151' },
+      totalRow: { bold: true, fontSize: 10, color: '#111827' },
+      balanceValue: { fontSize: 16, bold: true, alignment: 'center' },
+      footerNote: { fontSize: 8, color: '#888888', alignment: 'center' },
+    },
+    defaultStyle: { fontSize: 9, color: '#333333' },
+  };
+}
+
+export default function ReportsModal({ isOpen, onClose, advancedReportData, setAdvancedReportData, reportData, reportPeriod, setReportPeriod, ordersHistory, cashMove, setCashMove, loadReports, loadAdvancedReport, runWithAuth, getIPC, financialSummary }: ReportsModalProps) {
+  const addToast = useToastStore(s => s.addToast);
+  if (!isOpen) return null;
+
+  const isPeriodView = !!advancedReportData;
+  const data = isPeriodView ? advancedReportData : reportData;
+
+  const salesTotal = (data?.sales || []).reduce((a, c) => a + Number(c?.total_amount ?? 0), 0);
+  const entradasTotal = (data?.movements || [])
+    .filter(m => m?.type === 'ENTRADA')
+    .reduce((a, m) => a + Number(m?.total_amount ?? 0), 0);
+  const sangriasTotal = (data?.movements || [])
+    .filter(m => m?.type === 'SAIDA')
+    .reduce((a, m) => a + Number(m?.total_amount ?? 0), 0);
+  const saldoFinal = salesTotal + entradasTotal - sangriasTotal;
+
+  // --- Relatório por produto (nova feature v1.3.7) ---
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [productReportData, setProductReportData] = useState<ProductReport | null>(null);
+  const [catalogProducts, setCatalogProducts] = useState<any[]>([]);
+  const [isLoadingProduct, setIsLoadingProduct] = useState(false);
+
+  const loadCatalogProducts = () => {
+    getProducts().then(products => {
+      if (products.length > 0) {
+        setCatalogProducts(products);
+      }
+    }).catch(() => {});
+  };
+
+  const loadProductReport = () => {
+    if (!selectedProduct) {
+      setProductReportData(null);
+      return;
+    }
+    const ipc = getIPC();
+    if (!ipc) { addToast('Sem conexao com o sistema', 'error'); return; }
+    setIsLoadingProduct(true);
+    const name = selectedProduct.name;
+    const { startDate, endDate } = reportPeriod;
+    Promise.all([
+      ipc.invoke('reports:product-sales', { productName: name, startDate, endDate }),
+      ipc.invoke('reports:product-daily', { productName: name, startDate, endDate }),
+      ipc.invoke('reports:product-orders', { productName: name, startDate, endDate }),
+    ]).then(([salesRes, dailyRes, ordersRes]) => {
+      if (!salesRes?.success) {
+        addToast('Erro ao carregar relatório do produto', 'error');
+        setIsLoadingProduct(false);
+        return;
+      }
+      if (!dailyRes?.success) {
+        addToast('Erro ao carregar evolução diária do produto', 'error');
+        setIsLoadingProduct(false);
+        return;
+      }
+      if (!ordersRes?.success) {
+        addToast('Erro ao carregar pedidos do produto', 'error');
+        setIsLoadingProduct(false);
+        return;
+      }
+      const qty = Number(salesRes.data?.qty ?? 0);
+      const totalRevenue = Number(salesRes.data?.totalRevenue ?? 0);
+      const avgPrice = Number(salesRes.data?.avgPrice ?? 0);
+      const dailyData = dailyRes.data || [];
+      const payments = salesRes.data?.payments || [];
+      const orders = (ordersRes.data || []).slice(0, 50);
+      let totalGeral = 0;
+      if (isPeriodView && advancedReportData?.allOrders) {
+        totalGeral = advancedReportData.allOrders.reduce((s, o) => s + Number(o?.total ?? 0), 0);
+      } else if (!isPeriodView && data?.sales) {
+        totalGeral = data.sales.reduce((s, sRow) => s + Number(sRow?.total_amount ?? 0), 0);
+      }
+      const percentage = totalGeral > 0 ? (totalRevenue / totalGeral) * 100 : 0;
+      setProductReportData({ productName: name, qty, totalRevenue, avgPrice, dailyData, payments, orders, percentage });
+    }).catch(() => {
+      addToast('Erro ao carregar relatório do produto', 'error');
+    }).finally(() => setIsLoadingProduct(false));
+  };
+
+  useEffect(() => {
+    loadCatalogProducts();
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (selectedProduct) loadProductReport();
+  }, [reportPeriod.startDate, reportPeriod.endDate]);
+
+  const handleExportPDF = async () => {
+    const ipc = getIPC();
+    if (!ipc) { addToast('Sem conexão com o sistema', 'error'); return; }
+
+    // Buscar dados extras necessárias para o PDF expandido
+    const productReportPromise = selectedProduct
+      ? Promise.all([
+          ipc.invoke('reports:product-sales', { productName: selectedProduct.name, startDate: reportPeriod.startDate, endDate: reportPeriod.endDate }),
+          ipc.invoke('reports:product-daily', { productName: selectedProduct.name, startDate: reportPeriod.startDate, endDate: reportPeriod.endDate }),
+          ipc.invoke('reports:product-orders', { productName: selectedProduct.name, startDate: reportPeriod.startDate, endDate: reportPeriod.endDate }),
+        ])
+      : Promise.resolve([null, null, null]);
+
+    const [resStoreInfo, resOrders, resPromos, productResults] = await Promise.all([
+      ipc.invoke('reports:store-info'),
+      ipc.invoke('reports:all-orders-for-period', reportPeriod),
+      ipc.invoke('reports:promotions-for-period', reportPeriod),
+      productReportPromise,
+    ]);
+
+    if (!resStoreInfo?.success) {
+      addToast('Erro ao carregar dados da loja', 'error');
+      return;
+    }
+    if (!resOrders?.success) {
+      addToast('Erro ao carregar pedidos do período', 'error');
+      return;
+    }
+    if (!resPromos?.success) {
+      addToast('Erro ao carregar promoções do período', 'error');
+      return;
+    }
+
+    const storeInfo = resStoreInfo?.data || {};
+    const allOrders = resOrders?.data || [];
+    const promotions = resPromos?.data || [];
+
+    let productReport: ProductReport | null = null;
+    if (selectedProduct && productResults[0]?.success && productResults[1]?.success && productResults[2]?.success) {
+      const qty = Number(productResults[0].data?.qty ?? 0);
+      const totalRevenue = Number(productResults[0].data?.totalRevenue ?? 0);
+      const avgPrice = Number(productResults[0].data?.avgPrice ?? 0);
+      const dailyData = productResults[1].data || [];
+      const payments = productResults[0].data?.payments || [];
+      const orders = (productResults[2].data || []).slice(0, 50);
+      let totalGeral = 0;
+      if (isPeriodView && advancedReportData?.allOrders) {
+        totalGeral = advancedReportData.allOrders.reduce((s, o) => s + Number(o?.total ?? 0), 0);
+      } else if (!isPeriodView && data?.sales) {
+        totalGeral = data.sales.reduce((s, sRow) => s + Number(sRow?.total_amount ?? 0), 0);
+      }
+      const percentage = totalGeral > 0 ? (totalRevenue / totalGeral) * 100 : 0;
+      productReport = { productName: selectedProduct.name, qty, totalRevenue, avgPrice, dailyData, payments, orders, percentage };
+    }
+
+    const docDef = generatePDF(
+      data,
+      isPeriodView,
+      financialSummary,
+      reportPeriod,
+      storeInfo,
+      allOrders,
+      promotions,
+      productReport,
+    );
+    const now = new Date();
+    const datePart = now.toISOString().split('T')[0];
+    const defaultName = `relatorio-financeiro-${datePart}.pdf`;
+
+    try {
+      const pdfMakeModule: any = await import('pdfmake/build/pdfmake');
+      const pdfFontsModule: any = await import('pdfmake/build/vfs_fonts');
+      const pdfMake = pdfMakeModule.default;
+      pdfMake.vfs = pdfFontsModule.default;
+
+      const base64 = await pdfMake.createPdf(docDef).getBase64();
+      if (!base64) {
+        addToast('Erro ao gerar PDF: documento vazio', 'error');
+        return;
+      }
+
+      if (base64.length > 2_000_000) {
+        addToast('PDF muito grande para exportar (limite 2MB)', 'error');
+        return;
+      }
+
+      const res = await ipc.invoke('dialog:save-pdf', { data: base64, defaultName });
+      if (res?.success) {
+        addToast(`PDF salvo em: ${res.path}`, 'success');
+      } else if (res?.error) {
+        addToast(`Erro ao salvar PDF: ${res.error}`, 'error');
+      } else if (res?.canceled) {
+        addToast('Salvamento de PDF cancelado', 'info');
+      } else {
+        addToast('Erro desconhecido ao salvar PDF', 'error');
+      }
+    } catch (e: any) {
+      if (e.code === 'MODULE_NOT_FOUND' || e.message?.includes('pdfmake')) {
+        addToast('Erro de configuração: pdfmake não disponível', 'error');
+      } else if (e.message?.includes('PDFDocumentInvalid') || e.message?.includes('invalid')) {
+        addToast('Erro ao gerar PDF: estrutura inválida', 'error');
+      } else {
+        addToast('Erro ao exportar PDF', 'error');
+      }
+      console.error('[pdf] Erro ao gerar/salvar PDF:', e);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-surface z-[900] flex items-center justify-center p-6 animate-in fade-in duration-200">
+      <div className="bg-card w-full max-w-6xl h-[85vh] rounded-2xl border border-border flex flex-col overflow-hidden shadow-modal">
+        <div className="p-4 bg-surface-light border-b border-border flex justify-between items-center px-6">
+          <div className="flex items-center gap-4">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-success">Relatórios</h2>
+            <div className="flex gap-2">
+              <button onClick={() => { setAdvancedReportData(null); loadReports(); }}
+                className={`text-[10px] font-bold uppercase px-3 py-1 rounded transition-all ${!advancedReportData ? 'bg-success text-white' : 'bg-surface-light text-muted hover:text-primary'}`}>Hoje</button>
+              <button onClick={() => { 
+                setAdvancedReportData(null); 
+                const today = new Date();
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(today.getDate() - 30);
+                setReportPeriod({ 
+                  startDate: thirtyDaysAgo.toISOString().split('T')[0], 
+                  endDate: today.toISOString().split('T')[0] 
+                });
+                loadAdvancedReport();
+              }}
+                className={`text-[10px] font-bold uppercase px-3 py-1 rounded transition-all ${advancedReportData ? 'bg-success text-white' : 'bg-surface-light text-muted hover:text-primary'}`}>Período</button>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={handleExportPDF} className="p-1.5 hover:bg-success/20 rounded-md text-muted hover:text-success transition-all" title="Exportar PDF">
+              <FileDown size={20}/>
+            </button>
+            <button onClick={onClose} className="p-1.5 hover:bg-danger/20 rounded-md text-muted hover:text-danger transition-all"><X size={20}/></button>
+          </div>
+        </div>
+        
+        <div className="flex-1 flex overflow-hidden">
+          <div className="w-[400px] p-6 border-r border-border bg-surface overflow-y-auto custom-scrollbar">
+            {advancedReportData ? (
+              <>
+                <div className="mb-6 p-4 bg-surface-light rounded-xl border border-border">
+                  <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-3">Filtrar por Período</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Data Início</label>
+                      <input type="date" value={reportPeriod.startDate} onChange={e => setReportPeriod({...reportPeriod, startDate: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
+                    </div>
+                    <div>
+                      <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Data Fim</label>
+                      <input type="date" value={reportPeriod.endDate} onChange={e => setReportPeriod({...reportPeriod, endDate: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
+                    </div>
+                    <button onClick={loadAdvancedReport} className="w-full bg-success hover:bg-success py-2 rounded-lg font-bold text-xs uppercase tracking-widest text-white transition-all">Gerar Relatório</button>
+                  </div>
+                </div>
+
+              </>
+            ) : (
+              <>
+                <div className="mb-4 p-4 bg-surface-light rounded-xl border border-border">
+                  <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-2">Filtrar por Data</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Data</label>
+                      <input type="date" value={reportPeriod.startDate} onChange={e => setReportPeriod({...reportPeriod, startDate: e.target.value, endDate: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
+                    </div>
+                    <button onClick={loadReports} className="w-full bg-success hover:bg-success py-2 rounded-lg font-bold text-xs uppercase tracking-widest text-white transition-all">Atualizar</button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Seletor de Produto */}
+            <div className="mb-6">
+              <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-3">Relatório por Produto</h3>
+              <div className="space-y-2">
+                <div>
+                  <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Selecione</label>
+                  <select
+                    value={selectedProduct?.name || ''}
+                    onChange={e => {
+                      const product = catalogProducts.find(p => p.name === e.target.value);
+                      if (product) setSelectedProduct(product);
+                    }}
+                    disabled={catalogProducts.length === 0 || isLoadingProduct}
+                    className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-xs disabled:opacity-50"
+                  >
+                    <option value="">-- Selecione um produto --</option>
+                    {catalogProducts.map(p => (
+                      <option key={p.id} value={p.name}>{p.name} — R$ {Number(p.price).toFixed(2)}</option>
+                    ))}
+                  </select>
+                </div>
+                {selectedProduct && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        if (!isLoadingProduct) loadProductReport();
+                      }}
+                      disabled={isLoadingProduct}
+                      className="flex-1 bg-info hover:bg-info py-2 rounded-lg font-bold text-xs uppercase tracking-widest text-white transition-all disabled:opacity-50"
+                    >
+                      {isLoadingProduct ? 'Carregando...' : 'CARREGAR RELATÓRIO'}
+                    </button>
+                    <button
+                      onClick={() => { setSelectedProduct(null); setProductReportData(null); }}
+                      className="p-2 bg-danger/10 hover:bg-danger/20 rounded-lg text-danger transition-colors"
+                      title="Fechar"
+                    >
+                      <X size={16}/>
+                    </button>
+                  </div>
+                )}
+                {isLoadingProduct && (
+                  <div className="text-[10px] text-muted italic text-center py-1">Carregando dados do produto...</div>
+                )}
+              </div>
+            </div>
+
+                <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-4 border-b border-border pb-2">Métricas Avançadas</h3>
+                <div className="space-y-3 mb-6">
+                  <div className="bg-success/10 border border-success/30 p-4 rounded-lg">
+                    <span className="text-[9px] text-muted font-bold uppercase block">Ticket Médio</span>
+                    <span className="text-2xl font-bold text-success font-mono">R$ {Number(advancedReportData?.ticketAverage ?? 0).toFixed(2)}</span>
+                  </div>
+                  <div className="bg-info/10 border border-info/30 p-4 rounded-lg">
+                    <span className="text-[9px] text-muted font-bold uppercase block">Horários de Pico</span>
+                    <div className="mt-2 space-y-1">
+                      {advancedReportData?.peakHours?.slice(0, 3).map((h, i) => (
+                        <div key={i} className="flex justify-between text-xs">
+                          <span className="text-primary">{h?.hour || '??'}:00</span>
+                          <span className="font-bold text-info">{(h?.order_count ?? 0)} pedidos</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-4 border-b border-border pb-2">Resumo de Vendas (Período)</h3>
+                <div className="space-y-2 mb-8">
+                  {(data?.sales || []).map((s, i) => (
+                    <div key={i} className="flex justify-between items-center bg-surface-light p-3 rounded-lg border border-border">
+                      <span className="text-xs font-bold text-primary">{s.payment_method}</span>
+                      <span className="font-mono text-success font-bold">R$ {Number(s?.total_amount ?? 0).toFixed(2)}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between items-center bg-surface-light p-3 rounded-lg border border-border mt-2">
+                    <span className="text-xs font-bold text-primary uppercase tracking-widest">Total Vendas</span>
+                    <span className="font-mono text-success font-bold text-lg">R$ {salesTotal.toFixed(2)}</span>
+                  </div>
+                  {(data?.movements || []).filter(m => m?.type === 'ENTRADA' || m?.type === 'SAIDA').map((m, i) => (
+                    <div key={m.id || i} className={`flex justify-between items-center p-3 rounded-lg border ${m?.type === 'ENTRADA' ? 'bg-success/5 border-success/20' : 'bg-danger/5 border-danger/20'}`}>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold text-primary">{m?.type === 'ENTRADA' ? '➕ Entrada' : '➖ Sangria'}</span>
+                        <span className="text-[10px] text-muted">{m?.description || '-'}</span>
+                        <span className="text-[9px] text-muted/60">{m?.created_at ? new Date(m.created_at + 'Z').toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                      </div>
+                      <span className={`font-mono font-bold ${m?.type === 'ENTRADA' ? 'text-success' : 'text-danger'}`}>R$ {Number(m?.total_amount ?? 0).toFixed(2)}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between items-center bg-primary/10 border border-primary/20 p-3 rounded-lg mt-2">
+                    <span className="text-xs font-bold text-primary uppercase tracking-widest">Saldo do Caixa</span>
+                    <span className={`font-mono font-bold text-lg ${saldoFinal >= 0 ? 'text-success' : 'text-danger'}`}>R$ {saldoFinal.toFixed(2)}</span>
+                  </div>
+                </div>
+
+
+
+                <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-4 border-b border-border pb-2">Resumo de Vendas</h3>
+                <div className="space-y-2 mb-8">
+                  {(reportData?.sales || []).map((s, i) => (
+                    <div key={i} className="flex justify-between items-center bg-surface-light p-3 rounded-lg border border-border">
+                      <span className="text-xs font-bold text-primary">{s.payment_method}</span>
+                      <span className="font-mono text-success font-bold">R$ {Number(s?.total_amount ?? 0).toFixed(2)}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between items-center bg-surface-light p-3 rounded-lg border border-border mt-2">
+                    <span className="text-xs font-bold text-primary uppercase tracking-widest">Total Vendas</span>
+                    <span className="font-mono text-success font-bold text-lg">R$ {salesTotal.toFixed(2)}</span>
+                  </div>
+                  {(data?.movements || []).filter(m => m?.type === 'ENTRADA' || m?.type === 'SAIDA').map((m, i) => (
+                    <div key={m.id || i} className={`flex justify-between items-center p-3 rounded-lg border ${m?.type === 'ENTRADA' ? 'bg-success/5 border-success/20' : 'bg-danger/5 border-danger/20'}`}>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold text-primary">{m?.type === 'ENTRADA' ? '➕ Entrada' : '➖ Sangria'}</span>
+                        <span className="text-[10px] text-muted">{m?.description || '-'}</span>
+                        <span className="text-[9px] text-muted/60">{m?.created_at ? new Date(m.created_at + 'Z').toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                      </div>
+                      <span className={`font-mono font-bold ${m?.type === 'ENTRADA' ? 'text-success' : 'text-danger'}`}>R$ {Number(m?.total_amount ?? 0).toFixed(2)}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between items-center bg-primary/10 border border-primary/20 p-3 rounded-lg mt-2">
+                    <span className="text-xs font-bold text-primary uppercase tracking-widest">Saldo do Caixa</span>
+                    <span className={`font-mono font-bold text-lg ${saldoFinal >= 0 ? 'text-success' : 'text-danger'}`}>R$ {saldoFinal.toFixed(2)}</span>
+                  </div>
+                </div>
+
+
+
+            {/* Financial Summary - Today */}
+            {financialSummary && (
+              <div className="mb-8">
+                <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-4 border-b border-border pb-2 flex items-center gap-2">
+                  <DollarSign size={12} className="text-warning" />
+                  Resumo Financeiro
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-warning/10 border border-warning/30 p-3 rounded-lg">
+                    <span className="text-[9px] text-muted font-bold uppercase block">A Pagar (Total)</span>
+                    <span className="text-lg font-bold text-warning font-mono">R$ {Number(financialSummary?.payable?.total ?? 0).toFixed(2)}</span>
+                  </div>
+                  <div className="bg-success/10 border border-success/30 p-3 rounded-lg">
+                    <span className="text-[9px] text-muted font-bold uppercase block">A Receber (Total)</span>
+                    <span className="text-lg font-bold text-success font-mono">R$ {Number(financialSummary?.receivable?.total ?? 0).toFixed(2)}</span>
+                  </div>
+                  <div className="bg-danger/10 border border-danger/30 p-3 rounded-lg">
+                    <span className="text-[9px] text-muted font-bold uppercase block">A Pagar (Pendente)</span>
+                    <span className="text-lg font-bold text-danger font-mono">R$ {Number(financialSummary?.payable?.pending ?? 0).toFixed(2)}</span>
+                  </div>
+                  <div className="bg-info/10 border border-info/30 p-3 rounded-lg">
+                    <span className="text-[9px] text-muted font-bold uppercase block">A Receber (Pendente)</span>
+                    <span className="text-lg font-bold text-info font-mono">R$ {Number(financialSummary?.receivable?.pending ?? 0).toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {(data?.exchanges && data.exchanges.length > 0) && (
+              <div className="mb-8">
+                <h3 className="text-[10px] font-bold text-warning uppercase tracking-widest mb-4 border-b border-border pb-2 flex items-center gap-2">
+                  <DollarSign size={12} className="text-warning" />
+                  Permutas
+                </h3>
+                <div className="space-y-2">
+                  {data.exchanges.map((ex, i) => (
+                    <div key={ex.id || i} className="bg-warning/5 border border-warning/20 p-3 rounded-lg">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold text-primary">{ex.customer_name || 'Permuta'}</span>
+                          <span className="text-[10px] text-muted">{ex.created_at ? new Date(ex.created_at + 'Z').toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                        </div>
+                        <span className="font-mono font-bold text-warning">R$ {Number(ex?.total ?? 0).toFixed(2)}</span>
+                      </div>
+                      <div className="text-[10px] text-muted bg-surface-light p-2 rounded border border-border">
+                        <span className="font-bold uppercase">Trocado por:</span> <span className="text-primary">{ex.exchange_for || '(não informado)'}</span>
+                      </div>
+                      {ex.items && ex.items.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {ex.items.map((it, j) => (
+                            <div key={it.id || j} className="flex justify-between text-[10px] text-muted">
+                              <span>1x {it.product_name}</span>
+                              <span className="font-mono">R$ {Number(it?.price ?? 0).toFixed(2)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  <div className="flex justify-between items-center bg-warning/10 border border-warning/30 p-3 rounded-lg mt-2">
+                    <span className="text-xs font-bold text-primary uppercase tracking-widest">Total Permutas</span>
+                    <span className="font-mono font-bold text-warning text-lg">R$ {data.exchanges.reduce((a, e) => a + Number(e?.total ?? 0), 0).toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-4 border-b border-border pb-2">Lançamento Manual (Gaveta)</h3>
+            <div className="bg-surface-light p-4 rounded-xl border border-border space-y-4">
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => setCashMove({...cashMove, type: 'ENTRADA'})}
+                  className={`py-2 rounded font-bold text-[10px] flex items-center justify-center gap-1 transition-all ${cashMove.type === 'ENTRADA' ? 'bg-success/20 text-success border border-success/50' : 'bg-surface-light text-muted border border-border'}`}>
+                  <ArrowUpCircle size={14}/> ENTRADA</button>
+                <button type="button" onClick={() => setCashMove({...cashMove, type: 'SAIDA'})}
+                  className={`py-2 rounded font-bold text-[10px] flex items-center justify-center gap-1 transition-all ${cashMove.type === 'SAIDA' ? 'bg-danger/20 text-danger border border-danger/50' : 'bg-surface-light text-muted border border-border'}`}>
+                  <ArrowDownCircle size={14}/> SANGRIA</button>
+              </div>
+              <input type="number" step="0.01" placeholder="Valor R$" value={cashMove.amount} onChange={e => setCashMove({...cashMove, amount: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
+              <input type="text" placeholder="Motivo (Ex: Troco, Gelo...)" value={cashMove.description} onChange={e => setCashMove({...cashMove, description: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
+              <button type="button" onClick={() => {
+                const ipc = getIPC();
+                if(!ipc) { addToast('Sem conexão com o sistema', 'error'); return; }
+                if(!cashMove.amount) { addToast('Informe o valor', 'warning'); return; }
+                if(!cashMove.description) { addToast('Informe o motivo', 'warning'); return; }
+                ipc.invoke('cash:register', { ...cashMove, amount: parseFloat(cashMove.amount) }).then((res: any) => {
+                  if (res.success) {
+                    addToast('Movimento registrado com sucesso!', 'success');
+                    setCashMove({ type: 'SAIDA', amount: '', description: '' });
+                    loadReports();
+                    if (advancedReportData) loadAdvancedReport();
+                  } else {
+                    addToast(res.error, 'error');
+                  }
+                });
+              }} className="w-full bg-success hover:bg-success py-3 rounded-lg font-bold text-xs uppercase tracking-widest text-white transition-all">
+                Registrar Movimento
+              </button>
+            </div>
+          </div>
+
+              <div className="flex-1 p-6 flex flex-col overflow-hidden bg-surface">
+              <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-4 border-b border-border pb-2">
+                {advancedReportData ? 'Produtos Mais Vendidos (Período)' : 'Histórico de Pedidos (Estorno)'}
+              </h3>
+            <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-2">
+              {advancedReportData ? (
+                advancedReportData.topProducts?.map((p, i) => (
+                  <div key={i} className="bg-surface-light border border-border rounded-xl p-4 flex items-center justify-between">
+                    <div>
+                      <div className="font-bold text-sm text-primary">{p.product_name}</div>
+                      <div className="text-[10px] text-muted">{p?.qty ?? 0} vendidos • média R$ {Number(p?.avg_price ?? 0).toFixed(2)}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-mono font-bold text-success">R$ {Number(p?.total_revenue ?? 0).toFixed(2)}</div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                ordersHistory.map(o => (
+                  <div key={o.id} className="bg-surface-light border border-border rounded-xl p-4 flex flex-col">
+                    <div className="flex justify-between items-center mb-3 border-b border-border pb-3">
+                      <div>
+                        <span className="font-bold text-sm text-primary mr-3">{o.customer_name} {o.is_delivery ? '🛵' : ''}</span>
+                        <span className="text-[10px] bg-surface-light px-2 py-1 rounded text-muted uppercase">{o.payment_method}</span>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className="font-mono font-bold text-lg text-success">R$ {Number(o?.total ?? 0).toFixed(2)}</span>
+                        <button
+                          onClick={() => runWithAuth(() => {
+                            const ipc = getIPC();
+                            if(window.confirm(`Tem certeza que deseja CANCELAR (estornar) o pedido #${o.id} - ${o.customer_name}?`) && ipc) {
+                              ipc.invoke('orders:delete', o.id).then(() => {
+                                loadReports();
+                                if (advancedReportData) loadAdvancedReport();
+                              });
+                            }
+                          }, 'cancel_orders')}
+                          className="p-2 bg-danger/10 hover:bg-danger hover:text-white text-danger rounded-lg transition-colors flex items-center gap-2"
+                          title="Cancelar Pedido"
+                        >
+                          <Trash2 size={16} /> <span className="text-[10px] font-bold uppercase hidden xl:block">Estornar</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      {o.items?.map(i => (
+                        <div key={i.id} className="flex justify-between text-[10px] text-muted">
+                          <span>1x {i.product_name} <span className="text-muted/70 italic ml-1">{i.notes ? `(${i.notes})` : ''}</span></span>
+                          <span className="font-mono">R$ {Number(i?.price ?? 0).toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
+              {ordersHistory.length === 0 && !advancedReportData && <div className="text-center text-muted text-xs mt-10">Nenhuma venda registrada hoje.</div>}
+              {advancedReportData && advancedReportData.topProducts?.length === 0 && <div className="text-center text-muted text-xs mt-10">Nenhum produto vendido no período.</div>}
+            </div>
+          </div>
+        </div>
+
+        {/* Modal de Relatório por Produto (v1.3.7) */}
+        {selectedProduct && productReportData && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-card rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
+              <div className="p-4 bg-surface-light border-b border-border flex justify-between items-center">
+                <h3 className="text-sm font-bold text-primary uppercase tracking-wider">
+                  Relatório: {productReportData.productName}
+                </h3>
+                <button
+                  onClick={() => { setSelectedProduct(null); setProductReportData(null); }}
+                  className="p-2 hover:bg-danger/20 rounded-lg text-muted hover:text-danger transition-all"
+                >
+                  <X size={20}/>
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                {/* KPIs */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-surface-light rounded-xl p-4 border border-border text-center">
+                    <div className="text-[10px] text-muted font-bold uppercase tracking-widest mb-1">Qtde Vendida</div>
+                    <div className="text-2xl font-bold text-primary">{productReportData.qty}</div>
+                    <div className="text-[10px] text-muted">unidades</div>
+                  </div>
+                  <div className="bg-surface-light rounded-xl p-4 border border-border text-center">
+                    <div className="text-[10px] text-muted font-bold uppercase tracking-widest mb-1">Receita Total</div>
+                    <div className="text-2xl font-bold text-success">R$ {productReportData.totalRevenue.toFixed(2)}</div>
+                  </div>
+                  <div className="bg-surface-light rounded-xl p-4 border border-border text-center">
+                    <div className="text-[10px] text-muted font-bold uppercase tracking-widest mb-1">Preço Médio</div>
+                    <div className="text-2xl font-bold text-primary">R$ {productReportData.avgPrice.toFixed(2)}</div>
+                  </div>
+                  <div className="bg-surface-light rounded-xl p-4 border border-border text-center">
+                    <div className="text-[10px] text-muted font-bold uppercase tracking-widest mb-1">% do Total</div>
+                    <div className="text-2xl font-bold text-info">{productReportData.percentage.toFixed(1)}%</div>
+                  </div>
+                </div>
+
+                {/* Evolução Diária */}
+                <div>
+                  <h4 className="text-[10px] text-muted font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <TrendingUp size={14}/> Evolução Diária
+                  </h4>
+                  <div className="bg-surface-light rounded-xl border border-border overflow-hidden">
+                    <table className="w-full text-xs">
+                      <thead className="bg-surface border-b border-border">
+                        <tr>
+                          <th className="p-3 text-left font-bold text-muted uppercase">Dia</th>
+                          <th className="p-3 text-center font-bold text-muted uppercase">Qtde</th>
+                          <th className="p-3 text-right font-bold text-muted uppercase">Receita</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {productReportData.dailyData.map((d, i) => (
+                          <tr key={i}>
+                            <td className="p-3 text-primary font-medium">{d.day}</td>
+                            <td className="p-3 text-center">{d.qty}</td>
+                            <td className="p-3 text-right font-mono text-success">R$ {d.revenue.toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {productReportData.dailyData.length === 0 && (
+                      <div className="text-center text-muted text-xs py-8">Nenhum dado diário disponível.</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Formas de Pagamento */}
+                <div>
+                  <h4 className="text-[10px] text-muted font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <Clock size={14}/> Formas de Pagamento
+                  </h4>
+                  <div className="bg-surface-light rounded-xl border border-border overflow-hidden">
+                    <table className="w-full text-xs">
+                      <thead className="bg-surface border-b border-border">
+                        <tr>
+                          <th className="p-3 text-left font-bold text-muted uppercase">Forma de Pagamento</th>
+                          <th className="p-3 text-center font-bold text-muted uppercase">Pedidos</th>
+                          <th className="p-3 text-right font-bold text-muted uppercase">Receita</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {productReportData.payments.map((p, i) => (
+                          <tr key={i}>
+                            <td className="p-3 text-primary font-medium">{p.payment_method}</td>
+                            <td className="p-3 text-center">{p.orders_count}</td>
+                            <td className="p-3 text-right font-mono text-success">R$ {p.revenue.toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {productReportData.payments.length === 0 && (
+                      <div className="text-center text-muted text-xs py-8">Sem dados de pagamento.</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Pedidos que Contêm o Produto */}
+                <div>
+                  <h4 className="text-[10px] text-muted font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <PackageIcon size={14}/> Pedidos que Contêm o Produto
+                  </h4>
+                  <div className="bg-surface-light rounded-xl border border-border overflow-hidden">
+                    <table className="w-full text-xs">
+                      <thead className="bg-surface border-b border-border">
+                        <tr>
+                          <th className="p-3 text-left font-bold text-muted uppercase">Nº Pedido</th>
+                          <th className="p-3 text-left font-bold text-muted uppercase">Cliente</th>
+                          <th className="p-3 text-center font-bold text-muted uppercase">Data</th>
+                          <th className="p-3 text-left font-bold text-muted uppercase">Pagamento</th>
+                          <th className="p-3 text-right font-bold text-muted uppercase">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {productReportData.orders.map((o, i) => (
+                          <tr key={i}>
+                            <td className="p-3 font-mono font-bold text-primary">#{o.order_id}</td>
+                            <td className="p-3 text-primary">{o.customer_name || '-'}</td>
+                            <td className="p-3 text-center text-muted">
+                              {o.created_at ? new Date(o.created_at + 'Z').toLocaleDateString('pt-BR') : '-'}
+                            </td>
+                            <td className="p-3 text-muted">{o.payment_method || '-'}</td>
+                            <td className="p-3 text-right font-mono text-success">R$ {Number(o.order_total ?? 0).toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {productReportData.orders.length === 0 && (
+                      <div className="text-center text-muted text-xs py-8">Nenhum pedido encontrado.</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+    </div>
+  </div>
+  );
+}

@@ -5,6 +5,19 @@
    Paridade visual Linux/Windows
    ============================================================ */
 
+/* Transição suave entre temas */
+html {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+html *,
+html *::before,
+html *::after {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-duration: 0.3s;
+  transition-timing-function: ease;
+}
+
 /* Fonte Inter variável embutida (mesma tipografia no Windows/Linux) */
 @font-face {
   font-family: 'Inter';
@@ -108,4 +121,23 @@ input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
+}
+
+/* ============================================================
+   Animações do Sentry Feedback Widget
+   ============================================================ */
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
 }

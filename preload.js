@@ -39,6 +39,8 @@ const ALLOWED_CHANNELS = {
 
   'auth:login': true,
   'auth:logout': true,
+  'auth:refresh': true,
+  'auth:check': true,
   'auth:verify-password': true,
   'auth:update-password': true,
   'auth:change-user-password': true,
@@ -152,6 +154,8 @@ const api = {
   auth: {
     login: (...args) => safeInvoke('auth:login', ...args),
     logout: (...args) => safeInvoke('auth:logout', ...args),
+    refresh: (...args) => safeInvoke('auth:refresh', ...args),
+    check: (...args) => safeInvoke('auth:check', ...args),
     verifyPassword: (...args) => safeInvoke('auth:verify-password', ...args),
     updatePassword: (...args) => safeInvoke('auth:update-password', ...args),
     changeUserPassword: (...args) => safeInvoke('auth:change-user-password', ...args),

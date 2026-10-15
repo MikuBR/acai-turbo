@@ -6,16 +6,18 @@ import { useAuthStore } from '../store/authStore';
 import { useStore } from '../store/useStore';
 
 beforeEach(() => {
-  globalThis.window = {
+  // Preserva o jsdom: em vez de sobrescrever `window` todo (que destrói
+  // localStorage, document, addEventListener), injeta apenas o mock do electron.
+  Object.assign(window, {
     electron: {
       ipcRenderer: {
         invoke: vi.fn().mockResolvedValue({ success: true, data: [] }),
         on: vi.fn(),
         once: vi.fn(),
         removeListener: vi.fn(),
-      }
-    }
-  };
+      },
+    },
+  });
 });
 
 describe('PdvScreen', () => {
@@ -23,7 +25,7 @@ describe('PdvScreen', () => {
     localStorage.clear();
     useAuthStore.setState({
       currentUser: { id: 1, username: 'admin', full_name: 'Admin', role: 'admin', must_change_password: 0 },
-      authToken: 'fake-token',
+      isAuthenticated: true,
       authTime: Date.now(),
     });
     useStore.setState({

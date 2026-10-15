@@ -7,13 +7,14 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: './src/tests/setup.js',
-    include: ['src/tests/**/*.test.{js,jsx}', 'src/tests/**/*.spec.{js,jsx}'],
+    include: ['src/tests/**/*.test.{js,jsx,ts,tsx}', 'src/tests/**/*.spec.{js,jsx,ts,tsx}'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html'],
+      // 'lcov' é exigido pelo upload do Codecov no CI (./coverage/lcov.info)
+      reporter: ['text', 'json', 'html', 'lcov'],
       include: [
-        'src/store/**/*.js',
-        'src/components/atoms/**/*.jsx',
+        'src/store/**/*.{js,ts}',
+        'src/components/atoms/**/*.{jsx,tsx}',
         'database/validate.cjs',
       ],
       exclude: [

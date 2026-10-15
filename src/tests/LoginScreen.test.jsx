@@ -8,20 +8,22 @@ const mockInvoke = vi.fn();
 
 beforeEach(() => {
   mockInvoke.mockReset();
-  globalThis.window = {
+  // Preserva o jsdom: em vez de sobrescrever `window` todo (que destrói
+  // localStorage, document, addEventListener), injeta apenas o mock do electron.
+  Object.assign(window, {
     electron: {
       ipcRenderer: {
         invoke: mockInvoke,
         on: vi.fn(),
         once: vi.fn(),
         removeListener: vi.fn(),
-      }
-    }
-  };
+      },
+    },
+  });
   localStorage.clear();
   useAuthStore.setState({
     currentUser: null,
-    authToken: null,
+    isAuthenticated: false,
     authTime: 0,
   });
 });
@@ -45,7 +47,7 @@ describe('LoginScreen', () => {
     mockInvoke.mockResolvedValue({
       success: true,
       user: { id: 1, username: 'admin', full_name: 'Admin', role: 'admin', must_change_password: 0 },
-      token: 'fake-token-123',
+      // Token NÃO é mais retornado — fica em cookie httpOnly
     });
 
     render(
@@ -74,7 +76,7 @@ describe('LoginScreen', () => {
 
       await vi.waitFor(() => {
         expect(useAuthStore.getState().currentUser).toBeTruthy();
-        expect(useAuthStore.getState().authToken).toBe('fake-token-123');
+        expect(useAuthStore.getState().isAuthenticated).toBe(true);
       });
     }
   });
@@ -83,7 +85,6 @@ describe('LoginScreen', () => {
     mockInvoke.mockResolvedValue({
       success: true,
       user: { id: 1, username: 'admin', full_name: 'Admin', role: 'admin', must_change_password: 1 },
-      token: 'fake-token-123',
     });
 
     render(

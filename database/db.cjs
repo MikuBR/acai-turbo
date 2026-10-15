@@ -5,6 +5,7 @@ const { app } = require('electron');
 const bcrypt = require('bcryptjs');
 const { SqliteAdapter } = require('./adapters/sqlite.cjs');
 const { MigrationEngine, MigrationError } = require('./migrate.cjs');
+const { resolveNativeBinding } = require('./db-binding.cjs');
 
 let db;
 let _migrationError = null;
@@ -28,7 +29,7 @@ function initializeDatabase() {
   try {
     console.log('[db] Initializing database at:', dbPath);
 
-    db = new Database(dbPath);
+    db = new Database(dbPath, { nativeBinding: resolveNativeBinding() });
     db.pragma('journal_mode = WAL');
     db.pragma('foreign_keys = ON');
 

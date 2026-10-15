@@ -1,79 +1,86 @@
-# CI Optimization Protocol
+# CI/CD Protocol
+
+Documento operacional dos workflows reais em `.github/workflows/`.
+Última revisão: reflete o fluxo dual-ABI (Node + Electron) do better-sqlite3.
 
 ## Pipeline Architecture
 
+```text
+ci.yml — roda em push/PR de main e develop (ignora mudanças só de docs)
+  ├── lint-and-typecheck   (ubuntu, 10min)  eslint + tsc
+  ├── test-node            (ubuntu, 15min)  bindings Node + vitest --coverage + codecov
+  ├── test-electron        (ubuntu, 15min)  binding Electron + check ABI 128
+  ├── build                (ubuntu, 15min)  vite build (needs: lint, test-node, test-electron)
+  ├── abi-guard            (ubuntu, 10min)  version drift + presença dos scripts dual-ABI
+  ├── security-audit       (ubuntu, 15min)  npm audit (critical) + security tests
+  ├── dependency-review    (PR only)        dependency-review-action
+  └── summary              (always)         agrega resultados; falha se algum job falhou
+
+release.yml — build do installer Windows (NSIS)
+  ├── gate: exige CI 'success' para o mesmo commit (pulado em workflow_dispatch)
+  ├── npm ci --ignore-scripts → MSBuild → rebuild:native (binding Electron)
+  ├── vite build + verify:sourcemaps
+  └── electron-builder --win → publica release (tag v* ou windows-installer-<branch>)
+
+release-on-success.yml — release de texto contínua
+  └── workflow_run (CI success em main) → atualiza a release rolling edge-main
 ```
-push/PR → paths-ignore filtro
-  ├── lint (ubuntu, 10min timeout)
-  ├── audit (ubuntu, 5min timeout, continue-on-error)
-  │     ↓
-  ├── test (matrix: ubuntu + windows, 15min timeout, --ignore-scripts)
-  │     ↓
-  └── build-windows (30min timeout, full npm ci)
-        ├── validate installer
-        ├── upload artifact
-        └── [tag v*] → publish GitHub Release
-```
 
-## Cache Strategy
+## Dual-ABI Native Bindings
 
-| Key | Jobs | Scope |
-|---|---|---|
-| `deps-linux-${{ hashFiles('package-lock.json') }}` | lint, audit | npm ci full (postinstall) |
-| `deps-${{ runner.os }}-test-${{ hashFiles('package-lock.json') }}` | test (ubuntu + windows) | npm ci --ignore-scripts |
-| `deps-win-full-${{ hashFiles('package-lock.json') }}` | build-windows | npm ci full (native addons) |
+O projeto usa **prebuilds pré-compilados** para os dois runtimes:
 
-Rules:
-- Cache key includes OS + lockfile hash (deterministic)
-- `restore-keys` fallbackreduz cache miss parcial
-- `npm ci` só roda em cache miss
-- `--ignore-scripts` em test jobs (não precisam de Electron)
+| Runtime | ABI | Arquivo | Quem usa |
+|---|---|---|---|
+| Node.js 22 | 127 | `better_sqlite3.node-node.node` | Vitest (testes) |
+| Electron 32.3.3 | 128 | `better_sqlite3.node-electron.node` | app empacotado |
 
-## Safe-guards
-
-1. **Timeout por job**: lint=10min, audit=5min, test=15min, build=30min
-2. **`if: success()`**: test só roda se lint+audit passaram
-3. **`fail-fast: true`**: se um OS falhar, cancela o outro
-4. **Artifact validation**: build-windows verifica se .exe foi gerado (tamanho, existência)
-5. **`continue-on-error`**: audit não bloqueia o pipeline (npm audit pode ter falso positivo)
-6. **paths-ignore**: CI ignora commits que só mexem em .md, .gitattributes, .gitignore
-7. **`ACTIONS_STEP_DEBUG: false`**: impede vazamento de secrets em debug logs
-
-## Security
-
-1. **Permissions mínimas**: `contents: read` para lint/audit/test; `contents: write` só para build-windows (precisa criar Release)
-2. **`GITHUB_TOKEN`** escopo reduzido por job
-3. **`npm audit --audit-level=high`**: verifica dependências (não bloqueia, mas alerta)
-4. **Sem secrets em variáveis**: GH_TOKEN não aparece em logs
-5. **`paths-ignore` reduz superfície**: commits de documentação não disparam CI
+- `scripts/install-sqlite-bindings.cjs` baixa ambos (detecta a versão real do Node),
+  com flags `--node-only` / `--electron-only`.
+- O binário padrão `better_sqlite3.node` é **sempre sincronizado com o build Node**
+  (determinístico para `require('better-sqlite3')` direto nos testes).
+- `database/db-binding.cjs` resolve o binding correto em runtime via
+  `process.versions.electron`.
+- Scripts: `rebuild:node` (node-only), `rebuild:native` (electron-only),
+  `rebuild:all` (ambos), `check:node`, `check:native`.
 
 ## Trigger Rules
 
-| Evento | Jobs executados |
+| Evento | Workflows |
 |---|---|
-| Push: `main`/`develop` (código) | lint → audit → test → build-windows |
-| Push: tag `v*` | lint → audit → test → build-windows + Release |
-| PR: `main` (código) | lint → audit → test |
-| Push: `main`/`develop` (só .md/.git*) | ❌ Ignorado |
-| PR: `main` (só .md/.git*) | ❌ Ignorado |
+| Push `main`/`develop` (código) | ci.yml |
+| Push `main`/`develop` (só docs) | ❌ ignorado (paths-ignore) |
+| PR `main`/`develop` (código) | ci.yml + dependency-review |
+| Push tag `v*` | ci.yml + release.yml |
+| CI success em `main` | release-on-success.yml (edge-main) |
+| Manual | release.yml (workflow_dispatch; gate do CI é pulado) |
 
-## Performance Targets
+## Safe-guards
 
-| Job | Antes | Depois | Meta |
-|---|---|---|---|
-| lint | ~70s | ~20s (cache hit) | <30s |
-| audit | — | ~15s | <20s |
-| test (ubuntu) | ~195s | ~30s (cache + --ignore-scripts) | <40s |
-| test (windows) | ~51s | ~20s (cache) | <30s |
-| build-windows | ~90s | ~90s | <120s |
-| **Total (tag)** | **~4m** | **~2m** | **<2m30s** |
+1. **`timeout-minutes`** em todos os jobs (5–15min; build Windows 30min).
+2. **`concurrency`** cancela runs antigos do mesmo ref.
+3. **`permissions: contents: read`** no topo do ci.yml (menor privilégio);
+   `contents: write` só onde cria release.
+4. **`paths-ignore`** ignora mudanças só de documentação.
+5. **`npm ci`** em vez de `npm install` (respeita o lockfile).
+6. **Gate de CI** no release.yml: não publica installer se o CI não passou.
+7. **`if: always()`** no summary, que falha se qualquer job falhou.
+8. **ABI guard** detecta drift entre `package.json` e `ELECTRON_VERSION`.
 
 ## Troubleshooting
 
-**Cache miss inesperado**: `hashFiles('package-lock.json')` mudou — npm install/update modificou o lockfile.
+**Testes falham com NODE_MODULE_VERSION**: rode `npm run rebuild:node` — o binário
+padrão precisa ser o build Node.
 
-**Windows test lento**: verificar se cache hit funcionou. `deps-win-test-` key precisa existir de run anterior.
+**`check:native` falha no CI Linux**: esperado — o teste de runtime Electron é
+pulado fora do Windows (`--skip-electron-test` / `CI=true`).
 
-**build-windows falha**: MSVC tools ausente ou Python setuptools não instalado. `setup-msbuild@v2` + `pip install setuptools` são obrigatórios.
+**Cache miss inesperado**: `hashFiles('package-lock.json')` mudou — algum
+install/update alterou o lockfile.
 
-**Release não criada**: verificar se tag começa com `v`, se `permissions: contents: write` está ativo, e se `GITHUB_TOKEN` tem acesso ao repositório.
+**Release não criada**: verifique `permissions: contents: write` e se a tag
+começa com `v` (ou se é push de branch → `windows-installer-<branch>`).
+
+**Installer não publicado mesmo com CI verde**: confira se o job `test-node`
+(com coverage) passou — o gate do release.yml consulta a conclusão do ci.yml
+para o mesmo SHA.

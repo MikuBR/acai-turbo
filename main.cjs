@@ -30,6 +30,9 @@ const { initLogger: initMainLogger, logger: getLogger } = require('./database/lo
 // database/logger.cjs exports logger as a getter function; materialize the winston instance once at load
 const logger = getLogger();
 
+// Initialize Sentry (error tracking em produção)
+const sentryMain = require('./main/sentry.cjs');
+
 // Initialize update manager
 require('./main/update-manager.cjs');
 
@@ -52,6 +55,73 @@ function requireRole(minRole) {
   if (!currentSession) throw new Error('Não autenticado');
   if (minRole === 'admin' && currentSession.user.role !== 'admin') throw new Error('Acesso negado');
   if (minRole === 'manager' && !['admin', 'manager'].includes(currentSession.user.role)) throw new Error('Acesso negado');
+}
+
+// ============================================================
+// SEGURANÇA: Cookie httpOnly + Refresh Token Rotation
+// ============================================================
+const AUTH_COOKIE_NAME = 'auth_token';
+const REFRESH_COOKIE_NAME = 'refresh_token';
+const AUTH_TOKEN_TTL_MS = 8 * 60 * 60 * 1000; // 8 horas
+const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 dias
+
+// Armazena tokens de refresh rotacionados: { [refreshToken]: { userId, expiresAt } }
+const refreshTokenStore = new Map();
+
+function generateSecureToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+function setAuthCookies(session, accessToken, refreshToken) {
+  const isProd = app.isPackaged;
+  const cookieBase = {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: 'strict',
+    path: '/',
+  };
+  session.cookies.set(AUTH_COOKIE_NAME, accessToken, {
+    ...cookieBase,
+    maxAge: AUTH_TOKEN_TTL_MS / 1000,
+  });
+  session.cookies.set(REFRESH_COOKIE_NAME, refreshToken, {
+    ...cookieBase,
+    maxAge: REFRESH_TOKEN_TTL_MS / 1000,
+  });
+}
+
+function clearAuthCookies(session) {
+  session.cookies.remove(AUTH_COOKIE_NAME);
+  session.cookies.remove(REFRESH_COOKIE_NAME);
+}
+
+function getAuthTokenFromCookies(session) {
+  return session.cookies.get(AUTH_COOKIE_NAME).then(c => c?.value || null);
+}
+
+function getRefreshTokenFromCookies(session) {
+  return session.cookies.get(REFRESH_COOKIE_NAME).then(c => c?.value || null);
+}
+
+// Refresh token rotation: invalida o token antigo e emite um novo
+function rotateRefreshToken(oldRefreshToken, userId) {
+  refreshTokenStore.delete(oldRefreshToken);
+  const newRefreshToken = generateSecureToken();
+  refreshTokenStore.set(newRefreshToken, {
+    userId,
+    expiresAt: Date.now() + REFRESH_TOKEN_TTL_MS,
+  });
+  return newRefreshToken;
+}
+
+function validateRefreshToken(refreshToken) {
+  const entry = refreshTokenStore.get(refreshToken);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    refreshTokenStore.delete(refreshToken);
+    return null;
+  }
+  return entry;
 }
 
 // ============================================================
@@ -98,11 +168,32 @@ function createHandler(channel, handler, options = {}) {
       if (options.minRole) {
         requireRole(options.minRole);
       }
+
+      // Breadcrumb para operações críticas
+      const isCritical = ['auth:login', 'auth:logout', 'orders:save', 'cash:register', 'cash:open', 'cash:close'].includes(channel);
+      if (isCritical) {
+        sentryMain.addBreadcrumb('ipc', `${channel} iniciado`, 'info', { channel, userId: currentSession?.user?.id });
+      }
+
       const result = { success: true, ...await handler(valid.data) };
       logger.info(`[${channel}] success`, { channel, userId: currentSession?.user?.id });
+
+      // Breadcrumb de sucesso para operações críticas
+      if (isCritical) {
+        sentryMain.addBreadcrumb('ipc', `${channel} concluído com sucesso`, 'info', { channel, userId: currentSession?.user?.id });
+      }
+
       return result;
     } catch (e) {
       logger.error(`[${channel}] Error:`, { message: e.message, channel, userId: currentSession?.user?.id });
+
+      // Reporta erro ao Sentry para operações críticas
+      const isCritical = ['auth:login', 'auth:logout', 'orders:save', 'cash:register', 'cash:open', 'cash:close'].includes(channel);
+      if (isCritical) {
+        sentryMain.addBreadcrumb('ipc', `${channel} falhou: ${e.message}`, 'error', { channel, userId: currentSession?.user?.id });
+        sentryMain.reportError(e, { tags: { channel, type: 'ipc_error' } });
+      }
+
       const message = e.message || 'Erro interno. Tente novamente.';
       return { success: false, error: message };
     }
@@ -129,9 +220,13 @@ app.commandLine.appendSwitch('log-level', '3');
 // Captura exceções não tratadas e finaliza o app corretamente
 // para não deixar processos filho (GPU, utility) órfãos.
 // ============================================================
+// Inicializa Sentry antes de qualquer handler de erro
+sentryMain.initSentry();
+
 process.on('uncaughtException', (error) => {
   logger.error('main: uncaughtException', { error: error.message, stack: error.stack });
   console.error('[main] UNCAUGHT EXCEPTION:', error);
+  sentryMain.reportError(error, { tags: { type: 'uncaught_exception' } });
   dialog.showErrorBox('Erro Fatal', `Ocorreu um erro inesperado:\n\n${error.message}\n\nO aplicativo será encerrado.`);
   app.quit();
   setTimeout(() => {
@@ -142,6 +237,7 @@ process.on('uncaughtException', (error) => {
 process.on('unhandledRejection', (reason) => {
   logger.error('main: unhandledRejection', { reason: String(reason) });
   console.error('[main] UNHANDLED REJECTION:', reason);
+  sentryMain.reportError(reason, { tags: { type: 'unhandled_rejection' } });
 });
 
 let mainWindow = null;
@@ -523,8 +619,40 @@ createHandler('catalog:delete-product', async (id) => ({ count: deleteProduct(id
 // PEDIDOS - IPC Handlers
 // ============================================================
 createHandler('orders:save', async (data) => {
+  // Breadcrumb de checkout com detalhes do pedido
+  sentryMain.addBreadcrumb('checkout', 'Checkout iniciado', 'info', {
+    itemCount: data.items?.length || 0,
+    total: data.orderData?.total,
+    paymentMethod: data.orderData?.payment_method,
+    userId: currentSession?.user?.id,
+  });
+
   const id = saveFullOrder(data.orderData, data.items);
+
+  // Breadcrumb de checkout concluído
+  sentryMain.addBreadcrumb('checkout', 'Checkout concluído', 'info', {
+    orderId: id,
+    total: data.orderData?.total,
+    userId: currentSession?.user?.id,
+  });
+
+  // Performance mark: início da impressão
+  if (typeof performance !== 'undefined' && performance.mark) {
+    performance.mark('acai:print:start');
+  }
+
   const printResult = await printTickets(data.orderData, data.items).catch(e => ({ kitchen: { success: false, reason: e.message }, front: { success: false, reason: e.message } }));
+
+  // Performance mark: fim da impressão
+  if (typeof performance !== 'undefined' && performance.mark) {
+    performance.mark('acai:print:end');
+    try {
+      performance.measure('acai:print:duration', 'acai:print:start', 'acai:print:end');
+    } catch (e) {
+      // measure pode falhar se as marks não existirem
+    }
+  }
+
   return { id, print: printResult };
 });
 
@@ -866,6 +994,14 @@ async function ifoodProcessPollCycle() {
         addIfoodPendingOrder(event.orderId, order.displayId || order.id, event.id, event.merchantId || '', order);
         console.log(`[ifood] Novo pedido recebido: #${order.displayId || order.id} - ${order.customer?.name || 'N/A'}`);
 
+        // Breadcrumb de novo pedido iFood
+        sentryMain.addBreadcrumb('ifood', `Novo pedido iFood: #${order.displayId || order.id}`, 'info', {
+          orderId: event.orderId,
+          displayId: order.displayId || order.id,
+          customer: order.customer?.name || 'N/A',
+          total: order.total?.value || order.total || 0,
+        });
+
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send('ifood:new-order', {
             orderId: event.orderId,
@@ -877,6 +1013,8 @@ async function ifoodProcessPollCycle() {
         acknowledgedIds.push(event.id);
       } catch (e) {
         console.error(`[ifood] Erro ao processar pedido ${event.orderId}:`, e.message);
+        sentryMain.addBreadcrumb('ifood', `Erro ao processar pedido ${event.orderId}: ${e.message}`, 'error', { orderId: event.orderId });
+        sentryMain.reportError(e, { tags: { type: 'ifood_error', orderId: event.orderId } });
       }
     }
 
@@ -1179,40 +1317,156 @@ ipcMain.handle('auth:login', async (e, data) => {
 
     db.prepare('UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = ?').run(user.id);
 
-    const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString();
-    createSession(user.id, token, expiresAt);
+    // Gerar tokens seguros
+    const accessToken = generateSecureToken();
+    const refreshToken = generateSecureToken();
+    const expiresAt = new Date(Date.now() + AUTH_TOKEN_TTL_MS).toISOString();
+    createSession(user.id, accessToken, expiresAt);
     createAuditLog(user.id, 'LOGIN', null, null, 'User logged in');
+
+    // Armazenar refresh token para rotação
+    refreshTokenStore.set(refreshToken, {
+      userId: user.id,
+      expiresAt: Date.now() + REFRESH_TOKEN_TTL_MS,
+    });
+
+    // Configurar cookies httpOnly
+    const session = e.sender.session;
+    setAuthCookies(session, accessToken, refreshToken);
 
     setSession(
       { id: user.id, username: user.username, full_name: user.full_name, role: user.role, must_change_password: user.must_change_password },
-      token
+      accessToken
     );
 
+    // Breadcrumb de login bem-sucedido
+    sentryMain.addBreadcrumb('auth', `Login bem-sucedido: ${user.username}`, 'info', { userId: user.id, role: user.role });
+    sentryMain.setUser({ id: user.id, username: user.username, full_name: user.full_name });
+
+    // NÃO retornar o token — ele fica no cookie httpOnly
     return {
       success: true,
       user: { id: user.id, username: user.username, full_name: user.full_name, role: user.role, must_change_password: user.must_change_password },
-      token
     };
   } catch (e) {
     console.error('[auth:login] Error:', e.message);
+    sentryMain.addBreadcrumb('auth', `Login falhou: ${e.message}`, 'error', { username: data?.username });
     return { success: false, error: 'Erro interno ao fazer login.' };
   }
 });
 
-ipcMain.handle('auth:logout', async (e, { token, userId }) => {
+ipcMain.handle('auth:logout', async (e, { userId }) => {
   try {
-    const valid = validateIPC('auth:logout', { token, userId });
+    const valid = validateIPC('auth:logout', { userId });
     if (!valid.success) {
       return { success: false, error: valid.error };
     }
-    deleteSession(token);
+    // Limpar cookies httpOnly
+    const session = e.sender.session;
+    clearAuthCookies(session);
+    // Invalidar refresh token se existir
+    const refreshToken = await getRefreshTokenFromCookies(session);
+    if (refreshToken) {
+      refreshTokenStore.delete(refreshToken);
+    }
+    // Limpar sessão do banco
+    if (currentSession?.token) {
+      deleteSession(currentSession.token);
+    }
     createAuditLog(userId, 'LOGOUT', null, null, 'User logged out');
     clearSession();
+    sentryMain.addBreadcrumb('auth', 'Logout realizado', 'info', { userId });
+    sentryMain.setUser(null);
     return { success: true };
   } catch (e) {
     console.error('[auth:logout] Error:', e.message);
+    sentryMain.addBreadcrumb('auth', `Logout falhou: ${e.message}`, 'error', { userId });
     return { success: false, error: 'Erro ao fazer logout.' };
+  }
+});
+
+// ============================================================
+// SEGURANÇA: Refresh Token Rotation
+// ============================================================
+ipcMain.handle('auth:refresh', async (e) => {
+  try {
+    const session = e.sender.session;
+    const refreshToken = await getRefreshTokenFromCookies(session);
+    if (!refreshToken) {
+      return { success: false, error: 'Refresh token não encontrado' };
+    }
+
+    const entry = validateRefreshToken(refreshToken);
+    if (!entry) {
+      // Token inválido ou expirado — limpar cookies
+      clearAuthCookies(session);
+      return { success: false, error: 'Refresh token inválido ou expirado' };
+    }
+
+    const user = getUserById(entry.userId);
+    if (!user || !user.is_active) {
+      clearAuthCookies(session);
+      return { success: false, error: 'Usuário não encontrado ou inativo' };
+    }
+
+    // Rotacionar refresh token (antigo é invalidado)
+    const newRefreshToken = rotateRefreshToken(refreshToken, user.id);
+    const newAccessToken = generateSecureToken();
+    const expiresAt = new Date(Date.now() + AUTH_TOKEN_TTL_MS).toISOString();
+
+    // Atualizar sessão no banco
+    createSession(user.id, newAccessToken, expiresAt);
+
+    // Atualizar cookies
+    setAuthCookies(session, newAccessToken, newRefreshToken);
+
+    // Atualizar sessão em memória
+    setSession(
+      { id: user.id, username: user.username, full_name: user.full_name, role: user.role, must_change_password: user.must_change_password },
+      newAccessToken
+    );
+
+    createAuditLog(user.id, 'TOKEN_REFRESH', null, null, 'Token refreshed');
+
+    return {
+      success: true,
+      user: { id: user.id, username: user.username, full_name: user.full_name, role: user.role, must_change_password: user.must_change_password },
+    };
+  } catch (e) {
+    console.error('[auth:refresh] Error:', e.message);
+    return { success: false, error: 'Erro ao renovar token.' };
+  }
+});
+
+// Verificar se o usuário está autenticado (para inicialização do renderer)
+ipcMain.handle('auth:check', async (e) => {
+  try {
+    const session = e.sender.session;
+    const token = await getAuthTokenFromCookies(session);
+    if (!token) {
+      return { success: false, authenticated: false };
+    }
+    const dbSession = getSession(token);
+    if (!dbSession) {
+      return { success: false, authenticated: false };
+    }
+    const user = getUserById(dbSession.user_id);
+    if (!user || !user.is_active) {
+      return { success: false, authenticated: false };
+    }
+    // Atualizar sessão em memória
+    setSession(
+      { id: user.id, username: user.username, full_name: user.full_name, role: user.role, must_change_password: user.must_change_password },
+      token
+    );
+    return {
+      success: true,
+      authenticated: true,
+      user: { id: user.id, username: user.username, full_name: user.full_name, role: user.role, must_change_password: user.must_change_password },
+    };
+  } catch (e) {
+    console.error('[auth:check] Error:', e.message);
+    return { success: false, authenticated: false };
   }
 });
 
@@ -1259,23 +1513,30 @@ createHandler('auth:reset-admin-password', async ({ adminId, newPassword }) => {
   return { success: true };
 });
 
-ipcMain.handle('auth:reset-manager-password', async (e, data) => {
-  try {
-    requireRole('admin');
-    const admin = currentSession ? currentSession.user : null;
-    checkResetRateLimit(admin?.id);
+createHandler('auth:reset-manager-password', async () => {
+  requireRole('admin');
+  const admin = currentSession ? currentSession.user : null;
+  checkResetRateLimit(admin?.id);
 
-    const tempPassword = crypto.randomBytes(4).toString('hex');
-    const hash = bcrypt.hashSync(tempPassword, 10);
-    updateConfig('manager_password', hash);
-    createAuditLog(admin?.id, 'MANAGER_PASSWORD_RESET', 'config', 'manager_password', 'Manager password reset by admin');
+  const tempPassword = crypto.randomBytes(4).toString('hex');
+  const hash = bcrypt.hashSync(tempPassword, 10);
+  updateConfig('manager_password', hash);
+  createAuditLog(admin?.id, 'MANAGER_PASSWORD_RESET', 'config', 'manager_password', 'Manager password reset by admin');
 
-    recordResetAttempt(admin?.id);
-    return { success: true, tempPassword };
-  } catch (e) {
-    console.error('[auth:reset-manager-password] Error:', e.message);
-    return { success: false, error: e.message };
-  }
+  recordResetAttempt(admin?.id);
+
+  // A senha temporária NÃO trafega pelo IPC. É exibida via dialog nativo
+  // do Electron para evitar exposição em logs, devtools ou estado do renderer.
+  const win = mainWindow || BrowserWindow.getFocusedWindow();
+  await dialog.showMessageBox(win ?? undefined, {
+    type: 'info',
+    title: 'Senha do Gerente Resetada',
+    message: 'Uma nova senha temporária foi gerada.',
+    detail: `Senha temporária: ${tempPassword}\n\nGuarde-a em local seguro. O gerente deverá alterá-la no próximo acesso.`,
+    buttons: ['OK'],
+  });
+
+  return { success: true };
 });
 
 // ============================================================

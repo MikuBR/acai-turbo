@@ -1,4 +1,4 @@
-/* Tema claro (único tema do sistema) */
+/* Tema claro (padrão) */
 :root {
   --bg-primary: #faf9fc;
   --bg-secondary: #f3f0fa;
@@ -19,4 +19,27 @@
   --info: #2563eb;
   --scrollbar-thumb: #c4b5d8;
   --scrollbar-thumb-hover: #7e22ce;
+}
+
+/* Tema escuro */
+[data-theme="dark"] {
+  --bg-primary: #0f0d1a;
+  --bg-secondary: #1a1625;
+  --bg-card: #1e1a2e;
+  --bg-card-hover: #2a2438;
+  --border: #3d3552;
+  --border-light: #2d2840;
+  --text-primary: #e8e0f0;
+  --text-secondary: #a898c0;
+  --text-muted: #6a5a80;
+  --accent-primary: #a855f7;
+  --accent-secondary: #c084fc;
+  --highlight: #eab308;
+  --highlight-bg: rgba(234, 179, 8, 0.15);
+  --danger: #ef4444;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+  --scrollbar-thumb: #4a3f60;
+  --scrollbar-thumb-hover: #a855f7;
 }

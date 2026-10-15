@@ -1,9 +1,9 @@
 name: Release - Build Windows Installer
 
 # Dispara em pushes de main (e develop) e em tags v*.
-# Todo push de main gera o EXE e o publica no release
-# windows-installer-main (pre-release, sobrescrito a cada push).
-# Tags v* criam releases versionadas com o installer correspondente.
+# Cada branch gera seu próprio installer e o publica numa release pré-lançada
+# com tag windows-installer-<branch> (ex.: windows-installer-main), sobrescrita
+# a cada push. Tags v* criam releases versionadas com o installer correspondente.
 #
 # Nota: a workflow release-on-success.yml (workflow_run) cuida apenas da
 # release de texto edge-main. Este arquivo é o responsável pelo build do
@@ -32,14 +32,34 @@ jobs:
     name: Build Windows Installer (NSIS)
     runs-on: windows-latest
     timeout-minutes: 30
-    env:
-      NODE_VERSION: '22'
-      ELECTRON_VERSION: '32.3.3'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      # GATE: só publica se o CI (lint, testes, ABI, build) passou para este
+      # mesmo commit. Evita publicar um installer a partir de código quebrado.
+      # Em tags/dispatch manuais pode ser ignorado via SKIP_CI_GATE=true.
+      - name: Verify CI passed for this commit
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ($env:SKIP_CI_GATE -eq 'true') {
+            Write-Host "SKIP_CI_GATE=true — pulando verificação do CI"
+            exit 0
+          }
+          $sha = "${{ github.sha }}"
+          Write-Host "Verificando conclusão do CI para $sha..."
+          $result = gh api "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?head_sha=$sha" --jq '.workflow_runs[0].conclusion // "none"' 2>$null
+          Write-Host "CI conclusion: $result"
+          if ($result -ne 'success') {
+            Write-Error "CI não passou para este commit (conclusion=$result). Abortando o build do installer."
+            exit 1
+          }
+          Write-Host "✅ CI passou — prosseguindo com o build"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -51,11 +71,11 @@ jobs:
         uses: microsoft/setup-msbuild@v2
 
       # Note: postinstall script runs electron-builder install-app-deps +
-      # rebuild:native automatically. Using --ignore-scripts here to avoid
-      # the postinstall rebuild before we install MSBuild (it would fail).
+      # the dual-ABI installer automatically. Using --ignore-scripts here to
+      # avoid the postinstall rebuild before we install MSBuild (it would fail).
       # The rebuild is run explicitly below after MSBuild is available.
       - name: Install dependencies (pre-scripts)
-        run: npm install --legacy-peer-deps --ignore-scripts
+        run: npm ci --legacy-peer-deps --ignore-scripts
         shell: pwsh
 
       - name: Rebuild native modules for Electron
@@ -69,6 +89,20 @@ jobs:
       - name: Build client (Vite)
         shell: pwsh
         run: npm run build
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          VITE_APP_VERSION: ${{ github.ref_name }}
+
+      - name: Verify source map integrity
+        shell: pwsh
+        run: npm run verify:sourcemaps
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          VITE_APP_VERSION: ${{ github.ref_name }}
 
       - name: Build Windows installer (electron-builder)
         shell: pwsh
