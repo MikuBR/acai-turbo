@@ -1,8 +1,8 @@
-import type { Category, Promotion } from '../../types'
+import type { Category, PromotionFormState } from '../../types'
 
 interface PromotionFormProps {
-  newPromo: Promotion
-  setNewPromo: (promo: Promotion) => void
+  newPromo: PromotionFormState
+  setNewPromo: (promo: PromotionFormState) => void
   categories: Category[]
   onSubmit: (e: React.FormEvent) => void
   onCancel: () => void
@@ -17,7 +17,7 @@ export default function PromotionForm({ newPromo, setNewPromo, categories, onSub
       </div>
       <div>
         <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Tipo</label>
-        <select value={newPromo.type} onChange={e => setNewPromo({...newPromo, type: e.target.value as Promotion['type']})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" required>
+        <select value={newPromo.type} onChange={e => setNewPromo({...newPromo, type: e.target.value as PromotionFormState['type']})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" required>
           <option value="PERCENTAGE">Porcentagem (%)</option>
           <option value="FIXED_AMOUNT">Valor Fixo (R$)</option>
           <option value="BUY_X_GET_Y">Compre X Leve Y</option>
@@ -25,14 +25,14 @@ export default function PromotionForm({ newPromo, setNewPromo, categories, onSub
       </div>
       <div>
         <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">{newPromo.type === 'BUY_X_GET_Y' ? 'Desconto por Item Livre (R$)' : 'Valor'}</label>
-        <input type="number" step="0.01" value={newPromo.value} onChange={e => setNewPromo({...newPromo, value: e.target.value as unknown as number})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" required />
+        <input type="number" step="0.01" value={newPromo.value} onChange={e => setNewPromo({...newPromo, value: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" required />
         {newPromo.type === 'BUY_X_GET_Y' && (
           <span className="text-[9px] text-muted block mt-1">A cada {newPromo.min_quantity || 'X'} itens do escopo, o próximo item é livre. Defina este valor igual ao preço do item para deixá-lo grátis.</span>
         )}
       </div>
       <div>
         <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Aplica-se a</label>
-        <select value={newPromo.applies_to} onChange={e => setNewPromo({...newPromo, applies_to: e.target.value as Promotion['applies_to']})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" required>
+        <select value={newPromo.applies_to} onChange={e => setNewPromo({...newPromo, applies_to: e.target.value as PromotionFormState['applies_to']})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" required>
           <option value="ALL">Todos os Produtos</option>
           <option value="CATEGORY">Categoria Específica</option>
           <option value="SPECIFIC_PRODUCT">Produto Específico</option>
@@ -55,7 +55,7 @@ export default function PromotionForm({ newPromo, setNewPromo, categories, onSub
       )}
       <div>
         <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">{newPromo.type === 'BUY_X_GET_Y' ? 'Qtd. para Ativar (X)' : 'Qtd Mínima'}</label>
-        <input type="number" value={newPromo.min_quantity} onChange={e => setNewPromo({...newPromo, min_quantity: e.target.value as unknown as number})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" required />
+        <input type="number" value={newPromo.min_quantity} onChange={e => setNewPromo({...newPromo, min_quantity: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" required />
       </div>
       <div>
         <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Data Início</label>

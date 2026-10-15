@@ -1,8 +1,8 @@
-import type { Category, Product } from '../../types'
+import type { Category, ProductFormState } from '../../types'
 
 interface ProductFormProps {
-  newProd: Product
-  setNewProd: (product: Product) => void
+  newProd: ProductFormState
+  setNewProd: (product: ProductFormState) => void
   categories: Category[]
   onSubmit: (e: React.FormEvent) => void
   onCancel: () => void
@@ -22,7 +22,7 @@ export default function ProductForm({ newProd, setNewProd, categories, onSubmit,
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Preço</label>
-          <input type="number" step="0.01" value={newProd.price} onChange={e => setNewProd({...newProd, price: e.target.value as unknown as number})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" required />
+          <input type="number" step="0.01" value={newProd.price} onChange={e => setNewProd({...newProd, price: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" required />
         </div>
         <div>
           <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Categoria</label>

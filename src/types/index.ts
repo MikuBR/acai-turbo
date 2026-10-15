@@ -148,6 +148,60 @@ export interface IfoodConfig {
   enabled: boolean;
 }
 
+// --- Estados de Formulário ---
+// Os formulários guardam valores como o usuário os digita (ex.: preço e
+// quantidade são strings, campos gerados pelo banco não existem ainda).
+// Tipar o form-state separado do tipo de domínio evita conversões `as`
+// inseguras e mantém a validação do compilador.
+export interface ProductFormState {
+  id: number | null;
+  name: string;
+  price: string;
+  category: string;
+  ingredients: string;
+}
+
+export interface PromotionFormState {
+  id: number | null;
+  name: string;
+  type: PromotionType;
+  value: string;
+  applies_to: PromotionScope;
+  target_category: string;
+  target_product_id: number | null;
+  min_quantity: string;
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+}
+
+export interface UserFormState {
+  id: number | null;
+  username: string;
+  password: string;
+  full_name: string;
+  role: UserRole;
+}
+
+export interface FinancialFormState {
+  id: number | null;
+  type: 'payable' | 'receivable';
+  description: string;
+  amount: string;
+  due_date: string;
+  status: 'pending' | 'paid' | 'cancelled';
+  category: string;
+}
+
+export interface ClientFormState {
+  id: number | null;
+  name: string;
+  phone: string;
+  address: string;
+  email: string;
+  notes: string;
+}
+
 // --- Componentes ---
 export interface ProductCardProps {
   product: Product;

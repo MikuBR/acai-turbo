@@ -1,12 +1,4 @@
-import type { User } from '../../types'
-
-interface UserFormState {
-  id: number | null
-  username: string
-  password: string
-  full_name: string
-  role: User['role']
-}
+import type { UserFormState } from '../../types'
 
 interface UserFormProps {
   newUser: UserFormState
@@ -32,7 +24,7 @@ export default function UserForm({ newUser, setNewUser, onSubmit, onCancel }: Us
       </div>
       <div>
         <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Função</label>
-        <select value={newUser.role} onChange={e => setNewUser({...newUser, role: e.target.value as User['role']})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" required>
+        <select value={newUser.role} onChange={e => setNewUser({...newUser, role: e.target.value as UserFormState['role']})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" required>
           <option value="admin">Administrador</option>
           <option value="manager">Gerente</option>
           <option value="operator">Operador</option>

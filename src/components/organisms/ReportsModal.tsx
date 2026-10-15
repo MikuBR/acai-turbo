@@ -374,7 +374,7 @@ function generatePDF(data: ReportData, isPeriodView: boolean, financialSummary: 
   // SEÇÃO 5: SESSÕES DE CAIXA
   (data?.cashSessions || []).length > 0 && (() => {
     content.push({ text: '5. SESSÕES DE CAIXA', style: 'sectionTitle', margin: [0, 20, 0, 5] });
-    const sessionRows = data.cashSessions.map(cs => [
+    const sessionRows = (data.cashSessions || []).map(cs => [
       { text: cs.opened_at ? new Date(cs.opened_at + 'Z').toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-', fontSize: 8 },
       { text: `R$ ${Number(cs?.opening_amount ?? 0).toFixed(2)}`, alignment: 'right', fontSize: 8 },
       cs.closed_at

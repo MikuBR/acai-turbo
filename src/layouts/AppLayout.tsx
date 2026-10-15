@@ -263,7 +263,7 @@ export default function AppLayout() {
         activeTable={activeTable}
         onRemoveItem={removeItemFromActiveTable}
         onCheckout={() => navigate('/checkout')}
-        onDeleteTable={(id) => deleteTable(id)}
+        onDeleteTable={(id) => { if (id !== null) deleteTable(id); }}
         ifoodOrderId={activeTable?.ifoodOrderId || null}
         onIfoodAction={handleIfoodAction}
       />

@@ -1,11 +1,9 @@
 import { X } from 'lucide-react';
+import type { Product } from '../../types';
 
-interface AcaiBase {
-  id: number;
-  name: string;
-  price: number;
-  ingredients?: string;
-}
+// AcaiBase é estruturalmente um Product do catálogo (base ou adicional).
+// Usar o tipo do domínio evita divergência de campos (ex.: `category`).
+type AcaiBase = Product;
 
 interface Extra {
   id: number;

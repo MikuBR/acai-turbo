@@ -9,7 +9,7 @@ import { getProducts } from '../../services/productCache.js'
 import logger from '../../services/logger.js'
 import SettingsModal from '../../components/organisms/SettingsModal.tsx'
 import { usePerformanceMark } from '../../hooks/usePerformanceMark'
-import type { User, Category, Product, Promotion, FinancialAccount, Client, IfoodConfig } from '../../types'
+import type { User, Category, Promotion, FinancialAccount, Client, IfoodConfig, ProductFormState, PromotionFormState, UserFormState, FinancialFormState, ClientFormState } from '../../types'
 
 interface FinancialFilter {
   type: string
@@ -40,20 +40,20 @@ export default function SettingsScreen() {
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [newCatName, setNewCatName] = useState('');
-  const [newProd, setNewProd] = useState<Product>({ id: 0, name: '', price: 0, category: '', ingredients: '' });
+  const [newProd, setNewProd] = useState<ProductFormState>({ id: null, name: '', price: '', category: '', ingredients: '' });
   const [settingsTab, setSettingsTab] = useState('products');
   const [promotions, setPromotions] = useState<Promotion[]>([]);
-  const [newPromo, setNewPromo] = useState<Promotion>({ id: 0, name: '', type: 'PERCENTAGE', value: 0, applies_to: 'ALL', target_category: '', target_product_id: null, min_quantity: 1, start_date: '', end_date: '', is_active: true });
+  const [newPromo, setNewPromo] = useState<PromotionFormState>({ id: null, name: '', type: 'PERCENTAGE', value: '', applies_to: 'ALL', target_category: '', target_product_id: null, min_quantity: '1', start_date: '', end_date: '', is_active: true });
 
   const [users, setUsers] = useState<User[]>([]);
-  const [newUser, setNewUser] = useState<User>({ id: 0, username: '', full_name: '', role: 'operator', is_active: true, must_change_password: false, created_at: '' });
+  const [newUser, setNewUser] = useState<UserFormState>({ id: null, username: '', password: '', full_name: '', role: 'operator' });
 
   const [financialAccounts, setFinancialAccounts] = useState<FinancialAccount[]>([]);
-  const [financialForm, setFinancialForm] = useState<FinancialAccount>({ id: 0, type: 'payable', description: '', amount: 0, due_date: null, status: 'pending', category: null, created_at: '' });
+  const [financialForm, setFinancialForm] = useState<FinancialFormState>({ id: null, type: 'payable', description: '', amount: '', due_date: '', status: 'pending', category: '' });
   const [financialFilter, setFinancialFilter] = useState<FinancialFilter>({ type: 'all', status: 'all', startDate: '', endDate: '' });
 
   const [clients, setClients] = useState<Client[]>([]);
-  const [clientForm, setClientForm] = useState<Client>({ id: 0, name: '', phone: '', address: '', email: '', notes: '', created_at: '' });
+  const [clientForm, setClientForm] = useState<ClientFormState>({ id: null, name: '', phone: '', address: '', email: '', notes: '' });
   const [selectedClientOrders, setSelectedClientOrders] = useState<any[]>([]);
 
   const [printerConfig, setPrinterConfig] = useState<PrinterConfig>({ kitchenIp: '192.168.1.100', frontName: 'TANCA' });

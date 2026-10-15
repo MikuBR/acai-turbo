@@ -1,13 +1,4 @@
-import type { Client } from '../../types'
-
-interface ClientFormState {
-  id: number | null
-  name: string
-  phone: string
-  address: string
-  email: string
-  notes: string
-}
+import type { ClientFormState } from '../../types'
 
 interface ClientFormProps {
   clientForm: ClientFormState
@@ -37,7 +28,7 @@ export default function ClientForm({ clientForm, setClientForm, onSubmit, onCanc
       </div>
       <div>
         <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Observações</label>
-        <textarea value={clientForm.notes} onChange={e => setClientForm({...clientForm, notes: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" rows="2" />
+        <textarea value={clientForm.notes} onChange={e => setClientForm({...clientForm, notes: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" rows={2} />
       </div>
       <button type="submit" className={`w-full ${clientForm.id ? 'bg-info hover:bg-info' : 'bg-success hover:bg-success'} py-3 rounded-lg font-bold text-xs uppercase tracking-widest text-white transition-all mt-4 active:scale-95`}>
         {clientForm.id ? 'Atualizar Cliente' : 'Criar Cliente'}
