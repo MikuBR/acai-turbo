@@ -6,6 +6,30 @@ This project adheres to [Semantic Versioning](https://semver.org/lang/pt-br/).
 
 ---
 
+## [1.3.8] — 2026-10-16
+
+### Corrigido
+
+- **CI: gate de release com falso positivo (crítico)**: o job *Release - Build Windows Installer* falhava no passo `Verify CI passed for this commit` desde o commit `1759fe3`. O gate lia a conclusão do CI no mesmo instante do push, quando a run ainda estava `in_progress` — `conclusion` é `null` nesse estado e o fallback `// "none"` transformava "ainda rodando" em "não passou". O job abortava **~68s antes** de o CI terminar com sucesso: o CI passava, mas o instalador nunca era gerado. O pipeline aparecia vermelho sem defeito real.
+- **CI: gates de lint e typecheck que nunca rodavam**: o job *Lint & TypeCheck* falhava desde `1b1d68e` (17/set), antes da migração JSX→TSX. O ESLint não dava globals de Node para `src/tests/**` e não lintava arquivos `.tsx`, então **22 erros de tipo ficaram invisíveis** no CI. Corrigido: `ProductFormState`, `PromotionFormState`, `UserFormState`, `FinancialFormState` e `ClientFormState` criados em `src/types/index.ts`, removendo 14 casts `as` inseguros. Resultado: lint 11→0, typecheck 22→0.
+- **CI: job `Build Production (Vite)` nunca executava** — bloqueado pelo lint que falhava antes. Agora roda.
+
+### Alterado
+
+- **`release.yml` migra de `push` para `workflow_run`**: o build do instalador agora dispara quando o *CI - Açaí Wave* **termina**, não no push. O gate virou `if:` no nível do job — o instalador só é gerado quando o CI concluiu com sucesso, eliminando a corrida por construção. A detecção de tag `v*` passou a ser por SHA do commit aprovado (o `ci.yml` não roda em push de tag).
+- **Migração JSX → TSX**: 40+ componentes migrados, com tipos estritos. `AppLayout`, formulários e telas agora têm tipos de estado de formulário separados dos tipos de domínio.
+- **Observabilidade**: `src/services/alerts.ts`, `analytics.ts`, `performance.ts`, `sourcemaps.ts`; componentes `SentryFeedbackButton`/`SentryFeedbackWidget`, `ConnectionIndicator`; hooks `useOnlineStatus`, `usePerformanceMark`, `useTheme`.
+- **Cache de produtos**: `src/services/productCache.ts` com geração para evitar corrida entre limpeza e promise em voo.
+- **E2E**: suíte Playwright com mock de integração iFood (`e2e/ifood-integration.spec.ts`).
+- **Docs**: `docs/PERFORMANCE-MARKS.md`, `docs/WEB-VITALS.md`, `docs/SENTRY.md`, `docs/SOURCE-MAPS.md`.
+
+### Notas de release
+
+- **Ordem de push para release versionada**: como o `ci.yml` não roda em tags, o `release.yml` decide o destino comparando o SHA aprovado pelo CI com as tags `v*` do repo. Empurre `main` **e** a tag juntos: `git push origin main v1.3.8`. Se a tag subir depois, o commit cai na pré-release contínua `windows-installer-main`.
+- Este release consolida todo o trabalho que estava entre `v1.3.7` e o HEAD (migração TSX, observabilidade e correções de CI).
+
+---
+
 ## [1.3.7] — 2026-09-17
 
 ### Adicionado
