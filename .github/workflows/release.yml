@@ -1,23 +1,35 @@
 name: Release - Build Windows Installer
 
-# Dispara em pushes de main (e develop) e em tags v*.
-# Cada branch gera seu próprio installer e o publica numa release pré-lançada
-# com tag windows-installer-<branch> (ex.: windows-installer-main), sobrescrita
-# a cada push. Tags v* criam releases versionadas com o installer correspondente.
+# Build do instalador Windows (NSIS) e publicação da release.
 #
-# Nota: a workflow release-on-success.yml (workflow_run) cuida apenas da
-# release de texto edge-main. Este arquivo é o responsável pelo build do
-# executável Windows e pela anexação do .exe à release.
+# GATILHO: workflow_run — dispara quando o "CI - Açaí Wave" TERMINA.
+#
+# Por que workflow_run e não push? O gate anterior lia a conclusão do CI no
+# mesmo instante em que o push acontecia, quando a run do CI ainda estava
+# `in_progress`. O campo `conclusion` é null nesse estado e o fallback
+# `// "none"` transformava "ainda rodando" em "não passou": o job abortava
+# ~68s ANTES de o CI terminar com sucesso. Era falso positivo — o CI passava e
+# o build do instalador nunca rodava. Com workflow_run o CI já concluiu antes
+# de este job existir, então a corrida desaparece por construção.
+#
+# Tags v*: o ci.yml não roda em push de tag (só em branches), então a release
+# versionada é decidida por SHA. O passo "Detectar tag v* para este commit"
+# compara o SHA aprovado pelo CI contra as tags v* do repo. Exige que a tag já
+# esteja no remote quando o CI terminar — ordem recomendada: push de main e
+# tag juntos (ver scripts/bump-version.cjs).
+#
+# Despacho manual continua disponível via workflow_dispatch.
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_run:
+    workflows: ["CI - Açaí Wave"]
+    types: [completed]
     branches: [main, develop]
   workflow_dispatch:
 
+# Cancela o job anterior se um novo CI do mesmo commit/branch terminar.
 concurrency:
-  group: build-windows-${{ github.ref }}
+  group: build-windows-${{ github.event.workflow_run.head_sha || github.sha }}
   cancel-in-progress: true
 
 permissions:
@@ -32,34 +44,76 @@ jobs:
     name: Build Windows Installer (NSIS)
     runs-on: windows-latest
     timeout-minutes: 30
+
+    # O instalador só é gerado quando o CI passou. Se o CI falhou ou foi
+    # cancelado, o job inteiro é pulado — nunca publicamos a partir de código
+    # quebrado. (No gatilho por push esse gate era um passo; aqui é o job.)
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+
     steps:
+      # SHA e branch do commit que o CI acabou de aprovar.
+      # Em workflow_dispatch (manual) não há workflow_run; usa o HEAD local.
+      - name: Resolver SHA e branch de origem
+        id: src
+        shell: pwsh
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') {
+            $sha = "${{ github.sha }}"
+            $branch = "${{ github.ref_name }}"
+            Write-Host "Modo manual (workflow_dispatch) — SHA=$sha branch=$branch"
+          } else {
+            $sha = "${{ github.event.workflow_run.head_sha }}"
+            $branch = "${{ github.event.workflow_run.head_branch }}"
+            Write-Host "CI concluído (${{ github.event.workflow_run.conclusion }}) — SHA=$sha branch=$branch"
+          }
+          echo "SHA=$sha" >> $env:GITHUB_OUTPUT
+          echo "BRANCH=$branch" >> $env:GITHUB_OUTPUT
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          # fetch-depth: 0 mantém o histórico completo e todas as tags
+          # disponíveis para a detecção de tag v* por SHA no passo seguinte.
           fetch-depth: 0
+          ref: ${{ steps.src.outputs.SHA }}
 
-      # GATE: só publica se o CI (lint, testes, ABI, build) passou para este
-      # mesmo commit. Evita publicar um installer a partir de código quebrado.
-      # Em tags/dispatch manuais pode ser ignorado via SKIP_CI_GATE=true.
-      - name: Verify CI passed for this commit
-        if: ${{ github.event_name != 'workflow_dispatch' }}
+      # Decide o destino da release: tag v* existente para este commit, ou a
+      # release contínua da branch (windows-installer-<branch>).
+      #
+      # O checkout acima (fetch-depth: 0) já traz as tags do remote. Resolve o
+      # commit de cada tag v* com `git rev-list -n1`, que descasca tags
+      # annotated (a tag aponta para um objeto tag, não para o commit — é o
+      # mesmo motivo pelo qual `git/ref/tags/<t>` não serve para comparar SHA).
+      # Sem chamadas de API: funciona mesmo que existam mais de 100 tags.
+      - name: Detectar tag v* para este commit
+        id: taginfo
         shell: pwsh
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ steps.src.outputs.SHA }}
+          BRANCH: ${{ steps.src.outputs.BRANCH }}
         run: |
-          if ($env:SKIP_CI_GATE -eq 'true') {
-            Write-Host "SKIP_CI_GATE=true — pulando verificação do CI"
-            exit 0
+          $sha = $env:SHA
+          $matched = $null
+          foreach ($t in (git tag -l)) {
+            if ($t -notmatch '^v\d+\.\d+\.\d+') { continue }
+            $target = (git rev-list -n1 $t 2>$null)
+            if ($target -and $target -eq $sha) { $matched = $t; break }
           }
-          $sha = "${{ github.sha }}"
-          Write-Host "Verificando conclusão do CI para $sha..."
-          $result = gh api "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?head_sha=$sha" --jq '.workflow_runs[0].conclusion // "none"' 2>$null
-          Write-Host "CI conclusion: $result"
-          if ($result -ne 'success') {
-            Write-Error "CI não passou para este commit (conclusion=$result). Abortando o build do installer."
-            exit 1
+
+          if ($matched) {
+            Write-Host "Tag versionada detectada: $matched (aponta para $sha)"
+            echo "TAG=$matched" >> $env:GITHUB_OUTPUT
+            echo "REF_TYPE=tag" >> $env:GITHUB_OUTPUT
+            echo "PRERELEASE=false" >> $env:GITHUB_OUTPUT
+          } else {
+            $safeRef = ($env:BRANCH).Replace('/', '-')
+            Write-Host "Sem tag v* para este commit — usando release da branch: windows-installer-$safeRef"
+            echo "TAG=windows-installer-$safeRef" >> $env:GITHUB_OUTPUT
+            echo "REF_TYPE=branch" >> $env:GITHUB_OUTPUT
+            echo "PRERELEASE=true" >> $env:GITHUB_OUTPUT
           }
-          Write-Host "✅ CI passou — prosseguindo com o build"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -93,7 +147,7 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-          VITE_APP_VERSION: ${{ github.ref_name }}
+          VITE_APP_VERSION: ${{ steps.taginfo.outputs.TAG }}
 
       - name: Verify source map integrity
         shell: pwsh
@@ -102,7 +156,7 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-          VITE_APP_VERSION: ${{ github.ref_name }}
+          VITE_APP_VERSION: ${{ steps.taginfo.outputs.TAG }}
 
       - name: Build Windows installer (electron-builder)
         shell: pwsh
@@ -137,27 +191,13 @@ jobs:
             Write-Host "Found: $($file.Name) ($($file.Length) bytes)"
           }
 
-      - name: Determinar tag do release
-        id: refinfo
-        shell: pwsh
-        run: |
-          if ($env:GITHUB_REF_TYPE -eq 'tag') {
-            echo "TAG=$env:GITHUB_REF_NAME" >> $env:GITHUB_OUTPUT
-            echo "REF_TYPE=tag" >> $env:GITHUB_OUTPUT
-          } else {
-            # branch push: usa release fixa por branch
-            $safeRef = "$env:GITHUB_REF_NAME".Replace('/', '-')
-            echo "TAG=windows-installer-$safeRef" >> $env:GITHUB_OUTPUT
-            echo "REF_TYPE=branch" >> $env:GITHUB_OUTPUT
-          }
-
       - name: Gerar release notes (commits desde última tag)
         id: release_notes
         shell: pwsh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REF_TYPE: ${{ steps.refinfo.outputs.REF_TYPE }}
-          TAG: ${{ steps.refinfo.outputs.TAG }}
+          REF_TYPE: ${{ steps.taginfo.outputs.REF_TYPE }}
+          TAG: ${{ steps.taginfo.outputs.TAG }}
         run: |
           if ($env:REF_TYPE -eq 'tag') {
             # Primeira tag (não há tag anterior)
@@ -182,23 +222,12 @@ jobs:
           echo $notes >> $env:GITHUB_OUTPUT
           echo "EOF" >> $env:GITHUB_OUTPUT
 
-      - name: Determinar prerelease flag
-        id: prerelease_flag
-        shell: pwsh
-        run: |
-          if ($env:GITHUB_REF_TYPE -eq 'tag') {
-            $isPre = $env:GITHUB_REF_NAME.Contains('-')
-            echo "is_prerelease=$isPre" >> $env:GITHUB_OUTPUT
-          } else {
-            echo "is_prerelease=true" >> $env:GITHUB_OUTPUT
-          }
-
-      - name: Garantir que a release da branch existe
+      - name: Garantir que a release existe
         shell: pwsh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $tag = "${{ steps.refinfo.outputs.TAG }}"
+          $tag = "${{ steps.taginfo.outputs.TAG }}"
           if (-not (gh release view $tag --repo $env:GITHUB_REPOSITORY 2>$null)) {
             gh release create $tag --repo $env:GITHUB_REPOSITORY --title "Açaí Wave $tag" --notes "Windows installer for $env:GITHUB_REF" --prerelease
           }
@@ -211,13 +240,13 @@ jobs:
           files: |
             release/*.exe
             release/latest.yml
-          tag_name: ${{ steps.refinfo.outputs.TAG }}
-          name: "Açaí Wave ${{ steps.refinfo.outputs.TAG }}"
+          tag_name: ${{ steps.taginfo.outputs.TAG }}
+          name: "Açaí Wave ${{ steps.taginfo.outputs.TAG }}"
           body: |
-            ## Açaí Wave ${{ steps.refinfo.outputs.TAG }}
+            ## Açaí Wave ${{ steps.taginfo.outputs.TAG }}
 
             ### 📥 Download
-            - **Windows Installer (NSIS):** `acai-wave Setup ${{ steps.refinfo.outputs.TAG }}.exe`
+            - **Windows Installer (NSIS):** `acai-wave Setup ${{ steps.taginfo.outputs.TAG }}.exe`
 
             ### 🔧 Changes
             ${{ steps.release_notes.outputs.notes }}
@@ -228,8 +257,8 @@ jobs:
             3. Launch Açaí Wave from Start Menu
 
             ---
-            *Built from commit ${{ github.sha }}*
-            *Trigger: ${{ github.ref_type }} ${{ github.ref }}*
+            *Built from commit ${{ steps.src.outputs.SHA }}*
+            *Trigger: ${{ github.event_name }} ${{ github.event.workflow_run.head_branch || github.ref_name }}*
           draft: false
-          prerelease: ${{ steps.prerelease_flag.outputs.is_prerelease }}
+          prerelease: ${{ steps.taginfo.outputs.PRERELEASE }}
           overwrite_files: true

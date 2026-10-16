@@ -174,10 +174,16 @@ Saída: `release/`. Installer NSIS com icon em `build/icon.ico`, header em `buil
 
 ### CI
 
-GitHub Actions: `.github/workflows/ci.yml` (dispara em push de main/develop e tags `v*`) + `.github/workflows/release.yml` (gera Windows Installer e anexa .exe à release).
+GitHub Actions: `.github/workflows/ci.yml` (dispara em push de main/develop) + `.github/workflows/release.yml` (gera o Windows Installer e anexa o .exe à release).
 
-- **Push de main sem tag** → pré-release (`edge-main`) com versão baseada no commit.
-- **Tag `v*`** → release oficial com versão da tag.
+O `release.yml` dispara por `workflow_run`: ele roda quando o **CI termina**, não no push. Por isso o destino da release é decidido comparando o SHA aprovado pelo CI com as tags `v*` do repo.
+
+- **Push de main sem tag** → pré-release contínua (`windows-installer-main`) + release de texto `edge-main`.
+- **Tag `v*` já no remote** → release oficial com versão da tag.
+
+> **Ordem importa**: empurre `main` **e** a tag juntos, antes de o CI terminar
+> (ex.: `git push origin main v1.3.8`). Se a tag subir depois, o commit cai na
+> pré-release contínua e a release versionada fica de fora.
 
 ### Versões atuais
 

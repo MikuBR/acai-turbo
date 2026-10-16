@@ -17,10 +17,12 @@ ci.yml — roda em push/PR de main e develop (ignora mudanças só de docs)
   └── summary              (always)         agrega resultados; falha se algum job falhou
 
 release.yml — build do installer Windows (NSIS)
-  ├── gate: exige CI 'success' para o mesmo commit (pulado em workflow_dispatch)
+  ├── gatilho: workflow_run (dispara quando o CI TERMINA) + workflow_dispatch
+  ├── if no job: pula inteiro se o CI não passou (gate por construção)
+  ├── detecta tag v* para o SHA aprovado → release versionada; senão windows-installer-<branch>
   ├── npm ci --ignore-scripts → MSBuild → rebuild:native (binding Electron)
   ├── vite build + verify:sourcemaps
-  └── electron-builder --win → publica release (tag v* ou windows-installer-<branch>)
+  └── electron-builder --win → publica release
 
 release-on-success.yml — release de texto contínua
   └── workflow_run (CI success em main) → atualiza a release rolling edge-main
@@ -51,9 +53,15 @@ O projeto usa **prebuilds pré-compilados** para os dois runtimes:
 | Push `main`/`develop` (código) | ci.yml |
 | Push `main`/`develop` (só docs) | ❌ ignorado (paths-ignore) |
 | PR `main`/`develop` (código) | ci.yml + dependency-review |
-| Push tag `v*` | ci.yml + release.yml |
-| CI success em `main` | release-on-success.yml (edge-main) |
-| Manual | release.yml (workflow_dispatch; gate do CI é pulado) |
+| Push tag `v*` | ❌ ci.yml não roda em tags; a tag é detectada por SHA no release.yml |
+| CI **termina** em `main`/`develop` | release.yml (installer) + release-on-success.yml (edge-main) |
+| Manual | release.yml (workflow_dispatch) |
+
+> **Ordem de push para release versionada**: como o `ci.yml` não roda em tags,
+> o `release.yml` decide o destino comparando o SHA aprovado pelo CI com as
+> tags `v*` do repo. Empurre `main` **e** a tag antes de o CI terminar
+> (ex.: `git push origin main v1.3.7`). Se a tag subir depois, o commit cai na
+> release contínua `windows-installer-main` e a versionada fica de fora.
 
 ## Safe-guards
 
@@ -63,7 +71,9 @@ O projeto usa **prebuilds pré-compilados** para os dois runtimes:
    `contents: write` só onde cria release.
 4. **`paths-ignore`** ignora mudanças só de documentação.
 5. **`npm ci`** em vez de `npm install` (respeita o lockfile).
-6. **Gate de CI** no release.yml: não publica installer se o CI não passou.
+6. **Gate de CI** no release.yml: o job inteiro é pulado (`if` no job) quando o
+   CI não passou — e como o gatilho é `workflow_run`, o CI já concluiu antes de
+   o job existir (sem corrida).
 7. **`if: always()`** no summary, que falha se qualquer job falhou.
 8. **ABI guard** detecta drift entre `package.json` e `ELECTRON_VERSION`.
 
@@ -81,6 +91,11 @@ install/update alterou o lockfile.
 **Release não criada**: verifique `permissions: contents: write` e se a tag
 começa com `v` (ou se é push de branch → `windows-installer-<branch>`).
 
-**Installer não publicado mesmo com CI verde**: confira se o job `test-node`
-(com coverage) passou — o gate do release.yml consulta a conclusão do ci.yml
-para o mesmo SHA.
+**Installer não publicado mesmo com CI verde**: o `release.yml` dispara por
+`workflow_run` quando o CI **termina** — não no push. Se o CI terminou em
+`failure`/`cancelled`, o job é pulado de propósito. Confira a conclusão do CI
+para o SHA em questão (`gh run list --workflow=ci.yml`).
+
+**Tag `v*` não virou release versionada**: a tag precisa estar no remote antes
+de o CI terminar. Empurre `main` e a tag juntos; se a tag subiu depois, o
+commit foi publicado como `windows-installer-main`.

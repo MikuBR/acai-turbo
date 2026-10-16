@@ -187,11 +187,15 @@ function main() {
 
   console.log('');
   console.log(`📌 Próximos passos:`);
-  console.log(`   git push origin main`);
-  console.log(`   git push origin ${tagName}`);
-  console.log(`   gh release create ${tagName} --generate-notes --target main`);
+  console.log(`   git push origin main ${tagName}`);
   console.log('');
-  console.log(`💡 Ou use workflow existente: despache release.yml com tag ${tagName}`);
+  console.log('   ⚠️  Envie o commit E a tag JUNTOS, num único push.');
+  console.log('       O release.yml decide o destino por SHA: o CI (ci.yml) não roda');
+  console.log('       em push de tag, então a tag precisa já estar no remote quando o');
+  console.log('       CI terminar. Se a tag subir depois, o commit cai na pré-release');
+  console.log('       contínua (windows-installer-main) e a release versionada fica de fora.');
+  console.log('');
+  console.log(`   gh release create ${tagName} --generate-notes --target main`);
 }
 
 main();
