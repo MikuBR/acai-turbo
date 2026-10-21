@@ -60,10 +60,19 @@ function requireRole(minRole) {
 // ============================================================
 // SEGURANÇA: Cookie httpOnly + Refresh Token Rotation
 // ============================================================
-const AUTH_COOKIE_NAME = 'auth_token';
-const REFRESH_COOKIE_NAME = 'refresh_token';
-const AUTH_TOKEN_TTL_MS = 8 * 60 * 60 * 1000; // 8 horas
-const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 dias
+// Cookies httpOnly são encapsulados em `main/cookie-helpers.cjs` (única fonte de
+// verdade para nomes/TTL) para garantir o uso correto da API Electron:
+// `cookies.set({ url, name, value, ... })` — o `url` é obrigatório e uma chamada
+// 3-arg com string no índice 0 lança TypeError de forma SÍNCRONA (regressão 1759fe3).
+const {
+  AUTH_TOKEN_TTL_MS,
+  REFRESH_TOKEN_TTL_MS,
+  getCookieOrigin,
+  setAuthCookies,
+  clearAuthCookies,
+  getAuthTokenFromCookies,
+  getRefreshTokenFromCookies,
+} = require('./main/cookie-helpers.cjs');
 
 // Armazena tokens de refresh rotacionados: { [refreshToken]: { userId, expiresAt } }
 const refreshTokenStore = new Map();
@@ -72,36 +81,11 @@ function generateSecureToken() {
   return crypto.randomBytes(32).toString('hex');
 }
 
-function setAuthCookies(session, accessToken, refreshToken) {
-  const isProd = app.isPackaged;
-  const cookieBase = {
-    httpOnly: true,
-    secure: isProd,
-    sameSite: 'strict',
-    path: '/',
-  };
-  session.cookies.set(AUTH_COOKIE_NAME, accessToken, {
-    ...cookieBase,
-    maxAge: AUTH_TOKEN_TTL_MS / 1000,
-  });
-  session.cookies.set(REFRESH_COOKIE_NAME, refreshToken, {
-    ...cookieBase,
-    maxAge: REFRESH_TOKEN_TTL_MS / 1000,
-  });
-}
-
-function clearAuthCookies(session) {
-  session.cookies.remove(AUTH_COOKIE_NAME);
-  session.cookies.remove(REFRESH_COOKIE_NAME);
-}
-
-function getAuthTokenFromCookies(session) {
-  return session.cookies.get(AUTH_COOKIE_NAME).then(c => c?.value || null);
-}
-
-function getRefreshTokenFromCookies(session) {
-  return session.cookies.get(REFRESH_COOKIE_NAME).then(c => c?.value || null);
-}
+// NOTE: setAuthCookies / clearAuthCookies / getAuthTokenFromCookies /
+// getRefreshTokenFromCookies moraram para `main/cookie-helpers.cjs` e agora
+// recebem `urlOrigin` (origem do renderer) como argumento — a API Electron
+// `cookies.set` exige o objeto `{ url, name, value, ... }` e lança TypeError
+// de forma síncrona se passado um nome de cookie como string.
 
 // Refresh token rotation: invalida o token antigo e emite um novo
 function rotateRefreshToken(oldRefreshToken, userId) {
@@ -1330,9 +1314,15 @@ ipcMain.handle('auth:login', async (e, data) => {
       expiresAt: Date.now() + REFRESH_TOKEN_TTL_MS,
     });
 
-    // Configurar cookies httpOnly
+    // Configurar cookies httpOnly (url obrigatório pela API Electron cookies.set)
     const session = e.sender.session;
-    setAuthCookies(session, accessToken, refreshToken);
+    setAuthCookies(
+      session,
+      getCookieOrigin(e.sender),
+      accessToken,
+      refreshToken,
+      app.isPackaged
+    );
 
     setSession(
       { id: user.id, username: user.username, full_name: user.full_name, role: user.role, must_change_password: user.must_change_password },
@@ -1363,9 +1353,10 @@ ipcMain.handle('auth:logout', async (e, { userId }) => {
     }
     // Limpar cookies httpOnly
     const session = e.sender.session;
-    clearAuthCookies(session);
+    const origin = getCookieOrigin(e.sender);
+    clearAuthCookies(session, origin);
     // Invalidar refresh token se existir
-    const refreshToken = await getRefreshTokenFromCookies(session);
+    const refreshToken = await getRefreshTokenFromCookies(session, origin);
     if (refreshToken) {
       refreshTokenStore.delete(refreshToken);
     }
@@ -1391,7 +1382,8 @@ ipcMain.handle('auth:logout', async (e, { userId }) => {
 ipcMain.handle('auth:refresh', async (e) => {
   try {
     const session = e.sender.session;
-    const refreshToken = await getRefreshTokenFromCookies(session);
+    const origin = getCookieOrigin(e.sender);
+    const refreshToken = await getRefreshTokenFromCookies(session, origin);
     if (!refreshToken) {
       return { success: false, error: 'Refresh token não encontrado' };
     }
@@ -1399,13 +1391,13 @@ ipcMain.handle('auth:refresh', async (e) => {
     const entry = validateRefreshToken(refreshToken);
     if (!entry) {
       // Token inválido ou expirado — limpar cookies
-      clearAuthCookies(session);
+      clearAuthCookies(session, origin);
       return { success: false, error: 'Refresh token inválido ou expirado' };
     }
 
     const user = getUserById(entry.userId);
     if (!user || !user.is_active) {
-      clearAuthCookies(session);
+      clearAuthCookies(session, origin);
       return { success: false, error: 'Usuário não encontrado ou inativo' };
     }
 
@@ -1418,7 +1410,7 @@ ipcMain.handle('auth:refresh', async (e) => {
     createSession(user.id, newAccessToken, expiresAt);
 
     // Atualizar cookies
-    setAuthCookies(session, newAccessToken, newRefreshToken);
+    setAuthCookies(session, origin, newAccessToken, newRefreshToken, app.isPackaged);
 
     // Atualizar sessão em memória
     setSession(
@@ -1442,7 +1434,8 @@ ipcMain.handle('auth:refresh', async (e) => {
 ipcMain.handle('auth:check', async (e) => {
   try {
     const session = e.sender.session;
-    const token = await getAuthTokenFromCookies(session);
+    const origin = getCookieOrigin(e.sender);
+    const token = await getAuthTokenFromCookies(session, origin);
     if (!token) {
       return { success: false, authenticated: false };
     }
