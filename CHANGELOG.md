@@ -6,6 +6,16 @@ This project adheres to [Semantic Versioning](https://semver.org/lang/pt-br/).
 
 ---
 
+## [1.3.9] — 2026-10-22
+
+### Corrigido
+- **Auth: regressão síncrona de `session.cookies.set` no login (crítico)**: o handler `auth:login` chamava `session.cookies.set(name, value, opts)` — assinatura 3-arg com string no índice 0 — em vez da assinatura de objeto exigida pela API Electron (`{ url, name, value, ... }`). Isso lançava `TypeError` de forma síncrona, fazendo o login falhar com "Erro interno ao fazer login". Todos os handlers de cookie foram extraídos para `main/cookie-helpers.cjs` como funções puras e unit-testáveis; os quatro handlers IPC (`login`/`logout`/`refresh`/`check`) agora derivam a origem do renderer via `getCookieOrigin(e.sender)` e passam o `url` obrigatório.
+
+### Alterado
+- **Refatoração de auth**: `setAuthCookies`/`clearAuthCookies`/`getAuthTokenFromCookies`/`getRefreshTokenFromCookies` foram movidas de `main.cjs` para `main/cookie-helpers.cjs` (única fonte de verdade para nomes/TTL de cookies), com teste de regressão `src/tests/cookies.test.js` (9 casos).
+
+---
+
 ## [1.3.8] — 2026-10-16
 
 ### Corrigido
