@@ -10,6 +10,7 @@ const {
   getCategories, addCategory, deleteCategory, getOrdersHistory, deleteOrder,
   getPromotions, addPromotion, updatePromotion, deletePromotion, getActivePromotions,
   getUsers, getUserById, getUserByUsername, addUser, updateUser, deleteUser, toggleUserActive,
+  setUserFailedAttempts, setUserLockedUntil, clearUserLoginLockout,
   createSession, getSession, deleteSession, cleanupExpiredSessions,
   createAuditLog, getAuditLogs,
   getFinancialAccounts, addFinancialAccount, updateFinancialAccount, deleteFinancialAccount, addFinancialTransaction, getFinancialTransactions, getFinancialSummary,
@@ -106,37 +107,6 @@ function validateRefreshToken(refreshToken) {
     return null;
   }
   return entry;
-}
-
-// ============================================================
-// SEGURANÇA: Rate limiter para login (por username)
-// ============================================================
-const loginAttempts = {};
-
-function checkLoginRateLimit(username) {
-  const key = String(username);
-  const entry = loginAttempts[key];
-  if (entry && entry.count >= 10 && Date.now() < entry.lockUntil) {
-    const secondsLeft = Math.ceil((entry.lockUntil - Date.now()) / 1000);
-    throw new Error(`Muitas tentativas. Tente novamente em ${secondsLeft} segundos.`);
-  }
-}
-
-function recordLoginAttempt(username) {
-  const key = String(username);
-  if (!loginAttempts[key]) loginAttempts[key] = { count: 0, lockUntil: 0 };
-  loginAttempts[key].count++;
-  if (loginAttempts[key].count >= 10) {
-    loginAttempts[key].lockUntil = Date.now() + 15 * 60 * 1000;
-  }
-}
-
-function resetLoginAttempts(username) {
-  const key = String(username);
-  if (loginAttempts[key]) {
-    loginAttempts[key].count = 0;
-    loginAttempts[key].lockUntil = 0;
-  }
 }
 
 // ============================================================
@@ -1268,10 +1238,8 @@ ipcMain.handle('auth:login', async (e, data) => {
     if (!valid.success) return { success: false, error: valid.error };
 
     const { username, password } = valid.data;
-    checkLoginRateLimit(username);
     const user = getUserByUsername(username);
     if (!user || !user.is_active) {
-      resetLoginAttempts(username);
       return { success: false, error: 'Usuário não encontrado ou inativo' };
     }
 
@@ -1283,9 +1251,8 @@ ipcMain.handle('auth:login', async (e, data) => {
 
     const isValid = bcrypt.compareSync(password, user.password_hash);
     if (!isValid) {
-      recordLoginAttempt(username);
       const attempts = (user.failed_login_attempts || 0) + 1;
-      db.prepare('UPDATE users SET failed_login_attempts = ? WHERE id = ?').run(attempts, user.id);
+      setUserFailedAttempts(user.id, attempts);
 
       if (attempts >= 5) {
         const lockUntil = new Date(Date.now() + 15 * 60 * 1000).toISOString();
@@ -1297,9 +1264,7 @@ ipcMain.handle('auth:login', async (e, data) => {
       return { success: false, error: `Senha incorreta. ${remaining} tentativas restantes antes do bloqueio.` };
     }
 
-    resetLoginAttempts(username);
-
-    db.prepare('UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = ?').run(user.id);
+    clearUserLoginLockout(user.id);
 
     // Gerar tokens seguros
     const accessToken = generateSecureToken();
