@@ -37,7 +37,7 @@ export default function AcaiBuilderModal({ builder, onClose, setBuilder, acaiBas
   if (!builder) return null;
 
   return (
-    <div className="fixed inset-0 bg-surface z-[500] flex items-center justify-center p-6 animate-in fade-in duration-200">
+    <div className="fixed inset-0 bg-surface z-[500] flex items-center justify-center p-6 animate-fade-in">
       <div className="bg-card w-full max-w-5xl h-[85vh] rounded-2xl border border-border flex flex-col overflow-hidden shadow-modal">
         <div className="p-4 bg-surface-light border-b border-border flex justify-between items-center px-6">
           <h2 className="font-bold text-sm uppercase tracking-widest text-primary">Montagem Personalizada</h2>
