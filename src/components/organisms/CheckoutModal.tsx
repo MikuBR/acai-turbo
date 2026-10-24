@@ -1,47 +1,9 @@
 import { useState } from 'react';
 import { X, Check, Plus, Trash2 } from 'lucide-react';
 import { formatPromotionLabel } from '../../utils/promotion.js';
+import type { Payment, Promotion, Table, PaymentMethod, ActiveTable, CheckoutModalProps } from '../../types';
 
-const PAYMENT_METHODS = ['DINHEIRO', 'PIX', 'DÉBITO', 'CRÉDITO', 'PERMUTA'];
-
-interface Payment {
-  method: string;
-  amount: number;
-  exchangeFor?: string;
-}
-
-interface Promotion {
-  id: number;
-  name: string;
-  type: string;
-  value: number;
-  applies_to: string;
-  target_category?: string;
-  target_product_id?: number;
-  min_quantity: number;
-  start_date: string;
-  end_date: string;
-  is_active: boolean;
-}
-
-interface ActiveTable {
-  id: number | null;
-  name: string;
-  items: any[];
-  total: number;
-  isDelivery: boolean;
-}
-
-interface CheckoutModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  activeTable: ActiveTable | null;
-  promotions: Promotion[];
-  selectedPromotion: Promotion | null;
-  setSelectedPromotion: (promo: Promotion | null) => void;
-  calculateDiscount: (promo: Promotion, total: number, items: any[]) => number;
-  onFinalize: (data: { payments: Payment[]; amountReceived: string }) => void;
-}
+const PAYMENT_METHODS: PaymentMethod[] = ['DINHEIRO', 'PIX', 'DÉBITO', 'CRÉDITO', 'PERMUTA'];
 
 export default function CheckoutModal({ isOpen, onClose, activeTable, promotions, selectedPromotion, setSelectedPromotion, calculateDiscount, onFinalize }: CheckoutModalProps) {
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -88,7 +50,7 @@ export default function CheckoutModal({ isOpen, onClose, activeTable, promotions
       setAmountReceived('');
     } else {
       if (hasPermuta) setPayments([]);
-      setPayments(prev => [...prev.filter(p => p.method !== 'PERMUTA'), { method: pendingMethod, amount: truncatedAmt }]);
+      setPayments(prev => [...prev.filter(p => p.method !== 'PERMUTA'), { method: pendingMethod, amount: truncatedAmt } as Payment]);
       if (pendingMethod === 'DINHEIRO') {
         const existingCash = payments.filter(p => p.method === 'DINHEIRO').reduce((s, p) => s + p.amount, 0);
         setAmountReceived((existingCash + truncatedAmt).toFixed(2));
@@ -102,7 +64,7 @@ export default function CheckoutModal({ isOpen, onClose, activeTable, promotions
   };
 
   return (
-    <div className="fixed inset-0 bg-surface z-[800] flex items-center justify-center p-6 animate-in zoom-in duration-200">
+    <div className="fixed inset-0 bg-surface z-[800] flex items-center justify-center p-6 animate-zoom-in">
       <div className="bg-card p-8 rounded-2xl w-full max-w-md border border-border shadow-modal max-h-[90vh] overflow-y-auto custom-scrollbar">
         <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
           <h2 className="text-xs font-bold uppercase tracking-widest text-success">Caixa: {activeTable?.name || '---'}</h2>
@@ -141,7 +103,7 @@ export default function CheckoutModal({ isOpen, onClose, activeTable, promotions
           {payments.length > 0 ? (
             <div className="space-y-2 mb-3">
               {payments.map((p, i) => (
-                <div key={i} className="flex items-center justify-between bg-surface-light border border-border rounded-lg p-3 group animate-in fade-in">
+                <div key={i} className="flex items-center justify-between bg-surface-light border border-border rounded-lg p-3 group animate-fade-in">
                   <div className="flex items-center gap-2">
                     <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded ${p.method === 'PERMUTA' ? 'bg-warning/20 text-warning' : 'bg-primary/10 text-primary'}`}>{p.method}</span>
                     {p.exchangeFor && <span className="text-[10px] text-muted italic truncate max-w-[180px]">· {p.exchangeFor}</span>}
@@ -180,7 +142,7 @@ export default function CheckoutModal({ isOpen, onClose, activeTable, promotions
         </div>
 
         {showAddPayment && (
-          <div className="mb-6 bg-surface-light border border-border rounded-xl p-4 animate-in fade-in">
+          <div className="mb-6 bg-surface-light border border-border rounded-xl p-4 animate-fade-in">
             <div className="flex justify-between items-center mb-3">
               <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Adicionar Pagamento</span>
               <button onClick={() => setShowAddPayment(false)} className="p-1 hover:bg-danger/10 rounded text-muted hover:text-danger transition-all"><X size={14}/></button>
@@ -263,7 +225,7 @@ export default function CheckoutModal({ isOpen, onClose, activeTable, promotions
               placeholder="0.00"
             />
             {hasCash && amt > cashTarget && amt > 0 && (
-              <div className="mt-3 p-3 bg-surface-light border border-border rounded-lg text-center animate-in fade-in">
+              <div className="mt-3 p-3 bg-surface-light border border-border rounded-lg text-center animate-fade-in">
                 <span className="text-[10px] text-muted font-bold uppercase tracking-widest block mb-1">Troco a Devolver</span>
                 <span className="text-2xl font-bold text-warning font-mono">R$ {change.toFixed(2)}</span>
               </div>

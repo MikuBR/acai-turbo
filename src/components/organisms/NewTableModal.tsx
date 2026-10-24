@@ -76,7 +76,7 @@ export default function NewTableModal({ isOpen, onClose, tableType, setTableType
   };
 
   return (
-    <div ref={containerRef} className="fixed inset-0 bg-surface z-[700] flex items-center justify-center p-6 animate-in zoom-in duration-200">
+    <div ref={containerRef} className="fixed inset-0 bg-surface z-[700] flex items-center justify-center p-6 animate-zoom-in">
       <div className="bg-card p-8 rounded-2xl w-full max-w-md border border-border shadow-modal">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xs font-bold uppercase tracking-widest text-success">Nova Comanda</h2>

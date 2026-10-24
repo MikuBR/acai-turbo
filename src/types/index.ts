@@ -238,3 +238,23 @@ export interface OrderSidebarProps {
   ifoodConnected: boolean;
   ifoodUnreadCount: number;
 }
+
+// --- Checkout modal ---
+export interface ActiveTable {
+  id: number | null;
+  name: string;
+  items: MenuItem[];
+  total: number;
+  isDelivery: boolean;
+}
+
+export interface CheckoutModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  activeTable: ActiveTable | null;
+  promotions: Promotion[];
+  selectedPromotion: Promotion | null;
+  setSelectedPromotion: (promo: Promotion | null) => void;
+  calculateDiscount: (promo: Promotion, total: number, items: any[]) => number;
+  onFinalize: (data: { payments: Payment[]; amountReceived: string }) => void;
+}

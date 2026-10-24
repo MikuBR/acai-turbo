@@ -141,3 +141,25 @@ input[type=number]::-webkit-outer-spin-button {
 .animate-slide-up {
   animation: slide-up 0.3s ease-out;
 }
+
+/* Animações de entrada para modais (substituem classes do plugin tailwindcss-animate não instalado) */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes zoom-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slide-in-from-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@theme {
+  --animate-fade-in: fade-in 0.2s ease-out;
+  --animate-zoom-in: zoom-in 0.2s ease-out;
+  --animate-slide-in-from-right: slide-in-from-right 0.2s ease-out;
+}

@@ -35,7 +35,7 @@ export default function LoginModal({
   const activeSubmit = handleLogin || onLogin || ((e: React.FormEvent) => e.preventDefault());
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 animate-fade-in">
       <div className="bg-card p-8 rounded-2xl border border-border w-96 shadow-modal">
         <div className="text-center mb-6">
           <div className="w-20 h-20 bg-gradient-to-br from-primary to-primary-dark rounded-full flex items-center justify-center mx-auto mb-4 shadow-elegant">

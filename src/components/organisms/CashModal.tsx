@@ -151,7 +151,7 @@ export default function CashModal({ isOpen, onClose, getIPC }: CashModalProps) {
   const isOpenSession = !!current && current.status === 'OPEN';
 
   return (
-    <div className="fixed inset-0 bg-surface z-[850] flex items-center justify-center p-6 animate-in zoom-in duration-200">
+    <div className="fixed inset-0 bg-surface z-[850] flex items-center justify-center p-6 animate-zoom-in">
       <div className="bg-card p-8 rounded-2xl w-full max-w-md border border-border shadow-modal max-h-[90vh] overflow-y-auto custom-scrollbar">
         <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
           <h2 className="text-xs font-bold uppercase tracking-widest text-primary">Caixa</h2>

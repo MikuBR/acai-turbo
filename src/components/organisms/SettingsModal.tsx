@@ -216,7 +216,7 @@ export default function SettingsModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-surface z-[900] flex items-center justify-center p-6 animate-in fade-in duration-200">
+    <div className="fixed inset-0 bg-surface z-[900] flex items-center justify-center p-6 animate-fade-in">
       <div className="bg-card w-full max-w-5xl h-[80vh] rounded-2xl border border-border flex flex-col overflow-hidden shadow-modal">
         <div className="p-4 bg-surface-light border-b border-border flex justify-between items-center px-6">
           <SettingsTabs activeTab={settingsTab} onTabChange={setSettingsTab} />
@@ -565,7 +565,7 @@ export default function SettingsModal({
             </>
           )}
           {showResetAdminModal && (
-            <div className="fixed inset-0 bg-surface/80 z-[1200] flex items-center justify-center p-6 animate-in fade-in">
+            <div className="fixed inset-0 bg-surface/80 z-[1200] flex items-center justify-center p-6 animate-fade-in">
               <div className="bg-card p-6 rounded-2xl border border-border shadow-modal w-96">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-[10px] font-bold uppercase tracking-widest text-primary">Resetar Senha de Admin</h3>

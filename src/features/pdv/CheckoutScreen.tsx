@@ -10,33 +10,9 @@ import { calculateDiscount } from '../../utils/promotion.js'
 import { useOnlineStatus } from '../../hooks/useOnlineStatus'
 import { enqueueOrder } from '../../services/offlineQueue'
 import { usePerformanceMark } from '../../hooks/usePerformanceMark'
-import type { Table } from '../../types'
+import type { Table, Payment, Promotion } from '../../types'
 
-interface Payment {
-  method: string
-  amount: number
-  exchangeFor?: string
-}
-
-interface Promotion {
-  id: number
-  name: string
-  type: string
-  value: number
-  applies_to: string
-  target_category?: string
-  target_product_id?: number
-  min_quantity: number
-  start_date: string
-  end_date: string
-  is_active: boolean
-}
-
-interface CheckoutScreenProps {
-  // No props needed - uses stores and hooks
-}
-
-export default function CheckoutScreen(_props: CheckoutScreenProps) {
+export default function CheckoutScreen() {
   const navigate = useNavigate();
   const addToast = useToastStore(s => s.addToast);
   const { setLoading, clearLoading } = useLoadingStore();
