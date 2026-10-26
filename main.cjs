@@ -1306,7 +1306,7 @@ ipcMain.handle('auth:login', async (e, data) => {
   } catch (e) {
     console.error('[auth:login] Error:', e.message, e.stack);
     sentryMain.addBreadcrumb('auth', `Login falhou: ${e.message}`, 'error', { username: data?.username, stack: e.stack });
-    return { success: false, error: 'Erro interno ao fazer login.' };
+    return { success: false, error: `Erro interno ao fazer login: ${e.message}` };
   }
 });
 
