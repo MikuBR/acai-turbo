@@ -202,6 +202,30 @@ function setupUpdateListeners() {
     loggerModule.logger().info('[update] Atualização disponível:', info.version);
     notifyRenderer('update:available', info);
     notifyRenderer('update:status-change', { status: 'available', version: info.version });
+
+    // Popup de confirmação (SIM/NÃO) para o usuário
+    const { dialog } = require('electron');
+    dialog.showMessageBox({
+      type: 'question',
+      buttons: ['Sim', 'Não'],
+      defaultId: 0,
+      title: 'Atualização disponível',
+      message: `Nova versão ${info.version} disponível. Deseja baixar e instalar agora?`,
+    }).then((result) => {
+      if (result.response === 0) {
+        downloadUpdate().then(() => {
+          dialog.showMessageBox({
+            type: 'info',
+            buttons: ['Reiniciar agora', 'Depois'],
+            defaultId: 0,
+            title: 'Atualização pronta',
+            message: 'Atualização baixada. Reiniciar para aplicar?',
+          }).then((r) => {
+            if (r.response === 0) installUpdate();
+          });
+        });
+      }
+    }).catch((e) => loggerModule.logger().error('[update] dialog error:', e.message));
   });
 
   autoUpdater.on('update-not-available', () => {
