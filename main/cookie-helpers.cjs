@@ -65,7 +65,7 @@ function buildSetDetails(url, name, value, ttlMs, isProd) {
     name,
     value,
     httpOnly: true,
-    secure: !!isProd,
+    secure: !!isProd && /^https:/i.test(url),
     sameSite: 'strict',
     path: '/',
     maxAge: Math.round(ttlMs / 1000),

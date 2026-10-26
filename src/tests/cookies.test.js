@@ -61,7 +61,15 @@ describe('cookie helpers — Electron cookies.set regression', () => {
     expect(setCalls[1].maxAge).toBe(Math.round(REFRESH_TOKEN_TTL_MS / 1000));
   });
 
-  it('em prod (isProd=true), secure=true', () => {
+  it('em prod (isProd=true) sobre origin http (fallback), secure=false (Chromium rejeita secure sobre http)', () => {
+    const setCalls = [];
+    const mockSession = { cookies: { set: (d) => setCalls.push(d) } };
+    setAuthCookies(mockSession, 'http://localhost', 'a', 'r', true);
+    expect(setCalls[0].secure).toBe(false);
+    expect(setCalls[0].url).toBe('http://localhost');
+  });
+
+  it('em prod (isProd=true) sobre origin https, secure=true', () => {
     const setCalls = [];
     const mockSession = { cookies: { set: (d) => setCalls.push(d) } };
     setAuthCookies(mockSession, 'https://app.local', 'a', 'r', true);
