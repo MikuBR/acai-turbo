@@ -6,6 +6,14 @@ This project adheres to [Semantic Versioning](https://semver.org/lang/pt-br/).
 
 ---
 
+## [1.4.0] — 2026-10-26
+
+### Adicionado
+- **Relatórios reorganizados em página focada**: `ReportsScreen` agora é uma página com abas individuais (Vendas, Promoções, Delivery, Catálogo, Financeiro), filtro de período global e exportação PDF por aba.
+- **Componentes de relatório por tipo**: `src/components/organisms/reports/` com `SalesReport`, `PromotionsReport`, `DeliveryReport`, `CatalogReport`, `FinancialReport` e barrel `index.ts`.
+
+---
+
 ## [1.3.9] — 2026-10-22
 
 ### Corrigido
