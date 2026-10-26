@@ -51,6 +51,8 @@ function makeUpdaterLogger() {
 if (app.isPackaged) {
   autoUpdater.autoDownload = false; // Baixa manualmente
   autoUpdater.autoInstallOnAppQuit = true; // Instala ao fechar
+  autoUpdater.allowPrerelease = false; // Vinculado à Latest Release (não pré-release)
+  autoUpdater.allowDowngrade = false;
 }
 
 /**

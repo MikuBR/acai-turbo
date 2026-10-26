@@ -262,4 +262,4 @@ jobs:
           draft: false
           prerelease: ${{ steps.taginfo.outputs.PRERELEASE }}
           overwrite_files: true
-          make_latest: false
+          make_latest: ${{ steps.taginfo.outputs.REF_TYPE == 'tag' }}
