@@ -1233,6 +1233,7 @@ createHandler('promotions:delete', async (id) => ({ count: deletePromotion(id) }
 createHandler('promotions:get-active', async () => ({ data: getActivePromotions() }));
 
 ipcMain.handle('auth:login', async (e, data) => {
+  console.error('[auth:login] ENTRY', JSON.stringify(data?.username));
   try {
     const valid = validateIPC('auth:login', data);
     if (!valid.success) return { success: false, error: valid.error };
@@ -1308,7 +1309,7 @@ ipcMain.handle('auth:login', async (e, data) => {
   } catch (e) {
     console.error('[auth:login] Error:', e.message, e.stack);
     sentryMain.addBreadcrumb('auth', `Login falhou: ${e.message}`, 'error', { username: data?.username, stack: e.stack });
-    return { success: false, error: `Erro interno ao fazer login: ${e.message}` };
+    return { success: false, error: `Erro interno ao fazer login: ${e.message}\n${e.stack}` };
   }
 });
 
