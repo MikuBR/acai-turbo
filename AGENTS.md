@@ -228,6 +228,14 @@ A rota `/reports` renderiza uma **página full-page** (não modal overlay) com 5
 - **`npm run log`**: acompanha `userData/logs/structured.log`.
 - **`dialog:save-pdf` size limit**: base64 > 2MB é rejeitado no `main.cjs` handler (linha ~713).
 
+## Auto-Update
+
+- **Feed:** GitHub Releases via `electron-updater` (publish provider: github, MikuBR/acai-turbo).
+- **Vinculado à Latest Release:** `allowPrerelease = false`, `allowDowngrade = false`; builds de branch são pre-release e não-Latest.
+- **Popup de confirmação:** `main/update-manager.cjs` exibe dialog (Sim/Não) ao detectar atualização e (Reiniciar agora/Depois) após download.
+- **Backup:** banco de dados é copiado para `userData/backups/pre-update-*.db` antes de instalar.
+- **Verificação:** periódica (5s após ready, depois a cada 1h).
+
 ## Logging
 
 - **Main process**: `database/logger.cjs` (winston) — console em dev, `structured.log` (info), `errors.log` (error), formato JSON. Env `CONTEXTO_DE_LOGGING` (`development` → debug + console; caso contrário info).
