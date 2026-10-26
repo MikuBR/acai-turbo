@@ -827,6 +827,18 @@ const getUserById = (id) => {
   }
   return db.prepare('SELECT id, username, full_name, role, created_at, is_active FROM users WHERE id = ?').get(id);
 };
+const setUserFailedAttempts = (userId, attempts) => {
+  if (!userId || isNaN(userId)) throw new Error('Invalid user ID');
+  return db.prepare('UPDATE users SET failed_login_attempts = ? WHERE id = ?').run(attempts, userId).changes > 0;
+};
+const setUserLockedUntil = (userId, lockUntil) => {
+  if (!userId || isNaN(userId)) throw new Error('Invalid user ID');
+  return db.prepare('UPDATE users SET locked_until = ? WHERE id = ?').run(lockUntil, userId).changes > 0;
+};
+const clearUserLoginLockout = (userId) => {
+  if (!userId || isNaN(userId)) throw new Error('Invalid user ID');
+  return db.prepare('UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = ?').run(userId).changes > 0;
+};
 const getUserByUsername = (username) => {
   if (!username || typeof username !== 'string') {
     throw new Error('Invalid username');
@@ -1196,6 +1208,7 @@ module.exports = {
   getDailyReport, getDailyReportForDate, getReportByPeriod,
   getPromotions, addPromotion, updatePromotion, deletePromotion, getActivePromotions,
   getUsers, getUserById, getUserByUsername, addUser, updateUser, deleteUser, toggleUserActive,
+  setUserFailedAttempts, setUserLockedUntil, clearUserLoginLockout,
   createSession, getSession, deleteSession, cleanupExpiredSessions,
   createAuditLog, getAuditLogs,
   getFinancialAccounts, addFinancialAccount, updateFinancialAccount, deleteFinancialAccount, addFinancialTransaction, getFinancialTransactions, getFinancialSummary,
