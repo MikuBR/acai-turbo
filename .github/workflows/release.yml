@@ -229,7 +229,7 @@ jobs:
         run: |
           $tag = "${{ steps.taginfo.outputs.TAG }}"
           if (-not (gh release view $tag --repo $env:GITHUB_REPOSITORY 2>$null)) {
-            gh release create $tag --repo $env:GITHUB_REPOSITORY --title "Açaí Wave $tag" --notes "Windows installer for $env:GITHUB_REF" --prerelease
+            gh release create $tag --repo $env:GITHUB_REPOSITORY --title "Açaí Wave $tag" --notes "Windows installer for $env:GITHUB_REF" --prerelease --latest=false
           }
 
       - name: Criar/atualizar GitHub Release com o installer
@@ -262,3 +262,4 @@ jobs:
           draft: false
           prerelease: ${{ steps.taginfo.outputs.PRERELEASE }}
           overwrite_files: true
+          make_latest: false
