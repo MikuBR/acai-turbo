@@ -1238,7 +1238,8 @@ ipcMain.handle('auth:login', async (e, data) => {
     if (!valid.success) return { success: false, error: valid.error };
 
     const { username, password } = valid.data;
-    const user = getUserByUsername(username);
+    let user;
+    try { user = getUserByUsername(username); } catch (e) { console.error('[auth:login] getUserByUsername failed:', e.message, e.stack); throw e; }
     if (!user || !user.is_active) {
       return { success: false, error: 'Usuário não encontrado ou inativo' };
     }
@@ -1249,7 +1250,8 @@ ipcMain.handle('auth:login', async (e, data) => {
       return { success: false, error: `Conta bloqueada. Tente novamente em ${minutesLeft} minutos.` };
     }
 
-    const isValid = bcrypt.compareSync(password, user.password_hash);
+    let isValid;
+    try { isValid = bcrypt.compareSync(password, user.password_hash); } catch (e) { console.error('[auth:login] bcrypt.compareSync failed:', e.message, e.stack); throw e; }
     if (!isValid) {
       const attempts = (user.failed_login_attempts || 0) + 1;
       setUserFailedAttempts(user.id, attempts);
@@ -1264,14 +1266,14 @@ ipcMain.handle('auth:login', async (e, data) => {
       return { success: false, error: `Senha incorreta. ${remaining} tentativas restantes antes do bloqueio.` };
     }
 
-    clearUserLoginLockout(user.id);
+    try { clearUserLoginLockout(user.id); } catch (e) { console.error('[auth:login] clearUserLoginLockout failed:', e.message, e.stack); throw e; }
 
     // Gerar tokens seguros
     const accessToken = generateSecureToken();
     const refreshToken = generateSecureToken();
     const expiresAt = new Date(Date.now() + AUTH_TOKEN_TTL_MS).toISOString();
-    createSession(user.id, accessToken, expiresAt);
-    createAuditLog(user.id, 'LOGIN', null, null, 'User logged in');
+    try { createSession(user.id, accessToken, expiresAt); } catch (e) { console.error('[auth:login] createSession failed:', e.message, e.stack); throw e; }
+    try { createAuditLog(user.id, 'LOGIN', null, null, 'User logged in'); } catch (e) { console.error('[auth:login] createAuditLog failed:', e.message, e.stack); throw e; }
 
     // Armazenar refresh token para rotação
     refreshTokenStore.set(refreshToken, {
