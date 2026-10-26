@@ -6,6 +6,7 @@ import useLoadingStore from '../../store/loadingStore'
 import { getIPC } from '../../services/ipc.js'
 import logger from '../../services/logger.js'
 import ReportsModal from '../../components/organisms/ReportsModal.tsx'
+import { SalesReport, PromotionsReport, DeliveryReport, CatalogReport, FinancialReport } from '../../components/organisms/reports'
 import { usePerformanceMark } from '../../hooks/usePerformanceMark'
 import type { User } from '../../types'
 
@@ -29,13 +30,15 @@ interface TopProduct {
   avg_price: number
 }
 
-interface ReportData {
+export interface ReportData {
   sales: Sale[]
   movements: Movement[]
   topProducts: TopProduct[]
+  promotions?: Promotion[]
+  allOrders?: Order[]
 }
 
-interface Order {
+export interface Order {
   id: number
   customer_name: string
   total: number
@@ -51,11 +54,11 @@ interface CashMove {
   description: string
 }
 
+interface Promotion { id: number; name: string; type: string; value: number; start_date?: string; end_date?: string }
 interface ReportPeriod {
   startDate: string
   endDate: string
 }
-
 interface FinancialSummary {
   payable: { pending: number; paid: number; total: number }
   receivable: { pending: number; paid: number; total: number }
@@ -71,6 +74,8 @@ export default function ReportsScreen() {
   const reportsLog = logger.withScope('reports');
 
   const [reportData, setReportData] = useState<ReportData>({ sales: [], movements: [], topProducts: [] });
+  const [activeTab, setActiveTab] = useState<'sales' | 'promotions' | 'delivery' | 'catalog' | 'financial'>('sales');
+  const [products, setProducts] = useState<any[]>([]);
   const [ordersHistory, setOrdersHistory] = useState<Order[]>([]);
   const [cashMove, setCashMove] = useState<CashMove>({ type: 'SAIDA', amount: '', description: '' });
   const [reportPeriod, setReportPeriod] = useState<ReportPeriod>({ startDate: '', endDate: '' });
@@ -171,22 +176,31 @@ export default function ReportsScreen() {
   }, []);
 
   return (
-    <ReportsModal
-      isOpen={true}
-      onClose={() => navigate('/pdv')}
-      advancedReportData={advancedReportData}
-      setAdvancedReportData={setAdvancedReportData as any}
-      reportData={reportData}
-      reportPeriod={reportPeriod}
-      setReportPeriod={setReportPeriod}
-      ordersHistory={ordersHistory}
-      cashMove={cashMove}
-      setCashMove={setCashMove}
-      loadReports={loadReports}
-      loadAdvancedReport={loadAdvancedReport}
-      runWithAuth={runWithAuth}
-      getIPC={getIPC}
-      financialSummary={financialSummary}
-    />
+    <div className="p-4 space-y-4">
+      <div className="flex items-center gap-2 flex-wrap">
+        <button onClick={() => navigate('/pdv')} className="text-[10px] font-bold uppercase px-3 py-1 rounded bg-surface-light text-muted hover:bg-danger/20">Voltar</button>
+        {(['sales','promotions','delivery','catalog','financial'] as const).map((t) => (
+          <button key={t} onClick={() => setActiveTab(t)} className={`text-[10px] font-bold uppercase px-3 py-1 rounded ${activeTab === t ? 'bg-success text-white' : 'bg-surface-light text-muted'}`}>{t}</button>
+        ))}
+      </div>
+      <div className="flex gap-3 items-end">
+        <div>
+          <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Data Início</label>
+          <input type="date" value={reportPeriod.startDate} onChange={(e) => setReportPeriod({ ...reportPeriod, startDate: e.target.value })} className="bg-surface border border-border rounded px-2 py-1 text-xs" />
+        </div>
+        <div>
+          <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Data Fim</label>
+          <input type="date" value={reportPeriod.endDate} onChange={(e) => setReportPeriod({ ...reportPeriod, endDate: e.target.value })} className="bg-surface border border-border rounded px-2 py-1 text-xs" />
+        </div>
+        <button onClick={loadAdvancedReport} className="bg-success hover:bg-success py-1 px-3 rounded font-bold text-xs uppercase text-white">Gerar</button>
+      </div>
+      <div className="bg-surface rounded-lg p-4 border border-border">
+        {activeTab === 'sales' && <SalesReport reportData={reportData} advancedReportData={advancedReportData} onExportPDF={() => {}} />}
+        {activeTab === 'promotions' && <PromotionsReport promotions={advancedReportData?.promotions ?? null} onExportPDF={() => {}} />}
+        {activeTab === 'delivery' && <DeliveryReport orders={advancedReportData?.allOrders ?? ordersHistory} onExportPDF={() => {}} />}
+        {activeTab === 'catalog' && <CatalogReport products={products} onExportPDF={() => {}} />}
+        {activeTab === 'financial' && <FinancialReport financialSummary={financialSummary} onExportPDF={() => {}} />}
+      </div>
+    </div>
   );
 }
