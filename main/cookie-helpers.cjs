@@ -81,12 +81,12 @@ function buildSetDetails(url, name, value, ttlMs, isProd) {
  * @param {boolean} isProd
  */
 function setAuthCookies(session, urlOrigin, accessToken, refreshToken, isProd) {
-  session.cookies.set(
+  Promise.resolve(session.cookies.set(
     buildSetDetails(urlOrigin, AUTH_COOKIE_NAME, accessToken, AUTH_TOKEN_TTL_MS, isProd)
-  );
-  session.cookies.set(
+  )).catch((e) => console.error('[auth] cookies.set (access) failed:', e?.message));
+  Promise.resolve(session.cookies.set(
     buildSetDetails(urlOrigin, REFRESH_COOKIE_NAME, refreshToken, REFRESH_TOKEN_TTL_MS, isProd)
-  );
+  )).catch((e) => console.error('[auth] cookies.set (refresh) failed:', e?.message));
 }
 
 /**
