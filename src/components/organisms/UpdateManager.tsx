@@ -127,7 +127,7 @@ export function UpdateManager(_props: UpdateManagerProps) {
     return (
       <button
         onClick={handleCheckForUpdates}
-        className="fixed top-4 right-4 p-3 bg-accent-primary hover:bg-accent-secondary text-white rounded-full shadow-lg transition-all z-50"
+        className="fixed top-4 right-4 p-3 bg-accent-primary hover:bg-accent-secondary text-white rounded-full shadow-2xl transition-all z-[9999]"
         title="Verificar atualizações"
       >
         <RefreshCw size={20} />
@@ -137,7 +137,7 @@ export function UpdateManager(_props: UpdateManagerProps) {
 
   if (updateStatus === 'error') {
     return (
-      <div className="fixed top-4 right-4 max-w-sm bg-danger text-white p-4 rounded-lg shadow-lg z-50">
+      <div className="fixed top-4 right-4 max-w-sm bg-danger text-white p-4 rounded-lg shadow-2xl z-[9999] border border-white/20">
         <div className="flex items-start gap-3">
           <XCircle size={20} className="mt-0.5 flex-shrink-0" />
           <div className="flex-1">
@@ -160,7 +160,7 @@ export function UpdateManager(_props: UpdateManagerProps) {
 
   if (updateStatus === 'available') {
     return (
-      <div className="fixed top-4 right-4 max-w-sm bg-accent-primary text-white p-4 rounded-lg shadow-lg z-50">
+      <div className="fixed top-4 right-4 max-w-sm bg-accent-primary text-white p-4 rounded-lg shadow-2xl z-[9999] border border-white/20">
         <div className="flex items-start gap-3">
           <AlertTriangle size={20} className="mt-0.5 flex-shrink-0" />
           <div className="flex-1">
@@ -189,7 +189,7 @@ export function UpdateManager(_props: UpdateManagerProps) {
 
   if (updateStatus === 'downloading') {
     return (
-      <div className="fixed top-4 right-4 max-w-sm bg-accent-primary text-white p-4 rounded-lg shadow-lg z-50">
+      <div className="fixed top-4 right-4 max-w-sm bg-accent-primary text-white p-4 rounded-lg shadow-2xl z-[9999] border border-white/20">
         <div className="flex items-center gap-3">
           <Download size={20} className="animate-pulse" />
           <div className="flex-1">
@@ -209,7 +209,7 @@ export function UpdateManager(_props: UpdateManagerProps) {
 
   if (updateStatus === 'downloaded') {
     return (
-      <div className="fixed top-4 right-4 max-w-sm bg-success text-white p-4 rounded-lg shadow-lg z-50">
+      <div className="fixed top-4 right-4 max-w-sm bg-success text-white p-4 rounded-lg shadow-2xl z-[9999] border border-white/20">
         <div className="flex items-start gap-3">
           <CheckCircle size={20} className="mt-0.5 flex-shrink-0" />
           <div className="flex-1">
