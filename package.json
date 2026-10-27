@@ -118,7 +118,8 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "build/icon.ico"
+      "icon": "build/icon.ico",
+      "artifactName": "acai-wave-setup-${version}.exe"
     },
     "nsis": {
       "oneClick": false,
