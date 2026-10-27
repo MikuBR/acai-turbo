@@ -48,6 +48,7 @@ export default function AcaiBuilderScreen() {
 
   const acaiBases = useMemo(() => (catalog || []).filter((p: Product) => p.category === 'COPOS DE AÇAÍ'), [catalog]);
   const availableAddons = useMemo(() => (catalog || []).filter((p: Product) => p.category === 'ADICIONAIS DOCES'), [catalog]);
+  const blockedIngredients = useMemo(() => (catalog || []).filter((p: Product) => /bebida/i.test(p.category)).map((p: Product) => p.name.toLowerCase()), [catalog]);
 
   if (acaiBases.length === 0) {
     return (
@@ -103,6 +104,7 @@ export default function AcaiBuilderScreen() {
         setBuilder={setBuilder as any}
         acaiBases={acaiBases}
         availableAddons={availableAddons}
+        blockedIngredients={blockedIngredients}
         toggleRemoval={toggleRemoval}
         updateExtraInBuilder={updateExtraInBuilder}
         confirmFullBuild={confirmFullBuild}

@@ -236,7 +236,6 @@ export default function AppLayout() {
           onNewTable={() => navigate('/pdv/new-table')}
           onOpenReports={() => navigate('/reports')}
           onOpenSettings={() => runWithManagerAuth(() => navigate('/settings'))}
-          onOpenCash={() => runWithManagerAuth(() => setShowCashModal(true))}
           onLogout={handleLogout}
           onDeleteTable={(id) => deleteTable(id!)}
           ifoodConnected={!!ifoodConfig.enabled}

@@ -68,7 +68,6 @@ describe('AppLayout', () => {
     );
 
     expect(screen.getByTitle('Caixa e Relatórios')).toBeInTheDocument();
-    expect(screen.getByTitle('Caixa')).toBeInTheDocument();
     expect(screen.getByTitle('Configurações')).toBeInTheDocument();
     expect(screen.getByTitle('Sair')).toBeInTheDocument();
   });

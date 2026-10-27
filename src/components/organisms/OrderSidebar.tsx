@@ -10,17 +10,16 @@ interface Table {
 }
 
 interface OrderSidebarProps {
-  tables?: Table[];
-  activeTableId?: number | null;
+  tables: any[];
+  activeTableId: number | null;
   onSelectTable: (id: number) => void;
   onNewTable: () => void;
   onOpenReports: () => void;
   onOpenSettings: () => void;
-  onOpenCash: () => void;
   onLogout: () => void;
   onDeleteTable: (id: number) => void;
-  ifoodConnected?: boolean;
-  ifoodUnreadCount?: number;
+  ifoodConnected: boolean;
+  ifoodUnreadCount: number;
 }
 
 export const OrderSidebar = memo(function OrderSidebar({
@@ -30,7 +29,6 @@ export const OrderSidebar = memo(function OrderSidebar({
   onNewTable,
   onOpenReports,
   onOpenSettings,
-  onOpenCash,
   onLogout,
   onDeleteTable,
   ifoodConnected = false,
@@ -60,13 +58,6 @@ export const OrderSidebar = memo(function OrderSidebar({
             title="Caixa e Relatórios"
           >
             <FileText size={18} />
-          </button>
-          <button
-            onClick={onOpenCash}
-            className="p-1.5 hover:bg-surface-light rounded-md text-muted hover:text-success transition-colors"
-            title="Caixa"
-          >
-            <CircleDollarSign size={18} />
           </button>
           <button
             onClick={onOpenSettings}
