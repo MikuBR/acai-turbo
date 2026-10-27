@@ -270,7 +270,7 @@ function generatePDF(data: ReportData, isPeriodView: boolean, financialSummary: 
   }
 
   if (data?.exchanges && data.exchanges.length > 0) {
-    const exchangeTotal = data.exchanges.reduce((a, e) => a + Number(e?.total ?? 0), 0);
+    const exchangeTotal = (data.exchanges || []).reduce((a, e) => a + Number(e?.total ?? 0), 0);
     const exchangeRows = data.exchanges.map(ex => [
       { text: ex.customer_name || 'Permuta', fontSize: 8 },
       { text: ex.exchange_for || '(não informado)', fontSize: 8 },
@@ -486,8 +486,8 @@ function generatePDF(data: ReportData, isPeriodView: boolean, financialSummary: 
         body: [
           [{ text: 'Produto:', bold: true }, productReport.productName],
           [{ text: 'Quantidade Vendida:', bold: true }, String(productReport.qty)],
-          [{ text: 'Receita Total:', bold: true }, { text: `R$ ${productReport.totalRevenue.toFixed(2)}`, alignment: 'right' }],
-          [{ text: 'Preço Médio:', bold: true }, { text: `R$ ${productReport.avgPrice.toFixed(2)}`, alignment: 'right' }],
+          [{ text: 'Receita Total:', bold: true }, { text: `R$ ${Number(productReport?.totalRevenue ?? 0).toFixed(2)}`, alignment: 'right' }],
+          [{ text: 'Preço Médio:', bold: true }, { text: `R$ ${Number(productReport?.avgPrice ?? 0).toFixed(2)}`, alignment: 'right' }],
           [{ text: 'Participação no Total:', bold: true }, { text: `${productReport.percentage.toFixed(1)}%`, alignment: 'right' }],
         ],
       },
@@ -680,7 +680,7 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
       const orders = (ordersRes.data || []).slice(0, 50);
       let totalGeral = 0;
       if (isPeriodView && advancedReportData?.allOrders) {
-        totalGeral = advancedReportData.allOrders.reduce((s, o) => s + Number(o?.total ?? 0), 0);
+        totalGeral = (advancedReportData?.allOrders || []).reduce((s, o) => s + Number(o?.total ?? 0), 0);
       } else if (!isPeriodView && data?.sales) {
         totalGeral = data.sales.reduce((s, sRow) => s + Number(sRow?.total_amount ?? 0), 0);
       }
@@ -746,7 +746,7 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
       const orders = (productResults[2].data || []).slice(0, 50);
       let totalGeral = 0;
       if (isPeriodView && advancedReportData?.allOrders) {
-        totalGeral = advancedReportData.allOrders.reduce((s, o) => s + Number(o?.total ?? 0), 0);
+        totalGeral = (advancedReportData?.allOrders || []).reduce((s, o) => s + Number(o?.total ?? 0), 0);
       } else if (!isPeriodView && data?.sales) {
         totalGeral = data.sales.reduce((s, sRow) => s + Number(sRow?.total_amount ?? 0), 0);
       }

@@ -12,19 +12,19 @@ export default function FinancialReport({ financialSummary, onExportPDF }: Finan
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-surface rounded-lg p-3 border border-border">
           <span className="text-[9px] text-muted font-bold uppercase block">A Pagar (Total)</span>
-          <span className="text-lg font-bold text-primary">R$ {fs.payable.total.toFixed(2)}</span>
+          <span className="text-lg font-bold text-primary">R$ {Number(fs.payable?.total ?? 0).toFixed(2)}</span>
         </div>
         <div className="bg-surface rounded-lg p-3 border border-border">
           <span className="text-[9px] text-muted font-bold uppercase block">A Pagar (Pendente)</span>
-          <span className="text-lg font-bold text-warning">R$ {fs.payable.pending.toFixed(2)}</span>
+          <span className="text-lg font-bold text-warning">R$ {Number(fs.payable?.pending ?? 0).toFixed(2)}</span>
         </div>
         <div className="bg-surface rounded-lg p-3 border border-border">
           <span className="text-[9px] text-muted font-bold uppercase block">A Receber (Total)</span>
-          <span className="text-lg font-bold text-primary">R$ {fs.receivable.total.toFixed(2)}</span>
+          <span className="text-lg font-bold text-primary">R$ {Number(fs.receivable?.total ?? 0).toFixed(2)}</span>
         </div>
         <div className="bg-surface rounded-lg p-3 border border-border">
           <span className="text-[9px] text-muted font-bold uppercase block">A Receber (Pendente)</span>
-          <span className="text-lg font-bold text-warning">R$ {fs.receivable.pending.toFixed(2)}</span>
+          <span className="text-lg font-bold text-warning">R$ {Number(fs.receivable?.pending ?? 0).toFixed(2)}</span>
         </div>
       </div>
     </div>
