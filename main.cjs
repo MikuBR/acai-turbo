@@ -1267,7 +1267,11 @@ ipcMain.handle('auth:login', async (e, data) => {
       return { success: false, error: `Senha incorreta. ${remaining} tentativas restantes antes do bloqueio.` };
     }
 
-    try { clearUserLoginLockout(user.id); } catch (e) { console.error('[auth:login] clearUserLoginLockout failed:', e.message, e.stack); throw e; }
+    try {
+      const _clear = (typeof clearUserLoginLockout === 'function') ? clearUserLoginLockout : require('./database/db.cjs').clearUserLoginLockout;
+      if (typeof _clear !== 'function') throw new Error('clearUserLoginLockout is not a function (db module out of date?)');
+      _clear(user.id);
+    } catch (e) { console.error('[auth:login] clearUserLoginLockout failed:', e.message, e.stack); throw e; }
 
     // Gerar tokens seguros
     const accessToken = generateSecureToken();
