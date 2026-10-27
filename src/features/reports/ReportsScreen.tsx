@@ -90,13 +90,17 @@ export default function ReportsScreen() {
       Promise.all([
         ipc.invoke('reports:daily'),
         ipc.invoke('orders:get-history'),
-      ]).then(([daily, history]) => {
+        ipc.invoke('catalog:get-products'),
+        ipc.invoke('promotions:get'),
+      ]).then(([daily, history, productsRes, promotionsRes]) => {
         if (daily?.success) {
           const merged = { ...daily.data };
+          if (promotionsRes?.success) merged.promotions = promotionsRes.data;
           setReportData(merged);
           reportsLog.info('reports loaded');
         } else addToast('Erro ao carregar relatório diário', 'error');
         if (history?.success) setOrdersHistory(history.data);
+        if (productsRes?.success) setProducts(productsRes.data || []);
         mark('reports:load:end');
         const duration = measure('reports:load:start', 'reports:load:end');
         if (duration !== null) {
@@ -195,11 +199,11 @@ export default function ReportsScreen() {
         <button onClick={loadAdvancedReport} className="bg-success hover:bg-success py-1 px-3 rounded font-bold text-xs uppercase text-white">Gerar</button>
       </div>
       <div className="bg-surface rounded-lg p-4 border border-border">
-        {activeTab === 'sales' && <SalesReport reportData={reportData} advancedReportData={advancedReportData} onExportPDF={() => {}} />}
-        {activeTab === 'promotions' && <PromotionsReport promotions={advancedReportData?.promotions ?? null} onExportPDF={() => {}} />}
-        {activeTab === 'delivery' && <DeliveryReport orders={advancedReportData?.allOrders ?? ordersHistory} onExportPDF={() => {}} />}
-        {activeTab === 'catalog' && <CatalogReport products={products} onExportPDF={() => {}} />}
-        {activeTab === 'financial' && <FinancialReport financialSummary={financialSummary} onExportPDF={() => {}} />}
+        {activeTab === 'sales' && <SalesReport reportData={reportData} advancedReportData={advancedReportData} onExportPDF={() => window.print()} />}
+        {activeTab === 'promotions' && <PromotionsReport promotions={reportData?.promotions ?? advancedReportData?.promotions ?? null} onExportPDF={() => window.print()} />}
+        {activeTab === 'delivery' && <DeliveryReport orders={advancedReportData?.allOrders ?? ordersHistory} onExportPDF={() => window.print()} />}
+        {activeTab === 'catalog' && <CatalogReport products={products} onExportPDF={() => window.print()} />}
+        {activeTab === 'financial' && <FinancialReport financialSummary={financialSummary} onExportPDF={() => window.print()} />}
       </div>
     </div>
   );

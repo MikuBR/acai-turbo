@@ -1070,8 +1070,16 @@ const getFinancialSummary = (startDate = null, endDate = null) => {
     params.push(endDate);
   }
 
-  query += ' GROUP BY type, status';
-  return db.prepare(query).all(...params);
+  query += ' GROUP BY type';
+  const rows = db.prepare(query).all(...params);
+  const summary = { payable: { pending: 0, paid: 0, total: 0 }, receivable: { pending: 0, paid: 0, total: 0 } };
+  for (const r of rows) {
+    const key = r.type === 'payable' ? 'payable' : 'receivable';
+    summary[key].pending = Number(r.pending || 0);
+    summary[key].paid = Number(r.paid || 0);
+    summary[key].total = Number(r.total || 0);
+  }
+  return summary;
 };
 
 // --- EXPORTAÇÕES DE CLIENTES ---

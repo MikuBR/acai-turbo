@@ -224,6 +224,7 @@ A rota `/reports` renderiza uma **página full-page** (não modal overlay) com 5
 - **Windows-only packaging**: `build:win` requer NSIS; no Linux CI o build job gera apenas o frontend (`vite build`).
 - **Commits após swap:abi**: `swap-native-abi.cjs` altera `package-lock.json` — commite o lockfile.
 - **`generate:*` assets**: ícones/header/EULA vêm de `npm run generate:icons|generate:header|generate:license` e `npm run prepare:assets` — não editar à mão.
+- **Relatórios**: aba 'Caixa' não existe mais na tela de Relatórios (caixa é modal separado). `getFinancialSummary` retorna objeto `{payable, receivable}` (não array). Catálogo e promoções carregam automaticamente no loadReports. Exportar PDF usa `window.print()`.
 - **Credenciais**: não logar/expor senhas. `database/db.cjs` faz hash bcrypt (cost 10).
 - **`npm run log`**: acompanha `userData/logs/structured.log`.
 - **`dialog:save-pdf` size limit**: base64 > 2MB é rejeitado no `main.cjs` handler (linha ~713).
