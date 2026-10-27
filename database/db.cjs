@@ -1,7 +1,8 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const crypto = require('crypto');
-const { app } = require('electron');
+let app = null;
+try { app = require('electron').app; } catch (e) { app = null; }
 const bcrypt = require('bcryptjs');
 const { SqliteAdapter } = require('./adapters/sqlite.cjs');
 const { MigrationEngine, MigrationError } = require('./migrate.cjs');
@@ -15,12 +16,15 @@ function getMigrationError() {
 }
 
 function getDbPath() {
-  try {
-    return path.join(app.getPath('userData'), 'acai_turbo_v4.db');
-  } catch (e) {
-    const os = require('os');
-    return path.join(os.tmpdir(), 'acai-wave', 'acai_turbo_v4.db');
+  if (app && typeof app.getPath === 'function') {
+    try {
+      return path.join(app.getPath('userData'), 'acai_turbo_v4.db');
+    } catch (e) {
+      // fall through to tmpdir
+    }
   }
+  const os = require('os');
+  return path.join(os.tmpdir(), 'acai-wave', 'acai_turbo_v4.db');
 }
 
 const dbPath = getDbPath();
@@ -29,6 +33,8 @@ function initializeDatabase() {
   try {
     console.log('[db] Initializing database at:', dbPath);
 
+    const fs = require('fs');
+    fs.mkdirSync(path.dirname(dbPath), { recursive: true });
     db = new Database(dbPath, { nativeBinding: resolveNativeBinding() });
     db.pragma('journal_mode = WAL');
     db.pragma('foreign_keys = ON');
