@@ -25,6 +25,14 @@ export function UpdateManager(_props: UpdateManagerProps) {
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
+  // Auto-fechar notificações (available/error) em no máximo 5s
+  useEffect(() => {
+    if (updateStatus === 'available' || updateStatus === 'error' || updateStatus === 'latest') {
+      const t = setTimeout(() => setUpdateStatus('idle'), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [updateStatus]);
+
   useEffect(() => {
     const electron = (window as any).electron;
     if (!electron) return;
@@ -119,7 +127,7 @@ export function UpdateManager(_props: UpdateManagerProps) {
     return (
       <button
         onClick={handleCheckForUpdates}
-        className="fixed bottom-4 right-4 p-3 bg-accent-primary hover:bg-accent-secondary text-white rounded-full shadow-lg transition-all z-50"
+        className="fixed top-4 right-4 p-3 bg-accent-primary hover:bg-accent-secondary text-white rounded-full shadow-lg transition-all z-50"
         title="Verificar atualizações"
       >
         <RefreshCw size={20} />
@@ -129,7 +137,7 @@ export function UpdateManager(_props: UpdateManagerProps) {
 
   if (updateStatus === 'error') {
     return (
-      <div className="fixed bottom-4 right-4 max-w-sm bg-danger text-white p-4 rounded-lg shadow-lg z-50">
+      <div className="fixed top-4 right-4 max-w-sm bg-danger text-white p-4 rounded-lg shadow-lg z-50">
         <div className="flex items-start gap-3">
           <XCircle size={20} className="mt-0.5 flex-shrink-0" />
           <div className="flex-1">
@@ -152,7 +160,7 @@ export function UpdateManager(_props: UpdateManagerProps) {
 
   if (updateStatus === 'available') {
     return (
-      <div className="fixed bottom-4 right-4 max-w-sm bg-accent-primary text-white p-4 rounded-lg shadow-lg z-50">
+      <div className="fixed top-4 right-4 max-w-sm bg-accent-primary text-white p-4 rounded-lg shadow-lg z-50">
         <div className="flex items-start gap-3">
           <AlertTriangle size={20} className="mt-0.5 flex-shrink-0" />
           <div className="flex-1">
@@ -181,7 +189,7 @@ export function UpdateManager(_props: UpdateManagerProps) {
 
   if (updateStatus === 'downloading') {
     return (
-      <div className="fixed bottom-4 right-4 max-w-sm bg-accent-primary text-white p-4 rounded-lg shadow-lg z-50">
+      <div className="fixed top-4 right-4 max-w-sm bg-accent-primary text-white p-4 rounded-lg shadow-lg z-50">
         <div className="flex items-center gap-3">
           <Download size={20} className="animate-pulse" />
           <div className="flex-1">
@@ -201,7 +209,7 @@ export function UpdateManager(_props: UpdateManagerProps) {
 
   if (updateStatus === 'downloaded') {
     return (
-      <div className="fixed bottom-4 right-4 max-w-sm bg-success text-white p-4 rounded-lg shadow-lg z-50">
+      <div className="fixed top-4 right-4 max-w-sm bg-success text-white p-4 rounded-lg shadow-lg z-50">
         <div className="flex items-start gap-3">
           <CheckCircle size={20} className="mt-0.5 flex-shrink-0" />
           <div className="flex-1">

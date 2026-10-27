@@ -3,8 +3,9 @@ import logger from '../services/logger.js'
 
 const useToastStore = create((set) => ({
   toasts: [],
-  addToast: (message, type = 'info', duration = 4000) => {
+  addToast: (message, type = 'info', duration = 5000) => {
     const id = Date.now() + Math.random()
+    const safeDuration = Math.min(duration, 5000)
     set((state) => ({ toasts: [...state.toasts, { id, message, type }] }))
     try {
       const level = type === 'error' ? 'error' : type === 'warning' ? 'warn' : 'info';
@@ -14,7 +15,7 @@ const useToastStore = create((set) => ({
     }
     setTimeout(() => {
       set((state) => ({ toasts: state.toasts.filter(t => t.id !== id) }))
-    }, duration)
+    }, safeDuration)
   },
   removeToast: (id) => set((state) => ({ toasts: state.toasts.filter(t => t.id !== id) })),
 }))
