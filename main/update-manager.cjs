@@ -186,7 +186,17 @@ function installUpdate() {
 
   loggerModule.logger().info('[update] Instalando atualização...');
   isUpdateDownloaded = false;
-  autoUpdater.quitAndInstall(true, true);
+  try {
+    autoUpdater.quitAndInstall(true, true);
+  } catch (e) {
+    loggerModule.logger().error('[update] quitAndInstall falhou, fallback relaunch:', e.message);
+  }
+  // Fallback: se o app não fechar em 4s, força relaunch + exit
+  setTimeout(() => {
+    loggerModule.logger().warn('[update] Fallback: forçando relaunch + exit');
+    try { app.relaunch(); } catch (e) { loggerModule.logger().error('[update] relaunch falhou:', e.message); }
+    app.exit(0);
+  }, 4000);
 }
 
 /**
