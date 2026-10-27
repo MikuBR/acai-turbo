@@ -11,6 +11,7 @@ export default {
           DEFAULT: 'var(--accent-primary)',
           dark: 'var(--accent-secondary)',
         },
+        accent: 'var(--accent-primary)',
         surface: {
           DEFAULT: 'var(--bg-primary)',
           light: 'var(--bg-secondary)',

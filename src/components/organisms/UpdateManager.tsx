@@ -127,7 +127,7 @@ export function UpdateManager(_props: UpdateManagerProps) {
     return (
       <button
         onClick={handleCheckForUpdates}
-        className="fixed top-4 right-4 p-3 bg-accent-primary hover:bg-accent-secondary text-white rounded-full shadow-2xl transition-all z-[9999]"
+        className="fixed top-4 right-4 p-3 bg-accent hover:bg-primary-dark text-white rounded-full shadow-2xl transition-all z-[9999]"
         title="Verificar atualizações"
       >
         <RefreshCw size={20} />
@@ -160,7 +160,7 @@ export function UpdateManager(_props: UpdateManagerProps) {
 
   if (updateStatus === 'available') {
     return (
-      <div className="fixed top-4 right-4 max-w-sm bg-accent-primary text-white p-4 rounded-lg shadow-2xl z-[9999] border border-white/20">
+      <div className="fixed top-4 right-4 max-w-sm bg-accent text-white p-4 rounded-lg shadow-2xl z-[9999] border border-white/20">
         <div className="flex items-start gap-3">
           <AlertTriangle size={20} className="mt-0.5 flex-shrink-0" />
           <div className="flex-1">
@@ -178,7 +178,7 @@ export function UpdateManager(_props: UpdateManagerProps) {
         </div>
         <button
           onClick={handleDownloadUpdate}
-          className="mt-3 w-full py-2 bg-white text-accent-primary hover:bg-surface-light rounded text-sm font-medium transition-colors flex items-center justify-center gap-2"
+          className="mt-3 w-full py-2 bg-white text-accent hover:bg-surface-light rounded text-sm font-medium transition-colors flex items-center justify-center gap-2"
         >
           <Download size={16} />
           Baixar agora
@@ -189,7 +189,7 @@ export function UpdateManager(_props: UpdateManagerProps) {
 
   if (updateStatus === 'downloading') {
     return (
-      <div className="fixed top-4 right-4 max-w-sm bg-accent-primary text-white p-4 rounded-lg shadow-2xl z-[9999] border border-white/20">
+      <div className="fixed top-4 right-4 max-w-sm bg-accent text-white p-4 rounded-lg shadow-2xl z-[9999] border border-white/20">
         <div className="flex items-center gap-3">
           <Download size={20} className="animate-pulse" />
           <div className="flex-1">
