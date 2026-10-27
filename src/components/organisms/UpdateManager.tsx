@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { AlertTriangle, CheckCircle, Download, XCircle, RefreshCw } from 'lucide-react'
+import { setStoredReleaseNotes } from '../../services/versionStorage'
 
 interface UpdateInfo {
   version: string
@@ -48,6 +49,7 @@ export function UpdateManager(_props: UpdateManagerProps) {
     const unsubDownloaded = electron.ipcRenderer.on('update:downloaded', (event: any, info: any) => {
       setUpdateStatus('downloaded');
       setUpdateInfo(info);
+      if (info?.releaseNotes) setStoredReleaseNotes(typeof info.releaseNotes === 'string' ? info.releaseNotes : JSON.stringify(info.releaseNotes));
     });
 
     const unsubError = electron.ipcRenderer.on('update:error', (event: any, err: any) => {

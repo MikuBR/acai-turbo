@@ -13,6 +13,7 @@ import { initAlerts, processAlert } from './services/alerts'
 import { initSentry } from './services/sentry.js'
 import logger from './services/logger.js'
 import { preloadPriorityRoutes } from './router/preload'
+import ChangelogModal from './components/organisms/ChangelogModal'
 
 // Inicializa Sentry (error tracking em produção)
 initSentry()
@@ -65,11 +66,11 @@ createRoot(document.getElementById('root')!).render(
         <RouterProvider router={router} />
         <SentryFeedbackButton />
         <SentryFeedbackWidget />
+        <ChangelogModal />
       </ErrorBoundary>
     </SentryFeedbackProvider>
   </StrictMode>,
 )
-
 // Marca o fim do primeiro render e mede a duração
 mark('app:startup:end')
 const startupDuration = measure('app:startup:start', 'app:startup:end')
