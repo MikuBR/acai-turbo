@@ -159,4 +159,85 @@ describe('ReportsScreen', () => {
 
     expect(screen.getByTestId('pdv-page')).toBeInTheDocument();
   });
+
+  it('populates products state via catalog:get-products (catalog tab shows product)', async () => {
+    window.electron.ipcRenderer.invoke.mockImplementation((channel) => {
+      if (channel === 'catalog:get-products') return Promise.resolve({ success: true, data: [{ id: 1, name: 'Açaí 300ml', price: 12 }] });
+      if (channel === 'reports:daily') return Promise.resolve({ success: true, data: { sales: [], topProducts: [] } });
+      if (channel === 'orders:get-history') return Promise.resolve({ success: true, data: [] });
+      if (channel === 'promotions:get') return Promise.resolve({ success: true, data: [] });
+      if (channel === 'financial:get-summary') return Promise.resolve({ success: true, data: { payable: { pending: 0, paid: 0, total: 0 }, receivable: { pending: 0, paid: 0, total: 0 } } });
+      return Promise.resolve({ success: true, data: [] });
+    });
+    render(
+      <MemoryRouter initialEntries={['/reports']}>
+        <Routes>
+          <Route path="/reports" element={<ReportsScreen />} />
+          <Route path="/pdv" element={<div data-testid="pdv-page">PDV</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+    fireEvent.click(screen.getByText('catalog'));
+    expect(await screen.findByText('Açaí 300ml')).toBeInTheDocument();
+  });
+
+  it('populates promotions state via promotions:get (promotions tab shows promotion)', async () => {
+    window.electron.ipcRenderer.invoke.mockImplementation((channel) => {
+      if (channel === 'promotions:get') return Promise.resolve({ success: true, data: [{ id: 1, name: 'Promo Verão', type: 'percent', value: 10 }] });
+      if (channel === 'reports:daily') return Promise.resolve({ success: true, data: { sales: [], topProducts: [], promotions: [] } });
+      if (channel === 'orders:get-history') return Promise.resolve({ success: true, data: [] });
+      if (channel === 'catalog:get-products') return Promise.resolve({ success: true, data: [] });
+      if (channel === 'financial:get-summary') return Promise.resolve({ success: true, data: { payable: { pending: 0, paid: 0, total: 0 }, receivable: { pending: 0, paid: 0, total: 0 } } });
+      return Promise.resolve({ success: true, data: [] });
+    });
+    render(
+      <MemoryRouter initialEntries={['/reports']}>
+        <Routes>
+          <Route path="/reports" element={<ReportsScreen />} />
+          <Route path="/pdv" element={<div data-testid="pdv-page">PDV</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+    fireEvent.click(screen.getByRole('button', { name: /promotions/i }));
+    expect(await screen.findByText('Promo Verão')).toBeInTheDocument();
+  });
+
+  it('financialSummary has {payable, receivable} with non-zero values when accounts exist', async () => {
+    window.electron.ipcRenderer.invoke.mockImplementation((channel) => {
+      if (channel === 'financial:get-summary') return Promise.resolve({ success: true, data: { payable: { pending: 5, paid: 2, total: 7 }, receivable: { pending: 3, paid: 1, total: 4 } } });
+      if (channel === 'reports:daily') return Promise.resolve({ success: true, data: { sales: [], topProducts: [] } });
+      if (channel === 'orders:get-history') return Promise.resolve({ success: true, data: [] });
+      if (channel === 'catalog:get-products') return Promise.resolve({ success: true, data: [] });
+      if (channel === 'promotions:get') return Promise.resolve({ success: true, data: [] });
+      return Promise.resolve({ success: true, data: [] });
+    });
+    const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {});
+    render(
+      <MemoryRouter initialEntries={['/reports']}>
+        <Routes>
+          <Route path="/reports" element={<ReportsScreen />} />
+          <Route path="/pdv" element={<div data-testid="pdv-page">PDV</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+    fireEvent.click(screen.getByText('financial'));
+    expect(await screen.findByText(/7/)).toBeInTheDocument();
+    printSpy.mockRestore();
+  });
+
+  it('onExportPDF is not a no-op (calls window.print)', async () => {
+    const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {});
+    render(
+      <MemoryRouter initialEntries={['/reports']}>
+        <Routes>
+          <Route path="/reports" element={<ReportsScreen />} />
+          <Route path="/pdv" element={<div data-testid="pdv-page">PDV</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+    const btn = screen.getByRole('button', { name: /Exportar PDF/i });
+    fireEvent.click(btn);
+    expect(printSpy).toHaveBeenCalled();
+    printSpy.mockRestore();
+  });
 });
