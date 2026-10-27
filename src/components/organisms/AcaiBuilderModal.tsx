@@ -29,12 +29,13 @@ interface AcaiBuilderModalProps {
   acaiBases: AcaiBase[];
   availableAddons: AcaiBase[];
   blockedIngredients?: string[];
+  removableItems?: AcaiBase[];
   toggleRemoval: (ingredient: string) => void;
   updateExtraInBuilder: (addon: AcaiBase, delta: number) => void;
   confirmFullBuild: () => void;
 }
 
-export default function AcaiBuilderModal({ builder, onClose, setBuilder, acaiBases, availableAddons, blockedIngredients, toggleRemoval, updateExtraInBuilder, confirmFullBuild }: AcaiBuilderModalProps) {
+export default function AcaiBuilderModal({ builder, onClose, setBuilder, acaiBases, availableAddons, blockedIngredients, removableItems, toggleRemoval, updateExtraInBuilder, confirmFullBuild }: AcaiBuilderModalProps) {
   if (!builder) return null;
 
   return (
@@ -58,14 +59,14 @@ export default function AcaiBuilderModal({ builder, onClose, setBuilder, acaiBas
                 ))}
               </div>
             </section>
-            {builder.standard && builder.standard.length > 0 && (
+            {removableItems && removableItems.length > 0 && (
               <section className={!builder.base ? 'opacity-20 pointer-events-none' : ''}>
                 <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-3 border-l-2 border-danger pl-2">2. Retiradas</h3>
                 <div className="flex flex-wrap gap-2">
-                  {(builder.standard || []).filter(ing => !(blockedIngredients || []).includes(ing.toLowerCase())).map(ing => (
-                    <button key={ing} onClick={() => toggleRemoval(ing)}
-                      className={`px-3 py-1.5 rounded-md border text-[9px] font-bold transition-all ${builder.removals.includes(ing) ? 'bg-danger/10 border-danger text-danger' : 'bg-surface-light border-border text-muted'}`}>
-                      {builder.removals.includes(ing) ? 'SEM ' : '+ '} {ing}
+                  {removableItems.filter(item => !(blockedIngredients || []).includes(item.name.toLowerCase())).map(item => (
+                    <button key={item.id} onClick={() => toggleRemoval(item.name)}
+                      className={`px-3 py-1.5 rounded-md border text-[9px] font-bold transition-all ${builder.removals.includes(item.name) ? 'bg-danger/10 border-danger text-danger' : 'bg-surface-light border-border text-muted'}`}>
+                      {builder.removals.includes(item.name) ? 'SEM ' : '+ '} {item.name}
                     </button>
                   ))}
                 </div>

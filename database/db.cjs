@@ -104,7 +104,7 @@ seedDefaults();
 const checkCats = db.prepare('SELECT COUNT(*) as count FROM categories').get();
 if (checkCats.count === 0) {
   const insertCat = db.prepare('INSERT INTO categories (name) VALUES (?)');
-  ['COPOS DE AÇAÍ', 'ADICIONAIS DOCES', 'BEBIDAS', 'PORÇÕES'].forEach(c => insertCat.run(c));
+  ['COPOS DE AÇAÍ', 'ADICIONAIS DOCES', 'BEBIDAS', 'PORÇÕES', 'RETIRADAS'].forEach(c => insertCat.run(c));
 }
 
 const checkProducts = db.prepare('SELECT COUNT(*) as count FROM products').get();
