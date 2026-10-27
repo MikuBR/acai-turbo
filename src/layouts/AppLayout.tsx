@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, Outlet } from 'react-router'
-import { Moon, Sun } from 'lucide-react'
+import { Moon, Sun, RefreshCw } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import { useAuthStore } from '../store/authStore'
 import useToastStore from '../store/toastStore'
@@ -251,6 +251,16 @@ export default function AppLayout() {
             aria-label={theme === 'light' ? 'Ativar tema escuro' : 'Ativar tema claro'}
           >
             {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+          </button>
+          <button
+            onClick={async () => {
+              try { await (window as any).electron?.ipcRenderer?.invoke('update:check'); } catch (e) { console.error(e); }
+            }}
+            className="p-1.5 hover:bg-surface-light rounded-md text-muted hover:text-primary transition-colors"
+            title="Verificar atualizações"
+            aria-label="Verificar atualizações"
+          >
+            <RefreshCw size={18} />
           </button>
         </div>
       </div>
