@@ -2,6 +2,18 @@ import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { getLastSeenVersion, setLastSeenVersion, getStoredReleaseNotes, getCurrentVersion } from '../../services/versionStorage';
 
+function sanitizeHtml(html: string): string {
+  // Remove scripts, iframes, event handlers e tags perigosas
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+    .replace(/<object[\s\S]*?<\/object>/gi, '')
+    .replace(/<embed[^>]*>/gi, '')
+    .replace(/on\w+\s*=\s*"[^"]*"/gi, '')
+    .replace(/on\w+\s*=\s*'[^']*'/gi, '')
+    .replace(/javascript:/gi, '');
+}
+
 export default function ChangelogModal() {
   const [open, setOpen] = useState(false);
   const [notes, setNotes] = useState<string | null>(null);
@@ -38,7 +50,7 @@ export default function ChangelogModal() {
         </div>
         <div className="p-4 overflow-y-auto flex-1">
           {notes ? (
-            <pre className="whitespace-pre-wrap text-sm text-muted font-mono">{notes}</pre>
+            <div className="prose prose-sm max-w-none text-muted" dangerouslySetInnerHTML={{ __html: sanitizeHtml(notes) }} />
           ) : (
             <p className="text-sm text-muted">Atualização aplicada com sucesso. Confira as notas de release no GitHub.</p>
           )}
@@ -46,7 +58,7 @@ export default function ChangelogModal() {
         <div className="p-4 border-t border-border">
           <button
             onClick={handleClose}
-            className="w-full py-2 bg-accent-primary text-white rounded text-sm font-medium hover:bg-accent-secondary transition-colors"
+            className="w-full py-2 bg-accent text-white rounded text-sm font-medium hover:bg-primary-dark transition-colors"
           >
             Entendi
           </button>
