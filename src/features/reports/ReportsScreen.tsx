@@ -173,19 +173,71 @@ export default function ReportsScreen() {
     const now = new Date();
     const datePart = now.toISOString().split('T')[0];
     const defaultName = `relatorio-${activeTab}-${datePart}.pdf`;
+    const data = advancedReportData ?? reportData;
     try {
       const pdfMakeModule: any = await import('pdfmake/build/pdfmake');
       const pdfFontsModule: any = await import('pdfmake/build/vfs_fonts');
       const pdfMake = pdfMakeModule.default;
       pdfMake.vfs = pdfFontsModule.default;
 
+      const content: any[] = [
+        { text: 'Relatório - Açaí Wave', style: 'header' },
+        { text: `Aba: ${activeTab}`, margin: [0, 4, 0, 4] },
+        { text: `Gerado em: ${now.toLocaleString('pt-BR')}`, margin: [0, 0, 0, 12] },
+      ];
+
+      const money = (v: any) => `R$ ${Number(v ?? 0).toFixed(2)}`;
+
+      if (activeTab === 'sales') {
+        const sales = data?.sales ?? [];
+        const topProducts = data?.topProducts ?? [];
+        const totalSales = sales.reduce((s: number, x: any) => s + (x.total_amount ?? 0), 0);
+        const totalOrders = sales.reduce((s: number, x: any) => s + (x.order_count ?? 0), 0);
+        const avgTicket = totalOrders > 0 ? totalSales / totalOrders : 0;
+        content.push({ text: 'Resumo de Vendas', style: 'subheader', margin: [0, 8, 0, 4] });
+        content.push({ text: `Total Vendas: ${money(totalSales)}   Pedidos: ${totalOrders}   Ticket Médio: ${money(avgTicket)}`, margin: [0, 0, 0, 8] });
+        if (topProducts.length) {
+          content.push({ text: 'Itens Mais Vendidos', style: 'subheader', margin: [0, 8, 0, 4] });
+          content.push({ table: { headerRows: 1, widths: ['*', 'auto', 'auto'], body: [['Produto', 'Qtd', 'Receita'], ...topProducts.map((p: any) => [p.product_name, String(p.qty ?? 0), money(p.total_revenue)])], }, layout: 'lightHorizontalLines' });
+        }
+        if (sales.length) {
+          content.push({ text: 'Formas de Pagamento', style: 'subheader', margin: [0, 8, 0, 4] });
+          content.push({ table: { headerRows: 1, widths: ['*', 'auto', 'auto'], body: [['Método', 'Pedidos', 'Total'], ...sales.map((s: any) => [s.payment_method, String(s.order_count ?? 0), money(s.total_amount)])], }, layout: 'lightHorizontalLines' });
+        }
+      } else if (activeTab === 'delivery') {
+        const orders = (data?.allOrders ?? ordersHistory ?? []).filter((o: any) => o.is_delivery);
+        content.push({ text: 'Pedidos Delivery', style: 'subheader', margin: [0, 8, 0, 4] });
+        content.push({ text: `Total de pedidos: ${orders.length}`, margin: [0, 0, 0, 8] });
+        if (orders.length) {
+          content.push({ table: { headerRows: 1, widths: ['auto', '*', 'auto'], body: [['#', 'Cliente', 'Total'], ...orders.map((o: any) => [String(o.id), o.customer_name || '-', money(o.total)])], }, layout: 'lightHorizontalLines' });
+        } else {
+          content.push({ text: 'Nenhum pedido delivery no período.', italics: true });
+        }
+      } else if (activeTab === 'catalog') {
+        const prods = products ?? [];
+        content.push({ text: 'Catálogo de Produtos', style: 'subheader', margin: [0, 8, 0, 4] });
+        content.push({ text: `Total de produtos: ${prods.length}`, margin: [0, 0, 0, 8] });
+        if (prods.length) {
+          content.push({ table: { headerRows: 1, widths: ['*', 'auto'], body: [['Produto', 'Preço'], ...prods.map((p: any) => [p.name, money(p.price)])], }, layout: 'lightHorizontalLines' });
+        }
+      } else if (activeTab === 'financial') {
+        const fs = financialSummary;
+        content.push({ text: 'Resumo Financeiro', style: 'subheader', margin: [0, 8, 0, 4] });
+        content.push({ text: `A Pagar — Total: ${money(fs?.payable?.total)}  Pendente: ${money(fs?.payable?.pending)}  Pago: ${money(fs?.payable?.paid)}`, margin: [0, 2, 0, 2] });
+        content.push({ text: `A Receber — Total: ${money(fs?.receivable?.total)}  Pendente: ${money(fs?.receivable?.pending)}  Pago: ${money(fs?.receivable?.paid)}`, margin: [0, 2, 0, 8] });
+      } else if (activeTab === 'promotions') {
+        const promos = data?.promotions ?? [];
+        content.push({ text: 'Promoções', style: 'subheader', margin: [0, 8, 0, 4] });
+        content.push({ text: `Total: ${promos.length}`, margin: [0, 0, 0, 8] });
+        if (promos.length) {
+          content.push({ table: { headerRows: 1, widths: ['*', 'auto', 'auto'], body: [['Nome', 'Tipo', 'Valor'], ...promos.map((p: any) => [p.name, p.type, String(p.value)])], }, layout: 'lightHorizontalLines' });
+        }
+      }
+
       const docDef = {
-        content: [
-          { text: 'Relatório - Açaí Wave', style: 'header' },
-          { text: `Aba: ${activeTab}`, margin: [0, 4, 0, 4] },
-          { text: `Gerado em: ${now.toLocaleString('pt-BR')}`, margin: [0, 0, 0, 12] },
-        ],
-        styles: { header: { fontSize: 16, bold: true } },
+        content,
+        styles: { header: { fontSize: 16, bold: true }, subheader: { fontSize: 12, bold: true } },
+        defaultStyle: { fontSize: 10 },
       };
 
       const base64 = await pdfMake.createPdf(docDef).getBase64();
