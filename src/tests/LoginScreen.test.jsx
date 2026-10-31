@@ -81,17 +81,17 @@ describe('LoginScreen', () => {
     }
   });
 
-  it('navigates to /change-password when must_change_password is true', async () => {
+    it('navigates to /pdv when must_change_password is true (no forced change-password screen)', async () => {
     mockInvoke.mockResolvedValue({
       success: true,
-      user: { id: 1, username: 'admin', full_name: 'Admin', role: 'admin', must_change_password: 1 },
+      user: { id: 1, username: 'admin', full_name: 'Admin', role: 'admin', must_change_password: 1, must_change_manager_password: 0 },
     });
 
     render(
       <MemoryRouter initialEntries={['/login']}>
         <Routes>
           <Route path="/login" element={<LoginScreen />} />
-          <Route path="/change-password" element={<div data-testid="change-pwd-page">Change Password</div>} />
+          <Route path="/pdv" element={<div data-testid="pdv-page">PDV</div>} />
         </Routes>
       </MemoryRouter>
     );
@@ -108,7 +108,7 @@ describe('LoginScreen', () => {
       if (form) fireEvent.submit(form);
 
       await vi.waitFor(() => {
-        expect(screen.getByTestId('change-pwd-page')).toBeInTheDocument();
+        expect(screen.getByTestId('pdv-page')).toBeInTheDocument();
       });
     }
   });
