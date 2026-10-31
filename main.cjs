@@ -1309,7 +1309,7 @@ ipcMain.handle('auth:login', async (e, data) => {
     );
 
     setSession(
-      { id: user.id, username: user.username, full_name: user.full_name, role: user.role, must_change_password: user.must_change_password },
+      { id: user.id, username: user.username, full_name: user.full_name, role: user.role, must_change_password: user.must_change_password, must_change_manager_password: user.must_change_manager_password },
       accessToken
     );
 
@@ -1320,7 +1320,7 @@ ipcMain.handle('auth:login', async (e, data) => {
     // NÃO retornar o token — ele fica no cookie httpOnly
     return {
       success: true,
-      user: { id: user.id, username: user.username, full_name: user.full_name, role: user.role, must_change_password: user.must_change_password },
+      user: { id: user.id, username: user.username, full_name: user.full_name, role: user.role, must_change_password: user.must_change_password, must_change_manager_password: user.must_change_manager_password },
     };
   } catch (e) {
     console.error('[auth:login] Error:', e.message, e.stack);
@@ -1398,7 +1398,7 @@ ipcMain.handle('auth:refresh', async (e) => {
 
     // Atualizar sessão em memória
     setSession(
-      { id: user.id, username: user.username, full_name: user.full_name, role: user.role, must_change_password: user.must_change_password },
+      { id: user.id, username: user.username, full_name: user.full_name, role: user.role, must_change_password: user.must_change_password, must_change_manager_password: user.must_change_manager_password },
       newAccessToken
     );
 
@@ -1406,7 +1406,7 @@ ipcMain.handle('auth:refresh', async (e) => {
 
     return {
       success: true,
-      user: { id: user.id, username: user.username, full_name: user.full_name, role: user.role, must_change_password: user.must_change_password },
+      user: { id: user.id, username: user.username, full_name: user.full_name, role: user.role, must_change_password: user.must_change_password, must_change_manager_password: user.must_change_manager_password },
     };
   } catch (e) {
     console.error('[auth:refresh] Error:', e.message);
@@ -1433,13 +1433,13 @@ ipcMain.handle('auth:check', async (e) => {
     }
     // Atualizar sessão em memória
     setSession(
-      { id: user.id, username: user.username, full_name: user.full_name, role: user.role, must_change_password: user.must_change_password },
+      { id: user.id, username: user.username, full_name: user.full_name, role: user.role, must_change_password: user.must_change_password, must_change_manager_password: user.must_change_manager_password },
       token
     );
     return {
       success: true,
       authenticated: true,
-      user: { id: user.id, username: user.username, full_name: user.full_name, role: user.role, must_change_password: user.must_change_password },
+      user: { id: user.id, username: user.username, full_name: user.full_name, role: user.role, must_change_password: user.must_change_password, must_change_manager_password: user.must_change_manager_password },
     };
   } catch (e) {
     console.error('[auth:check] Error:', e.message);

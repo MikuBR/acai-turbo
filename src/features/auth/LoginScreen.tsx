@@ -48,6 +48,8 @@ export default function LoginScreen() {
 
           if (res.user.must_change_password) {
             navigate('/change-password');
+          } else if (res.user.must_change_manager_password) {
+            navigate('/settings');
           } else {
             navigate('/pdv');
           }

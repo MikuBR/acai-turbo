@@ -90,6 +90,7 @@ export interface AuthUser {
   full_name: string;
   role: string;
   must_change_password: number;
+  must_change_manager_password: number;
 }
 
 // --- IPC ---
