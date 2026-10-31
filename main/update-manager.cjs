@@ -154,20 +154,46 @@ async function checkForUpdates() {
   }
 
   // Classificar erro final
+  const category = classifyError(lastError);
+  const key = `${category}:${lastError?.message}`;
   if (isNetworkError(lastError)) {
     loggerModule.logger().info('[update] Sem conexão — tratado como offline (sem erro vermelho)');
     notifyRenderer('update:status-change', { status: 'latest' });
-    return { success: true, status: 'offline' };
+    return { success: true, status: 'offline', category: 'network' };
   }
-  loggerModule.logger().error('[update] Erro na verificação:', lastError?.message);
-  notifyRenderer('update:error', { message: lastError?.message });
-  notifyRenderer('update:status-change', { status: 'error' });
-  return { success: false, error: lastError?.message, status: 'error' };
+  if (shouldNotifyError(key)) {
+    loggerModule.logger().error(`[update] Erro na verificação (${category}):`, lastError?.message);
+    notifyRenderer('update:error', { message: lastError?.message, category });
+    notifyRenderer('update:status-change', { status: 'error' });
+  }
+  return { success: false, error: lastError?.message, status: 'error', category };
 }
 
 /**
  * Baixar atualização (chamado pelo renderer)
  */
+function classifyError(err) {
+  const msg = (err?.message || '').toLowerCase();
+  if (msg.includes('enotfound') || msg.includes('etimedout') || msg.includes('timeout') ||
+      msg.includes('network') || msg.includes('econnrefused') || msg.includes('offline')) return 'network';
+  if (msg.includes('404') || msg.includes('not found') || msg.includes('latest.yml')) return 'not_found';
+  if (msg.includes('sha512') || msg.includes('integrity') || msg.includes('checksum')) return 'integrity';
+  if (msg.includes('eacces') || msg.includes('permission') || msg.includes('access denied')) return 'permission';
+  return 'unknown';
+}
+
+let lastErrorKey = null;
+let lastErrorTime = 0;
+const ERROR_DEDUP_MS = 60000;
+
+function shouldNotifyError(key) {
+  const now = Date.now();
+  if (key === lastErrorKey && now - lastErrorTime < ERROR_DEDUP_MS) return false;
+  lastErrorKey = key;
+  lastErrorTime = now;
+  return true;
+}
+
 async function downloadUpdate() {
   if (!app.isPackaged) {
     return { success: false, error: 'Desabilitado em desenvolvimento' };
@@ -177,17 +203,31 @@ async function downloadUpdate() {
     return { success: true, message: 'Atualização já está pronta para instalar' };
   }
 
-  try {
-    loggerModule.logger().info('[update] Iniciando download...');
-    notifyRenderer('update:status-change', { status: 'downloading' });
-    await autoUpdater.downloadUpdate();
-    return { success: true, message: 'Download concluído' };
-  } catch (error) {
-    loggerModule.logger().error('[update] Falha no download:', error.message);
-    notifyRenderer('update:error', { message: error.message });
-    notifyRenderer('update:status-change', { status: 'error' });
-    return { success: false, error: error.message };
+  const maxAttempts = 3;
+  let lastError = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      loggerModule.logger().info('[update] Iniciando download...');
+      notifyRenderer('update:status-change', { status: 'downloading' });
+      await autoUpdater.downloadUpdate();
+      return { success: true, message: 'Download concluído' };
+    } catch (error) {
+      lastError = error;
+      loggerModule.logger().warn(`[update] Download tentativa ${attempt}/${maxAttempts} falhou:`, error.message);
+      if (attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, 1000 * attempt));
+      }
+    }
   }
+
+  const category = classifyError(lastError);
+  const key = `${category}:${lastError?.message}`;
+  if (shouldNotifyError(key)) {
+    loggerModule.logger().error(`[update] Falha no download (${category}):`, lastError.message);
+    notifyRenderer('update:error', { message: lastError.message, category });
+    notifyRenderer('update:status-change', { status: 'error' });
+  }
+  return { success: false, error: lastError.message, category };
 }
 
 /**
