@@ -180,9 +180,16 @@ export default function ReportsScreen() {
       const pdfMake = pdfMakeModule.default;
       pdfMake.vfs = pdfFontsModule.default;
 
+      const operator = currentUser?.full_name || currentUser?.username || 'Operador';
+      const periodStart = reportPeriod?.startDate || datePart;
+      const periodEnd = reportPeriod?.endDate || datePart;
+      const periodLabel = periodStart === periodEnd ? periodStart : `${periodStart} a ${periodEnd}`;
+      const tabLabels: Record<string, string> = { sales: 'Vendas', promotions: 'Promoções', delivery: 'Delivery', catalog: 'Catálogo', financial: 'Financeiro' };
       const content: any[] = [
         { text: 'Relatório - Açaí Wave', style: 'header' },
-        { text: `Aba: ${activeTab}`, margin: [0, 4, 0, 4] },
+        { text: `Aba: ${tabLabels[activeTab] || activeTab}`, margin: [0, 4, 0, 4] },
+        { text: `Operador: ${operator}`, margin: [0, 0, 0, 2] },
+        { text: `Período: ${periodLabel}`, margin: [0, 0, 0, 2] },
         { text: `Gerado em: ${now.toLocaleString('pt-BR')}`, margin: [0, 0, 0, 12] },
       ];
 
@@ -275,9 +282,12 @@ export default function ReportsScreen() {
     <div className="p-4 space-y-4">
       <div className="flex items-center gap-2 flex-wrap">
         <button onClick={() => navigate('/pdv')} className="text-[10px] font-bold uppercase px-3 py-1 rounded bg-surface-light text-muted hover:bg-danger/20">Voltar</button>
-        {(['sales','promotions','delivery','catalog','financial'] as const).map((t) => (
-          <button key={t} onClick={() => setActiveTab(t)} className={`text-[10px] font-bold uppercase px-3 py-1 rounded ${activeTab === t ? 'bg-success text-white' : 'bg-surface-light text-muted'}`}>{t}</button>
-        ))}
+        {(['sales','promotions','delivery','catalog','financial'] as const).map((t) => {
+          const labels: Record<string, string> = { sales: 'Vendas', promotions: 'Promoções', delivery: 'Delivery', catalog: 'Catálogo', financial: 'Financeiro' };
+          return (
+            <button key={t} onClick={() => setActiveTab(t)} className={`text-[10px] font-bold uppercase px-3 py-1 rounded ${activeTab === t ? 'bg-success text-white' : 'bg-surface-light text-muted'}`}>{labels[t]}</button>
+          );
+        })}
       </div>
       <div className="flex gap-3 items-end">
         <div>

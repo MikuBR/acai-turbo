@@ -58,7 +58,7 @@ describe('ReportsScreen', () => {
       </MemoryRouter>
     );
 
-    const promoTab = screen.getByRole('button', { name: /promotions/i });
+    const promoTab = screen.getByRole('button', { name: /Promoções/i });
     fireEvent.click(promoTab);
 
     expect(screen.getByText('Nome')).toBeInTheDocument();
@@ -77,7 +77,7 @@ describe('ReportsScreen', () => {
       </MemoryRouter>
     );
 
-    fireEvent.click(screen.getByText('delivery'));
+    fireEvent.click(screen.getByText('Delivery'));
     expect(screen.getByText('Pedidos Delivery')).toBeInTheDocument();
     expect(screen.getByText('Total Delivery')).toBeInTheDocument();
     expect(screen.getByText(/Nenhum pedido delivery/i)).toBeInTheDocument();
@@ -100,7 +100,7 @@ describe('ReportsScreen', () => {
       </MemoryRouter>
     );
 
-    const salesTab = screen.getByRole('button', { name: /sales/i });
+    const salesTab = screen.getByRole('button', { name: /Vendas/i });
     fireEvent.click(salesTab);
 
     expect(await screen.findByText(/Total Vendas/i)).toBeInTheDocument();
@@ -120,7 +120,7 @@ describe('ReportsScreen', () => {
       </MemoryRouter>
     );
 
-    fireEvent.click(screen.getByText('financial'));
+    fireEvent.click(screen.getByText('Financeiro'));
     expect(await screen.findByText(/A Pagar \(Total\)/i)).toBeInTheDocument();
     expect(screen.getByText(/A Pagar \(Pendente\)/i)).toBeInTheDocument();
     expect(screen.getByText(/A Receber \(Total\)/i)).toBeInTheDocument();
@@ -137,7 +137,7 @@ describe('ReportsScreen', () => {
       </MemoryRouter>
     );
 
-    fireEvent.click(screen.getByText('catalog'));
+    fireEvent.click(screen.getByText('Catálogo'));
     expect(screen.getByText(/Total de produtos:/i)).toBeInTheDocument();
     expect(screen.getByText(/Total de produtos: 0/i)).toBeInTheDocument();
     expect(screen.getByText('Nenhum produto cadastrado.')).toBeInTheDocument();
@@ -177,7 +177,7 @@ describe('ReportsScreen', () => {
         </Routes>
       </MemoryRouter>
     );
-    fireEvent.click(screen.getByText('catalog'));
+    fireEvent.click(screen.getByText('Catálogo'));
     expect(await screen.findByText('Açaí 300ml')).toBeInTheDocument();
   });
 
@@ -198,7 +198,7 @@ describe('ReportsScreen', () => {
         </Routes>
       </MemoryRouter>
     );
-    fireEvent.click(screen.getByRole('button', { name: /promotions/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Promoções/i }));
     expect(await screen.findByText('Promo Verão')).toBeInTheDocument();
   });
 
@@ -220,7 +220,7 @@ describe('ReportsScreen', () => {
         </Routes>
       </MemoryRouter>
     );
-    fireEvent.click(screen.getByText('financial'));
+    fireEvent.click(screen.getByText('Financeiro'));
     expect(await screen.findByText(/7/)).toBeInTheDocument();
     printSpy.mockRestore();
   });
