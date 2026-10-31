@@ -1013,11 +1013,11 @@ const getFinancialAccounts = (type = null, status = null, startDate = null, endD
     params.push(status);
   }
   if (startDate) {
-    query += ' AND date(due_date) >= date(?)';
+    query += ' AND (due_date IS NULL OR date(due_date) >= date(?))';
     params.push(startDate);
   }
   if (endDate) {
-    query += ' AND date(due_date) <= date(?)';
+    query += ' AND (due_date IS NULL OR date(due_date) <= date(?))';
     params.push(endDate);
   }
 
@@ -1089,11 +1089,11 @@ const getFinancialSummary = (startDate = null, endDate = null) => {
   const params = [];
 
   if (startDate) {
-    query += ' AND date(due_date) >= date(?)';
+    query += ' AND (due_date IS NULL OR date(due_date) >= date(?))';
     params.push(startDate);
   }
   if (endDate) {
-    query += ' AND date(due_date) <= date(?)';
+    query += ' AND (due_date IS NULL OR date(due_date) <= date(?))';
     params.push(endDate);
   }
 
