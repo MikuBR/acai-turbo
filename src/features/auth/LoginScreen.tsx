@@ -46,9 +46,7 @@ export default function LoginScreen() {
             authLog.info('login duration', { durationMs: duration });
           }
 
-          if (res.user.must_change_password) {
-            navigate('/change-password');
-          } else if (res.user.must_change_manager_password) {
+          if (res.user.must_change_manager_password) {
             navigate('/settings');
           } else {
             navigate('/pdv');
