@@ -206,16 +206,7 @@ export default function SettingsModal({
     }
   }
 
-  const handlePasswordChange = () => {
-    const ipc = getIPC()
-    if (!pwdForm.current || !pwdForm.next || !ipc) return
-    ipc.invoke('auth:update-password', { current: pwdForm.current, next: pwdForm.next }).then((res: any) => {
-      if (res.success) { addToast('Senha atualizada com sucesso!', 'success'); setPwdForm({ current: '', next: '' }) }
-      else { addToast('Erro: ' + res.error, 'error') }
-    })
-  }
-
-  return (
+    return (
     <div className="fixed inset-0 bg-surface z-[900] flex items-center justify-center p-6 animate-fade-in">
       <div className="bg-card w-full max-w-5xl h-[80vh] rounded-2xl border border-border flex flex-col overflow-hidden shadow-modal">
         <div className="p-4 bg-surface-light border-b border-border flex justify-between items-center px-6">
@@ -282,14 +273,6 @@ export default function SettingsModal({
               <div className="w-80 p-6 border-r border-border bg-surface overflow-y-auto custom-scrollbar">
                 <h3 className="text-[10px] font-bold text-success uppercase mb-4 tracking-widest border-b border-border pb-2">{newUser.id ? 'Editar Usuário' : 'Novo Usuário'}</h3>
                 <UserForm newUser={newUser} setNewUser={setNewUser} onSubmit={handleUserSubmit} onCancel={() => setNewUser({ id: null, username: '', password: '', full_name: '', role: 'operator', manager_password: '' })} />
-                <div className="mt-6 pt-4 border-t border-border">
-                  <h3 className="text-[10px] font-bold text-success uppercase mb-3 tracking-widest border-b border-border pb-2">Alterar Senha</h3>
-                  <div className="space-y-3">
-                    <input type="password" placeholder="Senha Atual" value={pwdForm.current} onChange={e => setPwdForm({...pwdForm, current: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
-                    <input type="password" placeholder="Nova Senha" value={pwdForm.next} onChange={e => setPwdForm({...pwdForm, next: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
-                    <button onClick={handlePasswordChange} className="w-full bg-success hover:bg-success py-3 rounded-lg font-bold text-xs uppercase tracking-widest text-white transition-all">Alterar Senha</button>
-                  </div>
-                </div>
               </div>
               <div className="flex-1 p-6 flex flex-col overflow-hidden">
                 <h3 className="text-[10px] font-bold text-muted uppercase mb-4 tracking-widest border-b border-border pb-2">Usuários Cadastrados</h3>
