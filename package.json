@@ -1,7 +1,7 @@
 {
   "name": "acai-wave",
   "private": true,
-  "version": "1.4.24",
+  "version": "1.4.25",
   "license": "PROPRIETARY",
   "type": "module",
   "main": "main.cjs",
