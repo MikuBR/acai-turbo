@@ -46,12 +46,7 @@ export default function LoginScreen() {
             authLog.info('login duration', { durationMs: duration });
           }
 
-          if (res.user.must_change_manager_password) {
-            navigate('/settings');
-          } else {
-            navigate('/pdv');
-          }
-
+          navigate('/pdv');
           setLoginForm({ username: '', password: '' });
         } else {
           mark('login:end');

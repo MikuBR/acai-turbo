@@ -101,6 +101,15 @@ const seedDefaults = db.transaction(() => {
   }
 });
 seedDefaults();
+// Backfill: usuários sem senha de gerente recebem a padrão '1234'
+try {
+  const usersWithoutMgr = db.prepare('SELECT id FROM users WHERE manager_password IS NULL').all();
+  if (usersWithoutMgr.length > 0) {
+    const hash = bcrypt.hashSync('1234', 10);
+    db.prepare('UPDATE users SET manager_password = ?, must_change_manager_password = 0 WHERE manager_password IS NULL').run(hash);
+    console.log('[db] Backfill manager_password (1234) para', usersWithoutMgr.length, 'usuário(s)');
+  }
+} catch (e) { console.error('[db] backfill manager_password:', e.message); }
 
 const checkCats = db.prepare('SELECT COUNT(*) as count FROM categories').get();
 if (checkCats.count === 0) {
