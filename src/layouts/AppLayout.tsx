@@ -20,6 +20,7 @@ import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { getPendingCount, syncPendingOrders } from '../services/offlineQueue'
 import { useTheme } from '../hooks/useTheme'
 import { usePerformanceMark } from '../hooks/usePerformanceMark'
+import { getCurrentVersion } from '../services/versionStorage';
 import { usePreloadRoute } from '../hooks/usePreloadRoute.js'
 import type { IfoodConfig, Table } from '../types'
 
@@ -280,6 +281,10 @@ export default function AppLayout() {
       <ToastContainer />
       <LoadingOverlay />
       <UpdateManager />
+
+      <div className="fixed bottom-2 left-2 z-[9999] text-[9px] font-mono text-muted bg-surface/80 px-2 py-1 rounded border border-border/50 pointer-events-none">
+        v{getCurrentVersion()}
+      </div>
 
       {showPassModal.show && (
         <ManagerAuthModal
