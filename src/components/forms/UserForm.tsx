@@ -23,6 +23,10 @@ export default function UserForm({ newUser, setNewUser, onSubmit, onCancel }: Us
         <input type="password" value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" required />
       </div>
       <div>
+        <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Senha de Gerente</label>
+        <input type="password" value={newUser.manager_password} onChange={e => setNewUser({...newUser, manager_password: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" required />
+      </div>
+      <div>
         <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Função</label>
         <select value={newUser.role} onChange={e => setNewUser({...newUser, role: e.target.value as UserFormState['role']})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" required>
           <option value="admin">Administrador</option>

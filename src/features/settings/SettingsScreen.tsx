@@ -46,7 +46,7 @@ export default function SettingsScreen() {
   const [newPromo, setNewPromo] = useState<PromotionFormState>({ id: null, name: '', type: 'PERCENTAGE', value: '', applies_to: 'ALL', target_category: '', target_product_id: null, min_quantity: '1', start_date: '', end_date: '', is_active: true });
 
   const [users, setUsers] = useState<User[]>([]);
-  const [newUser, setNewUser] = useState<UserFormState>({ id: null, username: '', password: '', full_name: '', role: 'operator' });
+  const [newUser, setNewUser] = useState<UserFormState>({ id: null, username: '', password: '', full_name: '', role: 'operator', manager_password: '' });
 
   const [financialAccounts, setFinancialAccounts] = useState<FinancialAccount[]>([]);
   const [financialForm, setFinancialForm] = useState<FinancialFormState>({ id: null, type: 'payable', description: '', amount: '', due_date: '', status: 'pending', category: '' });

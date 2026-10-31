@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Pencil, Trash2, X, Check, Save } from 'lucide-react'
+import { Pencil, Trash2, X, Check, Save, Key } from 'lucide-react'
 import useToastStore from '../../store/toastStore'
 import SettingsTabs from '../molecules/SettingsTabs'
 import ProductForm from '../forms/ProductForm'
@@ -170,8 +170,8 @@ export default function SettingsModal({
   const handleUserSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const ipc = getIPC()
-    if (ipc && newUser.username && newUser.password && newUser.full_name) {
-      const payload = { username: newUser.username, password: newUser.password, full_name: newUser.full_name, role: newUser.role }
+    if (ipc && newUser.username && newUser.password && newUser.full_name && newUser.manager_password) {
+      const payload = { username: newUser.username, password: newUser.password, full_name: newUser.full_name, role: newUser.role, manager_password: newUser.manager_password }
       if (newUser.id) {
         ipc.invoke('users:update', { id: newUser.id, user: payload }).then(() => loadUsers())
       } else {
@@ -281,7 +281,7 @@ export default function SettingsModal({
             <>
               <div className="w-80 p-6 border-r border-border bg-surface overflow-y-auto custom-scrollbar">
                 <h3 className="text-[10px] font-bold text-success uppercase mb-4 tracking-widest border-b border-border pb-2">{newUser.id ? 'Editar Usuário' : 'Novo Usuário'}</h3>
-                <UserForm newUser={newUser} setNewUser={setNewUser} onSubmit={handleUserSubmit} onCancel={() => setNewUser({ id: null, username: '', password: '', full_name: '', role: 'operator' })} />
+                <UserForm newUser={newUser} setNewUser={setNewUser} onSubmit={handleUserSubmit} onCancel={() => setNewUser({ id: null, username: '', password: '', full_name: '', role: 'operator', manager_password: '' })} />
                 <div className="mt-6 pt-4 border-t border-border">
                   <h3 className="text-[10px] font-bold text-success uppercase mb-3 tracking-widest border-b border-border pb-2">Alterar Senha</h3>
                   <div className="space-y-3">
@@ -303,7 +303,10 @@ export default function SettingsModal({
                         <div className="text-[8px] text-muted">Criado em: {new Date(u.created_at).toLocaleDateString()}</div>
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => setNewUser({ id: u.id, username: u.username, password: '', full_name: u.full_name, role: u.role })} className="p-2 bg-info/10 hover:bg-info/20 text-info rounded-lg transition-colors"><Pencil size={16} /></button>
+                        <button onClick={() => setNewUser({ id: u.id, username: u.username, password: '', full_name: u.full_name, role: u.role, manager_password: '' })} className="p-2 bg-info/10 hover:bg-info/20 text-info rounded-lg transition-colors"><Pencil size={16} /></button>
+                        {currentUser?.role === 'admin' && (
+                          <button onClick={() => { const ipc = getIPC(); if(ipc && window.confirm(`Resetar senha de gerente de ${u.full_name}?`)) { ipc.invoke('auth:reset-manager-password', { userId: u.id }).then((res: any) => { if(res?.success) addToast('Senha de gerente resetada! Nova senha temporária exibida.', 'success', 10000); else addToast('Erro: ' + (res?.error || 'desconhecido'), 'error'); }).catch((e: any) => addToast('Erro: ' + e.message, 'error')); } }} className="p-2 bg-warning/10 hover:bg-warning/20 text-warning rounded-lg transition-colors" title="Resetar senha de gerente"><Key size={16} /></button>
+                        )}
                         <button onClick={() => { const ipc = getIPC(); if(window.confirm(`${u.is_active ? 'Desativar' : 'Ativar'} usuário ${u.full_name}?`) && ipc) { ipc.invoke('users:toggle-active', u.id).then(() => loadUsers()); } }} className={`p-2 rounded-lg transition-colors ${u.is_active ? 'bg-warning/10 hover:bg-warning/20 text-warning' : 'bg-success/10 hover:bg-success/20 text-success'}`}>{u.is_active ? <X size={16} /> : <Check size={16} />}</button>
                         <button onClick={() => { const ipc = getIPC(); if(window.confirm(`Excluir usuário ${u.full_name}?`) && ipc) { ipc.invoke('users:delete', u.id).then(() => loadUsers()); } }} className="p-2 bg-danger/10 hover:bg-danger/20 text-danger rounded-lg transition-colors"><Trash2 size={16} /></button>
                       </div>
@@ -319,7 +322,6 @@ export default function SettingsModal({
                     <div className="bg-warning/10 border border-warning/30 p-4 rounded-lg space-y-3">
                       <div className="font-bold text-xs uppercase text-warning mb-1">Recuperação de Senhas</div>
                       <div className="text-[10px] text-muted">Administradores podem resetar senhas para evitar bloqueio do sistema.</div>
-                      <button onClick={() => { const ipc = getIPC(); if(ipc && window.confirm('Resetar a senha do gerente? Uma nova senha temporária será gerada.')) { ipc.invoke('auth:reset-manager-password').then((res: any) => { if(res.success) addToast('Senha do gerente resetada! A nova senha temporária foi exibida em uma janela. Guarde-a em local seguro.', 'success', 10000); else addToast('Erro: ' + res.error, 'error'); }).catch((e: any) => addToast('Erro de comunicação: ' + e.message, 'error')); } }} className="w-full bg-warning hover:bg-warning py-2 rounded-lg font-bold text-[10px] uppercase tracking-widest text-white transition-all">Resetar Senha do Gerente</button>
                       <button onClick={() => { if(!users || users.length === 0) { addToast('Nenhum usuário encontrado', 'warning'); return; } setShowResetAdminModal(true); }} className="w-full bg-info hover:bg-info py-2 rounded-lg font-bold text-[10px] uppercase tracking-widest text-white transition-all">Resetar Senha de Admin</button>
                     </div>
                   )}

@@ -181,6 +181,7 @@ export interface UserFormState {
   password: string;
   full_name: string;
   role: UserRole;
+  manager_password: string;
 }
 
 export interface FinancialFormState {

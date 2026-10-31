@@ -1187,7 +1187,7 @@ createHandler('ifood:dispatch', async ({ orderId }) => {
 // ============================================================
 ipcMain.handle('auth:verify-password', async (e, password) => {
   try {
-    const { checkVerifyPasswordRateLimit, resetVerifyPasswordRateLimit, recordVerifyPasswordAttempt } = require('./database/db.cjs');
+    const { checkVerifyPasswordRateLimit, resetVerifyPasswordRateLimit, recordVerifyPasswordAttempt, getUserManagerPassword } = require('./database/db.cjs');
     const valid = validateIPC('auth:verify-password', password);
     if (!valid.success) {
       return { success: false, valid: false, error: valid.error };
@@ -1196,8 +1196,12 @@ ipcMain.handle('auth:verify-password', async (e, password) => {
     if (!password || typeof password !== 'string') {
       return { success: false, valid: false, error: 'Senha inválida' };
     }
-    const stored = getConfig('manager_password');
-    const isValid = stored && bcrypt.compareSync(password, stored.value);
+    const userId = currentSession?.user?.id;
+    if (!userId) {
+      return { success: false, valid: false, error: 'Usuário não autenticado' };
+    }
+    const storedHash = getUserManagerPassword(userId);
+    const isValid = storedHash && bcrypt.compareSync(password, storedHash);
     if (isValid) {
       resetVerifyPasswordRateLimit();
       return { success: true, valid: true };
@@ -1211,14 +1215,19 @@ ipcMain.handle('auth:verify-password', async (e, password) => {
 
 ipcMain.handle('auth:update-password', async (e, { current, next }) => {
   try {
-    const stored = getConfig('manager_password');
-    const isValid = bcrypt.compareSync(current, stored.value);
+    const { updateUserManagerPassword } = require('./database/db.cjs');
+    const userId = currentSession?.user?.id;
+    if (!userId) {
+      return { success: false, error: 'Usuário não autenticado' };
+    }
+    const storedHash = require('./database/db.cjs').getUserManagerPassword(userId);
+    const isValid = storedHash && bcrypt.compareSync(current, storedHash);
     if (!isValid) {
       return { success: false, error: 'Senha atual incorreta' };
     }
     const newPasswordHash = bcrypt.hashSync(next, 10);
-    updateConfig('manager_password', newPasswordHash);
-    createAuditLog(currentSession?.user?.id, 'MANAGER_PASSWORD_CHANGE', null, null, 'Manager password changed');
+    updateUserManagerPassword(userId, newPasswordHash);
+    createAuditLog(currentSession?.user?.id, 'MANAGER_PASSWORD_CHANGE', 'users', String(userId), 'Manager password changed');
     return { success: true };
   } catch (e) {
     console.error('[auth:update-password] Error:', e.message);
@@ -1481,15 +1490,19 @@ createHandler('auth:reset-admin-password', async ({ adminId, newPassword }) => {
   return { success: true };
 });
 
-createHandler('auth:reset-manager-password', async () => {
+createHandler('auth:reset-manager-password', async ({ userId }) => {
   requireRole('admin');
   const admin = currentSession ? currentSession.user : null;
   checkResetRateLimit(admin?.id);
 
+  if (!userId) {
+    throw new Error('userId é obrigatório');
+  }
+  const { updateUserManagerPassword } = require('./database/db.cjs');
   const tempPassword = crypto.randomBytes(4).toString('hex');
   const hash = bcrypt.hashSync(tempPassword, 10);
-  updateConfig('manager_password', hash);
-  createAuditLog(admin?.id, 'MANAGER_PASSWORD_RESET', 'config', 'manager_password', 'Manager password reset by admin');
+  updateUserManagerPassword(userId, hash);
+  createAuditLog(admin?.id, 'MANAGER_PASSWORD_RESET', 'users', String(userId), 'Manager password reset by admin');
 
   recordResetAttempt(admin?.id);
 

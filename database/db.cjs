@@ -831,7 +831,7 @@ const getUserById = (id) => {
   if (!id || isNaN(id)) {
     throw new Error('Invalid user ID');
   }
-  return db.prepare('SELECT id, username, full_name, role, created_at, is_active FROM users WHERE id = ?').get(id);
+  return db.prepare('SELECT id, username, full_name, role, created_at, is_active, manager_password, must_change_manager_password FROM users WHERE id = ?').get(id);
 };
 const setUserFailedAttempts = (userId, attempts) => {
   if (!userId || isNaN(userId)) throw new Error('Invalid user ID');
@@ -852,27 +852,54 @@ const getUserByUsername = (username) => {
   return db.prepare('SELECT * FROM users WHERE username = ?').get(username);
 };
 const addUser = (user) => {
-  if (!user || !user.username || !user.password || !user.full_name || !user.role) {
+  if (!user || !user.username || !user.password || !user.full_name || !user.role || !user.manager_password) {
     throw new Error('Invalid user data');
   }
   const passwordHash = bcrypt.hashSync(user.password, 10);
-  const stmt = db.prepare('INSERT INTO users (username, password_hash, full_name, role) VALUES (?, ?, ?, ?)');
-  return stmt.run(user.username, passwordHash, user.full_name, user.role).lastInsertRowid;
+  const managerHash = bcrypt.hashSync(user.manager_password, 10);
+  const stmt = db.prepare('INSERT INTO users (username, password_hash, full_name, role, manager_password) VALUES (?, ?, ?, ?, ?)');
+  return stmt.run(user.username, passwordHash, user.full_name, user.role, managerHash).lastInsertRowid;
 };
 const updateUser = (id, user) => {
   if (!id || isNaN(id) || !user || !user.username || !user.full_name || !user.role) {
     throw new Error('Invalid user data');
   }
   let stmt;
-  if (user.password) {
+  if (user.password && user.manager_password) {
+    const passwordHash = bcrypt.hashSync(user.password, 10);
+    const managerHash = bcrypt.hashSync(user.manager_password, 10);
+    stmt = db.prepare('UPDATE users SET username = ?, password_hash = ?, full_name = ?, role = ?, manager_password = ? WHERE id = ?');
+    return stmt.run(user.username, passwordHash, user.full_name, user.role, managerHash, id).changes > 0;
+  } else if (user.password) {
     const passwordHash = bcrypt.hashSync(user.password, 10);
     stmt = db.prepare('UPDATE users SET username = ?, password_hash = ?, full_name = ?, role = ? WHERE id = ?');
     return stmt.run(user.username, passwordHash, user.full_name, user.role, id).changes > 0;
+  } else if (user.manager_password) {
+    const managerHash = bcrypt.hashSync(user.manager_password, 10);
+    stmt = db.prepare('UPDATE users SET username = ?, full_name = ?, role = ?, manager_password = ? WHERE id = ?');
+    return stmt.run(user.username, user.full_name, user.role, managerHash, id).changes > 0;
   } else {
     stmt = db.prepare('UPDATE users SET username = ?, full_name = ?, role = ? WHERE id = ?');
     return stmt.run(user.username, user.full_name, user.role, id).changes > 0;
   }
 };
+const getUserManagerPassword = (userId) => {
+  if (!userId || isNaN(userId)) throw new Error('Invalid user ID');
+  const row = db.prepare('SELECT manager_password FROM users WHERE id = ?').get(userId);
+  return row ? row.manager_password : null;
+};
+
+const updateUserManagerPassword = (userId, hash) => {
+  if (!userId || isNaN(userId)) throw new Error('Invalid user ID');
+  if (!hash || typeof hash !== 'string') throw new Error('Invalid password hash');
+  return db.prepare('UPDATE users SET manager_password = ?, must_change_manager_password = 0 WHERE id = ?').run(hash, userId).changes > 0;
+};
+
+const clearUserManagerPassword = (userId) => {
+  if (!userId || isNaN(userId)) throw new Error('Invalid user ID');
+  return db.prepare('UPDATE users SET manager_password = NULL, must_change_manager_password = 1 WHERE id = ?').run(userId).changes > 0;
+};
+
 const deleteUser = (id) => {
   if (!id || isNaN(id)) {
     throw new Error('Invalid user ID');
@@ -1221,7 +1248,7 @@ module.exports = {
   getCurrentCashSession, openCashSession, closeCashSession, getCashSessions,
   getDailyReport, getDailyReportForDate, getReportByPeriod,
   getPromotions, addPromotion, updatePromotion, deletePromotion, getActivePromotions,
-  getUsers, getUserById, getUserByUsername, addUser, updateUser, deleteUser, toggleUserActive,
+  getUsers, getUserById, getUserByUsername, addUser, updateUser, deleteUser, toggleUserActive, getUserManagerPassword, updateUserManagerPassword, clearUserManagerPassword,
   setUserFailedAttempts, setUserLockedUntil, clearUserLoginLockout,
   createSession, getSession, deleteSession, cleanupExpiredSessions,
   createAuditLog, getAuditLogs,
