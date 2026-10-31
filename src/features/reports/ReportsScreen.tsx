@@ -292,11 +292,11 @@ export default function ReportsScreen() {
       <div className="flex gap-3 items-end">
         <div>
           <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Data Início</label>
-          <input type="date" value={reportPeriod.startDate} onChange={(e) => setReportPeriod({ ...reportPeriod, startDate: e.target.value })} className="bg-surface border border-border rounded px-2 py-1 text-xs" />
+          <input type="date" value={reportPeriod.startDate} onChange={(e) => setReportPeriod({ ...reportPeriod, startDate: e.target.value })} className="bg-surface border border-border rounded px-2 py-1 text-xs text-text-primary" />
         </div>
         <div>
           <label className="text-[9px] text-muted font-bold uppercase ml-1 mb-1 block">Data Fim</label>
-          <input type="date" value={reportPeriod.endDate} onChange={(e) => setReportPeriod({ ...reportPeriod, endDate: e.target.value })} className="bg-surface border border-border rounded px-2 py-1 text-xs" />
+          <input type="date" value={reportPeriod.endDate} onChange={(e) => setReportPeriod({ ...reportPeriod, endDate: e.target.value })} className="bg-surface border border-border rounded px-2 py-1 text-xs text-text-primary" />
         </div>
         <button onClick={loadAdvancedReport} className="bg-success hover:bg-success py-1 px-3 rounded font-bold text-xs uppercase text-white">Gerar</button>
       </div>
