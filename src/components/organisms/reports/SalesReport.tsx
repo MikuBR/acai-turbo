@@ -36,6 +36,21 @@ export default function SalesReport({ reportData, advancedReportData, onExportPD
       </div>
       <div>
         <h4 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-2">Itens Mais Vendidos</h4>
+        {topProducts.length > 0 && (
+          <svg viewBox="0 0 300 120" className="w-full h-32 mb-2">
+            {topProducts.slice(0, 5).map((p, i) => {
+              const max = Math.max(...topProducts.slice(0, 5).map(x => x.total_revenue ?? 0), 1);
+              const w = ((p.total_revenue ?? 0) / max) * 260;
+              const y = i * 22;
+              return (
+                <g key={i}>
+                  <rect x={0} y={y} width={w} height={14} fill="var(--accent-primary, #3b82f6)" rx={3} />
+                  <text x={w + 4} y={y + 11} fontSize={9} fill="currentColor">{p.product_name} ({(p.total_revenue ?? 0).toFixed(0)})</text>
+                </g>
+              );
+            })}
+          </svg>
+        )}
         <table className="w-full text-xs">
           <thead><tr className="text-left text-muted"><th>Produto</th><th>Qtd</th><th>Receita</th></tr></thead>
           <tbody>
@@ -51,6 +66,21 @@ export default function SalesReport({ reportData, advancedReportData, onExportPD
       </div>
       <div>
         <h4 className="text-[10px] font-bold text-muted uppercase tracking-widest mb-2">Formas de Pagamento</h4>
+        {sales.length > 0 && (
+          <svg viewBox="0 0 300 120" className="w-full h-32 mb-2">
+            {sales.map((s, i) => {
+              const max = Math.max(...sales.map(x => x.total_amount ?? 0), 1);
+              const w = ((s.total_amount ?? 0) / max) * 260;
+              const y = i * 22;
+              return (
+                <g key={i}>
+                  <rect x={0} y={y} width={w} height={14} fill="#10b981" rx={3} />
+                  <text x={w + 4} y={y + 11} fontSize={9} fill="currentColor">{s.payment_method} ({(s.total_amount ?? 0).toFixed(0)})</text>
+                </g>
+              );
+            })}
+          </svg>
+        )}
         <table className="w-full text-xs">
           <thead><tr className="text-left text-muted"><th>Método</th><th>Pedidos</th><th>Total</th></tr></thead>
           <tbody>
