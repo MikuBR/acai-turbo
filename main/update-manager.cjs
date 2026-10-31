@@ -122,24 +122,47 @@ function verifyDatabaseIntegrity(db) {
 /**
  * Iniciar verificação de atualizações
  */
-function checkForUpdates() {
+function isNetworkError(err) {
+  const msg = (err?.message || '').toLowerCase();
+  return msg.includes('enotfound') || msg.includes('etimedout') || msg.includes('timeout') ||
+    msg.includes('network') || msg.includes('econnrefused') || msg.includes('offline');
+}
+
+async function checkForUpdates() {
   if (!app.isPackaged) {
     loggerModule.logger().info('[update] Desabilitado em desenvolvimento');
-    return;
+    return { success: true, status: 'dev' };
   }
 
   loggerModule.logger().info('[update] Verificando atualizações...');
   notifyRenderer('update:status-change', { status: 'checking' });
 
-  autoUpdater.checkForUpdates()
-    .then((result) => {
+  const maxAttempts = 3;
+  let lastError = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const result = await autoUpdater.checkForUpdates();
       loggerModule.logger().info('[update] Verificação concluída:', result?.updateInfo?.version || 'N/A');
-    })
-    .catch((error) => {
-      loggerModule.logger().error('[update] Erro na verificação:', error.message);
-      notifyRenderer('update:error', { message: error.message });
-      notifyRenderer('update:status-change', { status: 'error' });
-    });
+      return { success: true, status: 'checked', version: result?.updateInfo?.version };
+    } catch (error) {
+      lastError = error;
+      loggerModule.logger().warn(`[update] Tentativa ${attempt}/${maxAttempts} falhou:`, error.message);
+      if (attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, 1000 * attempt));
+      }
+    }
+  }
+
+  // Classificar erro final
+  if (isNetworkError(lastError)) {
+    loggerModule.logger().info('[update] Sem conexão — tratado como offline (sem erro vermelho)');
+    notifyRenderer('update:status-change', { status: 'latest' });
+    return { success: true, status: 'offline' };
+  }
+  loggerModule.logger().error('[update] Erro na verificação:', lastError?.message);
+  notifyRenderer('update:error', { message: lastError?.message });
+  notifyRenderer('update:status-change', { status: 'error' });
+  return { success: false, error: lastError?.message, status: 'error' };
 }
 
 /**
@@ -251,8 +274,7 @@ function setupUpdateListeners() {
 function setupIPCHandlers() {
   // Verificar atualizações (renderer pode solicitar)
   ipcMain.handle('update:check', async () => {
-    checkForUpdates();
-    return { success: true };
+    return await checkForUpdates();
   });
 
   // Iniciar download
