@@ -1,11 +1,10 @@
-import { Package, Tag, Shield, Users, DollarSign, UserCheck, Printer, Wifi } from 'lucide-react';
+import { Package, Tag, Users, DollarSign, UserCheck, Printer, Wifi } from 'lucide-react';
 import SettingsTab from './SettingsTab';
 
 const tabs = [
   { id: 'products', label: 'Produtos', icon: Package },
   { id: 'promotions', label: 'Promoções', icon: Tag },
-  { id: 'security', label: 'Segurança', icon: Shield },
-  { id: 'users', label: 'Usuários', icon: Users },
+  { id: 'users', label: 'Usuários e Segurança', icon: Users },
   { id: 'financial', label: 'Financeiro', icon: DollarSign },
   { id: 'clients', label: 'Clientes', icon: UserCheck },
   { id: 'printers', label: 'Impressoras', icon: Printer },

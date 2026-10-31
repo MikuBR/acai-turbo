@@ -277,50 +277,19 @@ export default function SettingsModal({
               </div>
             </>
           )}
-          {settingsTab === 'security' && (
-            <>
-              <div className="w-80 p-6 border-r border-border bg-surface overflow-y-auto custom-scrollbar">
-                <h3 className="text-[10px] font-bold text-success uppercase mb-4 tracking-widest border-b border-border pb-2">Alterar Senha</h3>
-                <div className="space-y-3">
-                  <input type="password" placeholder="Senha Atual" value={pwdForm.current} onChange={e => setPwdForm({...pwdForm, current: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
-                  <input type="password" placeholder="Nova Senha" value={pwdForm.next} onChange={e => setPwdForm({...pwdForm, next: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
-                  <button onClick={handlePasswordChange} className="w-full bg-success hover:bg-success py-3 rounded-lg font-bold text-xs uppercase tracking-widest text-white transition-all">Alterar Senha</button>
-                </div>
-              </div>
-               <div className="flex-1 p-6 flex flex-col overflow-hidden">
-                <h3 className="text-[10px] font-bold text-muted uppercase mb-4 tracking-widest border-b border-border pb-2">Informações de Segurança</h3>
-                <div className="flex-1 overflow-y-auto space-y-4 custom-scrollbar pr-2">
-                  <div className="bg-surface-light border border-border p-4 rounded-lg">
-                    <div className="font-bold text-xs uppercase text-primary mb-2">Senha de Gerente</div>
-                    <div className="text-[10px] text-muted">A senha de gerente é necessária para:</div>
-                    <ul className="text-[9px] text-muted mt-2 space-y-1 list-disc list-inside">
-                      <li>Editar produtos</li>
-                      <li>Excluir produtos</li>
-                      <li>Editar promoções</li>
-                      <li>Cancelar pedidos (estorno)</li>
-                    </ul>
-                  </div>
-                  {currentUser?.role === 'admin' && (
-                    <div className="bg-warning/10 border border-warning/30 p-4 rounded-lg space-y-3">
-                      <div className="font-bold text-xs uppercase text-warning mb-1">Recuperação de Senhas</div>
-                      <div className="text-[10px] text-muted">Administradores podem resetar senhas para evitar bloqueio do sistema.</div>
-                      <button onClick={() => { const ipc = getIPC(); if(ipc && window.confirm('Resetar a senha do gerente? Uma nova senha temporária será gerada.')) { ipc.invoke('auth:reset-manager-password').then((res: any) => { if(res.success) addToast('Senha do gerente resetada! A nova senha temporária foi exibida em uma janela. Guarde-a em local seguro.', 'success', 10000); else addToast('Erro: ' + res.error, 'error'); }).catch((e: any) => addToast('Erro de comunicação: ' + e.message, 'error')); } }} className="w-full bg-warning hover:bg-warning py-2 rounded-lg font-bold text-[10px] uppercase tracking-widest text-white transition-all">Resetar Senha do Gerente</button>
-                      <button onClick={() => { if(!users || users.length === 0) { addToast('Nenhum usuário encontrado', 'warning'); return; } setShowResetAdminModal(true); }} className="w-full bg-info hover:bg-info py-2 rounded-lg font-bold text-[10px] uppercase tracking-widest text-white transition-all">Resetar Senha de Admin</button>
-                    </div>
-                  )}
-                  <div className="bg-success/10 border border-success/30 p-4 rounded-lg">
-                    <div className="font-bold text-xs uppercase text-success mb-2">Redundância de Segurança</div>
-                    <div className="text-[10px] text-muted">Administradores podem recuperar a senha do gerente. Gerentes podem solicitar a administradores que recuperem suas senhas. O último administrador nunca pode ser deletado ou desativado.</div>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
           {settingsTab === 'users' && (
             <>
               <div className="w-80 p-6 border-r border-border bg-surface overflow-y-auto custom-scrollbar">
                 <h3 className="text-[10px] font-bold text-success uppercase mb-4 tracking-widest border-b border-border pb-2">{newUser.id ? 'Editar Usuário' : 'Novo Usuário'}</h3>
                 <UserForm newUser={newUser} setNewUser={setNewUser} onSubmit={handleUserSubmit} onCancel={() => setNewUser({ id: null, username: '', password: '', full_name: '', role: 'operator' })} />
+                <div className="mt-6 pt-4 border-t border-border">
+                  <h3 className="text-[10px] font-bold text-success uppercase mb-3 tracking-widest border-b border-border pb-2">Alterar Senha</h3>
+                  <div className="space-y-3">
+                    <input type="password" placeholder="Senha Atual" value={pwdForm.current} onChange={e => setPwdForm({...pwdForm, current: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
+                    <input type="password" placeholder="Nova Senha" value={pwdForm.next} onChange={e => setPwdForm({...pwdForm, next: e.target.value})} className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium shadow-sm" />
+                    <button onClick={handlePasswordChange} className="w-full bg-success hover:bg-success py-3 rounded-lg font-bold text-xs uppercase tracking-widest text-white transition-all">Alterar Senha</button>
+                  </div>
+                </div>
               </div>
               <div className="flex-1 p-6 flex flex-col overflow-hidden">
                 <h3 className="text-[10px] font-bold text-muted uppercase mb-4 tracking-widest border-b border-border pb-2">Usuários Cadastrados</h3>
@@ -340,6 +309,24 @@ export default function SettingsModal({
                       </div>
                     </div>
                   ))}
+                </div>
+                <div className="mt-4 space-y-3">
+                  <div className="bg-surface-light border border-border p-4 rounded-lg">
+                    <div className="font-bold text-xs uppercase text-primary mb-2">Senha de Gerente</div>
+                    <div className="text-[10px] text-muted">A senha de gerente é necessária para: editar/excluir produtos, editar promoções, cancelar pedidos (estorno).</div>
+                  </div>
+                  {currentUser?.role === 'admin' && (
+                    <div className="bg-warning/10 border border-warning/30 p-4 rounded-lg space-y-3">
+                      <div className="font-bold text-xs uppercase text-warning mb-1">Recuperação de Senhas</div>
+                      <div className="text-[10px] text-muted">Administradores podem resetar senhas para evitar bloqueio do sistema.</div>
+                      <button onClick={() => { const ipc = getIPC(); if(ipc && window.confirm('Resetar a senha do gerente? Uma nova senha temporária será gerada.')) { ipc.invoke('auth:reset-manager-password').then((res: any) => { if(res.success) addToast('Senha do gerente resetada! A nova senha temporária foi exibida em uma janela. Guarde-a em local seguro.', 'success', 10000); else addToast('Erro: ' + res.error, 'error'); }).catch((e: any) => addToast('Erro de comunicação: ' + e.message, 'error')); } }} className="w-full bg-warning hover:bg-warning py-2 rounded-lg font-bold text-[10px] uppercase tracking-widest text-white transition-all">Resetar Senha do Gerente</button>
+                      <button onClick={() => { if(!users || users.length === 0) { addToast('Nenhum usuário encontrado', 'warning'); return; } setShowResetAdminModal(true); }} className="w-full bg-info hover:bg-info py-2 rounded-lg font-bold text-[10px] uppercase tracking-widest text-white transition-all">Resetar Senha de Admin</button>
+                    </div>
+                  )}
+                  <div className="bg-success/10 border border-success/30 p-4 rounded-lg">
+                    <div className="font-bold text-xs uppercase text-success mb-2">Redundância de Segurança</div>
+                    <div className="text-[10px] text-muted">Administradores podem recuperar a senha do gerente. Gerentes podem solicitar a administradores que recuperem suas senhas. O último administrador nunca pode ser deletado ou desativado.</div>
+                  </div>
                 </div>
               </div>
             </>
