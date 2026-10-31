@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import { useStore } from '../../store/useStore'
 import NewTableModal from '../../components/organisms/NewTableModal.tsx'
 import { usePerformanceMark } from '../../hooks/usePerformanceMark'
+import { getIPC } from '../../services/ipc.js'
 
 interface DelivForm {
   name: string
@@ -37,6 +38,25 @@ export default function NewTableScreen() {
         address: delivForm.address,
         fee: parseFloat(delivForm.fee || '0')
       });
+      // Persistir cliente novo (fire-and-forget)
+      const ipc = getIPC();
+      if (ipc && delivForm.name.trim()) {
+        (async () => {
+          try {
+            const res = await ipc.invoke('clients:get-by-phone', delivForm.phone);
+            if (res?.data) return;
+            await ipc.invoke('clients:add', {
+              name: delivForm.name.trim(),
+              phone: delivForm.phone || null,
+              address: delivForm.address || null,
+              email: null,
+              notes: null,
+            });
+          } catch {
+            // não bloquear abertura da comanda
+          }
+        })();
+      }
     }
     setNewTableName('');
     setDelivForm({ name: '', phone: '', address: '', fee: '' });

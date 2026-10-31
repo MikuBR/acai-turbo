@@ -1,7 +1,8 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import useFocusTrap from '../../hooks/useFocusTrap';
 import { getIPC } from '../../services/ipc.js';
+import ClientPickerModal from './ClientPickerModal.tsx';
 
 interface DelivForm {
   name: string;
@@ -24,6 +25,8 @@ interface NewTableModalProps {
 
 export default function NewTableModal({ isOpen, onClose, tableType, setTableType, newTableName, setNewTableName, delivForm, setDelivForm, handleAddTable }: NewTableModalProps) {
   const containerRef = useFocusTrap(isOpen) as React.RefObject<HTMLDivElement | null>;
+
+  const [showClientPicker, setShowClientPicker] = useState(false);
 
   const nameRef = useRef<HTMLInputElement>(null);
   const phoneRef = useRef<HTMLInputElement>(null);
@@ -101,7 +104,15 @@ export default function NewTableModal({ isOpen, onClose, tableType, setTableType
             className="w-full bg-card border border-border p-3 rounded-lg text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium shadow-sm mb-4 text-lg font-bold" autoFocus
           />
         ) : (
-          <div className="space-y-3 mb-6">
+          <>
+            <button
+              type="button"
+              onClick={() => setShowClientPicker(true)}
+              className="w-full mb-3 py-2 rounded-lg font-bold text-[10px] uppercase transition-all bg-surface-light border border-border text-primary hover:bg-primary hover:text-white"
+            >
+              Selecionar cliente cadastrado
+            </button>
+            <div className="space-y-3 mb-6">
             <input
               ref={nameRef}
               type="text" placeholder="Nome do Cliente* — Ex: João Silva" value={delivForm.name}
@@ -134,12 +145,21 @@ export default function NewTableModal({ isOpen, onClose, tableType, setTableType
               />
             </div>
           </div>
-        )}
+          </>
+          )}
 
         <button onClick={handleAddTable} className="w-full bg-success hover:bg-success py-3 rounded-lg font-bold text-xs uppercase tracking-widest text-white transition-all active:scale-95">
           Abrir Comanda
         </button>
       </div>
+      <ClientPickerModal
+        isOpen={showClientPicker}
+        onClose={() => setShowClientPicker(false)}
+        onSelect={(c) => {
+          setDelivForm((prev) => ({ ...prev, name: c.name, phone: c.phone || prev.phone, address: c.address || prev.address }));
+          setShowClientPicker(false);
+        }}
+      />
     </div>
   );
 }
