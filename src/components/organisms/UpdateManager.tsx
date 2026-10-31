@@ -137,7 +137,7 @@ export function UpdateManager(_props: UpdateManagerProps) {
 
   if (updateStatus === 'error') {
     return (
-      <div className="fixed top-4 right-4 max-w-sm bg-danger text-white p-4 rounded-lg shadow-2xl z-[9999] border border-white/20">
+      <div className="fixed top-4 right-4 max-w-sm bg-red-600 text-white p-4 rounded-lg shadow-2xl z-[9999] border border-white/20">
         <div className="flex items-start gap-3">
           <XCircle size={20} className="mt-0.5 flex-shrink-0" />
           <div className="flex-1">
@@ -150,7 +150,7 @@ export function UpdateManager(_props: UpdateManagerProps) {
         </div>
         <button
           onClick={handleCheckForUpdates}
-          className="mt-3 w-full py-2 bg-white/20 hover:bg-white/30 rounded text-sm font-medium transition-colors"
+          className="mt-3 w-full py-2 bg-white/90 hover:bg-white text-red-600 rounded text-sm font-medium transition-colors"
         >
           Tentar novamente
         </button>
@@ -209,7 +209,7 @@ export function UpdateManager(_props: UpdateManagerProps) {
 
   if (updateStatus === 'downloaded') {
     return (
-      <div className="fixed top-4 right-4 max-w-sm bg-success text-white p-4 rounded-lg shadow-2xl z-[9999] border border-white/20">
+      <div className="fixed top-4 right-4 max-w-sm bg-green-600 text-white p-4 rounded-lg shadow-2xl z-[9999] border border-white/20">
         <div className="flex items-start gap-3">
           <CheckCircle size={20} className="mt-0.5 flex-shrink-0" />
           <div className="flex-1">
@@ -231,7 +231,7 @@ export function UpdateManager(_props: UpdateManagerProps) {
           </button>
           <button
             onClick={() => setUpdateStatus('idle')}
-            className="px-3 py-2 bg-white/20 hover:bg-white/30 rounded text-sm font-medium transition-colors"
+            className="px-3 py-2 bg-white/90 hover:bg-white/100 text-green-600 rounded text-sm font-medium transition-colors"
           >
             Depois
           </button>
