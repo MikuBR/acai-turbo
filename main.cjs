@@ -364,7 +364,7 @@ function getPrinterConfig() {
   const frontName = getConfig('printer_front_name');
   const frontIp = getConfig('printer_front_ip');
   return {
-    kitchenIp: kitchenIp ? kitchenIp.value : '192.168.1.100',
+    kitchenIp: kitchenIp ? kitchenIp.value : '',
     frontName: frontName ? frontName.value : 'TANCA',
     frontIp: frontIp ? frontIp.value : '',
   };
@@ -395,14 +395,16 @@ function stripEscPos(text) {
 
 async function printTickets(orderData, items) {
   const result = { kitchen: { success: false, reason: 'Nenhum item para cozinha', preview: '' }, front: { success: false, reason: 'Nenhum item para balcão', preview: '' } };
-  const kitchenItems = items.filter(i => !i.category.toUpperCase().includes('BEBIDA') && !i.category.toUpperCase().includes('REFRIGERANTE') && !i.category.toUpperCase().includes('CHOPP'));
-  const frontItems = items.filter(i => i.category.toUpperCase().includes('BEBIDA') || i.category.toUpperCase().includes('REFRIGERANTE') || i.category.toUpperCase().includes('CHOPP'));
+  const { kitchenItems, frontItems } = require('./main/print-helpers.cjs').classifyItems(items);
   const dateStr = receiptDate(orderData.createdAt);
   const table = orderData.tableName || '';
   const operator = orderData.operatorName || (currentSession && currentSession.user ? currentSession.user.full_name : '');
   const { kitchenIp, frontName, frontIp } = getPrinterConfig();
 
   if (kitchenItems.length > 0) {
+    if (!kitchenIp) {
+      result.kitchen = { success: false, reason: 'Impressora da cozinha não configurada', preview: '' };
+    } else {
     try {
       const printerKitchen = new ThermalPrinter({ type: PrinterTypes.EPSON, interface: `tcp://${kitchenIp}`, timeout: 5000, characterSet: CharacterSet.PC852_LATIN2 });
       if (await printerKitchen.isPrinterConnected()) {
@@ -415,7 +417,7 @@ async function printTickets(orderData, items) {
 
         if (orderData.isDelivery) {
           printerKitchen.println('** DELIVERY **');
-          printerKitchen.println(`Cliente: ${orderData.tableName.toUpperCase()}`);
+          printerKitchen.println(`Cliente: ${(orderData.tableName || '').toUpperCase()}`);
           if (orderData.phone) printerKitchen.println(`Tel: ${orderData.phone}`);
           if (orderData.address) printerKitchen.println(`End: ${orderData.address}`);
         } else {
@@ -453,6 +455,7 @@ async function printTickets(orderData, items) {
       console.error('[print] Cozinha erro:', e.message);
       result.kitchen = { success: false, reason: e.message };
     }
+    }
   }
 
   if (frontItems.length > 0) {
@@ -469,7 +472,7 @@ async function printTickets(orderData, items) {
 
         if (orderData.isDelivery) {
           printerFront.println('** DELIVERY **');
-          printerFront.println(`Cliente: ${orderData.tableName.toUpperCase()}`);
+          printerFront.println(`Cliente: ${(orderData.tableName || '').toUpperCase()}`);
           if (orderData.phone) printerFront.println(`Tel: ${orderData.phone}`);
           if (orderData.address) printerFront.println(`End: ${orderData.address}`);
         } else {
