@@ -49,4 +49,3 @@ module.exports = {
   up,
   validate,
 };
-EOF
