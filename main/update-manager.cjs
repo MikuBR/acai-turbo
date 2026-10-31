@@ -313,9 +313,18 @@ function setupUpdateListeners() {
   });
 
   autoUpdater.on('error', (error) => {
-    loggerModule.logger().error('[update] Erro:', error.message);
-    notifyRenderer('update:error', { message: error.message });
-    notifyRenderer('update:status-change', { status: 'error' });
+    const category = classifyError(error);
+    const key = `${category}:${error.message}`;
+    loggerModule.logger().error(`[update] Erro (${category}):`, error.message);
+    if (category === 'network' || category === 'not_found') {
+      // Erro recuperável/transitório → status neutro, sem toast vermelho
+      notifyRenderer('update:status-change', { status: 'latest' });
+      return;
+    }
+    if (shouldNotifyError(key)) {
+      notifyRenderer('update:error', { message: error.message, category });
+      notifyRenderer('update:status-change', { status: 'error' });
+    }
   });
 }
 
