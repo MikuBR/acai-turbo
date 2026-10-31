@@ -95,8 +95,9 @@ const seedDefaults = db.transaction(() => {
   const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get();
   if (userCount.count === 0) {
     const passwordHash = bcrypt.hashSync('admin123', 10);
-    db.prepare('INSERT INTO users (username, password_hash, full_name, role, must_change_password) VALUES (?, ?, ?, ?, ?)').run('admin', passwordHash, 'Administrador', 'admin', 0);
-    console.log('[db] Admin user created. Default password: admin123');
+    const managerHash = bcrypt.hashSync('1234', 10);
+    db.prepare('INSERT INTO users (username, password_hash, full_name, role, must_change_password, manager_password, must_change_manager_password) VALUES (?, ?, ?, ?, ?, ?, ?)').run('admin', passwordHash, 'Administrador', 'admin', 0, managerHash, 0);
+    console.log('[db] Admin user created. Default password: admin123 / manager: 1234');
   }
 });
 seedDefaults();
