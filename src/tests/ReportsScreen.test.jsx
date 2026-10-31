@@ -225,8 +225,9 @@ describe('ReportsScreen', () => {
     printSpy.mockRestore();
   });
 
-  it('onExportPDF is not a no-op (calls window.print)', async () => {
-    const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {});
+  it('onExportPDF calls dialog:save-pdf IPC (no longer a window.print no-op)', async () => {
+    const invokeSpy = vi.fn().mockResolvedValue({ success: true, path: '/tmp/relatorio.pdf' });
+    window.electron.ipcRenderer.invoke = invokeSpy;
     render(
       <MemoryRouter initialEntries={['/reports']}>
         <Routes>
@@ -237,7 +238,7 @@ describe('ReportsScreen', () => {
     );
     const btn = screen.getByRole('button', { name: /Exportar PDF/i });
     fireEvent.click(btn);
-    expect(printSpy).toHaveBeenCalled();
-    printSpy.mockRestore();
+    await new Promise((r) => setTimeout(r, 1000));
+    expect(invokeSpy).toHaveBeenCalledWith('dialog:save-pdf', expect.objectContaining({ data: expect.any(String), defaultName: expect.any(String) }));
   });
 });

@@ -168,6 +168,46 @@ export default function ReportsScreen() {
     callback();
   };
 
+  const handleExportPDF = async () => {
+    const addToastLocal = (msg: string, type: string) => addToast(msg, type as any);
+    const now = new Date();
+    const datePart = now.toISOString().split('T')[0];
+    const defaultName = `relatorio-${activeTab}-${datePart}.pdf`;
+    try {
+      const pdfMakeModule: any = await import('pdfmake/build/pdfmake');
+      const pdfFontsModule: any = await import('pdfmake/build/vfs_fonts');
+      const pdfMake = pdfMakeModule.default;
+      pdfMake.vfs = pdfFontsModule.default;
+
+      const docDef = {
+        content: [
+          { text: 'Relatório - Açaí Wave', style: 'header' },
+          { text: `Aba: ${activeTab}`, margin: [0, 4, 0, 4] },
+          { text: `Gerado em: ${now.toLocaleString('pt-BR')}`, margin: [0, 0, 0, 12] },
+        ],
+        styles: { header: { fontSize: 16, bold: true } },
+      };
+
+      const base64 = await pdfMake.createPdf(docDef).getBase64();
+      if (!base64) {
+        addToastLocal('Erro ao gerar PDF: documento vazio', 'error');
+        return;
+      }
+      const ipc = getIPC();
+      if (!ipc) {
+        addToastLocal('IPC indisponível', 'error');
+        return;
+      }
+      const res = await ipc.invoke('dialog:save-pdf', { data: base64, defaultName });
+      if (res?.success) addToastLocal(`PDF salvo em: ${res.path}`, 'success');
+      else if (res?.error) addToastLocal(`Erro ao salvar PDF: ${res.error}`, 'error');
+      else if (res?.canceled) addToastLocal('Salvamento de PDF cancelado', 'info');
+      else addToastLocal('Erro desconhecido ao salvar PDF', 'error');
+    } catch (e: any) {
+      console.error('[pdf] Erro ao gerar/salvar PDF:', e);
+      addToastLocal('Erro ao exportar PDF', 'error');
+    }
+  };
   useEffect(() => {
     mark('reports:mount:start');
     loadReports();
@@ -199,11 +239,11 @@ export default function ReportsScreen() {
         <button onClick={loadAdvancedReport} className="bg-success hover:bg-success py-1 px-3 rounded font-bold text-xs uppercase text-white">Gerar</button>
       </div>
       <div className="bg-surface rounded-lg p-4 border border-border">
-        {activeTab === 'sales' && <SalesReport reportData={reportData} advancedReportData={advancedReportData} onExportPDF={() => window.print()} />}
-        {activeTab === 'promotions' && <PromotionsReport promotions={reportData?.promotions ?? advancedReportData?.promotions ?? null} onExportPDF={() => window.print()} />}
-        {activeTab === 'delivery' && <DeliveryReport orders={advancedReportData?.allOrders ?? ordersHistory} onExportPDF={() => window.print()} />}
-        {activeTab === 'catalog' && <CatalogReport products={products} onExportPDF={() => window.print()} />}
-        {activeTab === 'financial' && <FinancialReport financialSummary={financialSummary} onExportPDF={() => window.print()} />}
+        {activeTab === 'sales' && <SalesReport reportData={reportData} advancedReportData={advancedReportData} onExportPDF={handleExportPDF} />}
+        {activeTab === 'promotions' && <PromotionsReport promotions={reportData?.promotions ?? advancedReportData?.promotions ?? null} onExportPDF={handleExportPDF} />}
+        {activeTab === 'delivery' && <DeliveryReport orders={advancedReportData?.allOrders ?? ordersHistory} onExportPDF={handleExportPDF} />}
+        {activeTab === 'catalog' && <CatalogReport products={products} onExportPDF={handleExportPDF} />}
+        {activeTab === 'financial' && <FinancialReport financialSummary={financialSummary} onExportPDF={handleExportPDF} />}
       </div>
     </div>
   );

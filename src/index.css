@@ -123,6 +123,18 @@ input[type=number]::-webkit-outer-spin-button {
   margin: 0;
 }
 
+/* Restaura o seletor de calendário nativo em inputs type="date" que o
+   preflight do Tailwind v4 remove (appearance: none), tornando a
+   seleção de data intuitiva (calendário ao clicar). */
+input[type="date"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="time"] {
+  -webkit-appearance: auto;
+  appearance: auto;
+  cursor: pointer;
+}
+
 /* ============================================================
    Animações do Sentry Feedback Widget
    ============================================================ */
