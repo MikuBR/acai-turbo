@@ -161,6 +161,12 @@ async function checkForUpdates() {
     notifyRenderer('update:status-change', { status: 'latest' });
     return { success: true, status: 'offline', category: 'network' };
   }
+  if (category === 'not_found') {
+    // Asset ainda não disponível (build em andamento) → status neutro, sem toast vermelho
+    loggerModule.logger().info('[update] Atualização em preparação (asset indisponível) — sem erro vermelho');
+    notifyRenderer('update:status-change', { status: 'latest' });
+    return { success: true, status: 'preparing', category: 'not_found' };
+  }
   if (shouldNotifyError(key)) {
     loggerModule.logger().error(`[update] Erro na verificação (${category}):`, lastError?.message);
     notifyRenderer('update:error', { message: lastError?.message, category });
@@ -222,6 +228,11 @@ async function downloadUpdate() {
 
   const category = classifyError(lastError);
   const key = `${category}:${lastError?.message}`;
+  if (category === 'not_found') {
+    loggerModule.logger().info('[update] Download: asset em preparação (sem toast vermelho)');
+    notifyRenderer('update:status-change', { status: 'latest' });
+    return { success: false, error: lastError.message, category, status: 'preparing' };
+  }
   if (shouldNotifyError(key)) {
     loggerModule.logger().error(`[update] Falha no download (${category}):`, lastError.message);
     notifyRenderer('update:error', { message: lastError.message, category });
