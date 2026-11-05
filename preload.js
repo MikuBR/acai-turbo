@@ -11,6 +11,7 @@ const ALLOWED_CHANNELS = {
 
   'orders:save': true,
   'orders:get-history': true,
+  'orders:get-by-ifood': true,
   'orders:delete': true,
 
   'cash:register': true,
@@ -121,6 +122,7 @@ const api = {
   orders: {
     save: (...args) => safeInvoke('orders:save', ...args),
     getHistory: (...args) => safeInvoke('orders:get-history', ...args),
+    getByIfood: (...args) => safeInvoke('orders:get-by-ifood', ...args),
     delete: (...args) => safeInvoke('orders:delete', ...args),
   },
   cash: {

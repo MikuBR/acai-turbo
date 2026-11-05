@@ -204,7 +204,7 @@ function saveFullOrder(orderData, items) {
     throw new Error('Invalid order data');
   }
 
-  const INSERT_ORDER_SQL = 'INSERT INTO orders (customer_name, total, original_total, discount, promotion_id, promotion_name, payment_method, is_delivery, address, phone, is_exchange, exchange_for, total_paid, payment_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+  const INSERT_ORDER_SQL = 'INSERT INTO orders (customer_name, total, original_total, discount, promotion_id, promotion_name, payment_method, is_delivery, address, phone, is_exchange, exchange_for, total_paid, payment_status, ifood_order_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
   const INSERT_PAYMENT_SQL = 'INSERT INTO order_payments (order_id, payment_method, amount) VALUES (?, ?, ?)';
   const INSERT_ITEM_SQL = 'INSERT INTO order_items (order_id, product_name, price, notes, category) VALUES (?, ?, ?, ?, ?)';
 
@@ -254,7 +254,8 @@ function saveFullOrder(orderData, items) {
       isExchange,
       exchangeFor,
       totalPaid,
-      paymentStatus
+      paymentStatus,
+      order.ifoodOrderId || null
     );
     const orderId = info.lastInsertRowid;
 
@@ -315,6 +316,20 @@ function removeIfoodPendingOrder(orderId) {
 function countIfoodPendingOrders() {
   const row = db.prepare('SELECT COUNT(*) as count FROM ifood_pending_orders WHERE status = ?').get('pending');
   return row?.count || 0;
+}
+
+// --- iFOOD: BUSCA E STATUS DE COMANDA VINCULADA ---
+function getOrderByIfoodOrderId(ifoodOrderId) {
+  if (!ifoodOrderId) return null;
+  const row = db.prepare('SELECT * FROM orders WHERE ifood_order_id = ?').get(ifoodOrderId);
+  return row || null;
+}
+
+function updateOrderStatus(orderId, status) {
+  if (!orderId || isNaN(Number(orderId)) || !status || typeof status !== 'string') {
+    throw new Error('Invalid params');
+  }
+  return db.prepare('UPDATE orders SET status = ? WHERE id = ?').run(status, Number(orderId)).changes > 0;
 }
 
 // --- NOVO: HISTÓRICO E CANCELAMENTO ---
@@ -432,7 +447,7 @@ function getDailyReport() {
     WHERE datetime(created_at, 'localtime') >= datetime(?, 'localtime')
       AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
       AND is_exchange = 0
-    GROUP BY payment_method
+    GROUP BY payment_method, is_delivery
   `).all(today, endOfDay);
 
   const exchanges = db.prepare(`
@@ -521,7 +536,7 @@ function getReportByPeriod(startDate, endDate) {
     WHERE datetime(created_at, 'localtime') >= datetime(?, 'localtime')
     AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
     AND is_exchange = 0
-    GROUP BY payment_method
+    GROUP BY payment_method, is_delivery
   `).all(startDate, endDateTime);
 
   const exchanges = db.prepare(`
@@ -612,7 +627,7 @@ function getDailyReportForDate(dateStr) {
     WHERE datetime(created_at, 'localtime') >= datetime(?, 'localtime')
       AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
       AND is_exchange = 0
-    GROUP BY payment_method
+    GROUP BY payment_method, is_delivery
   `).all(dateStr, endOfDay);
 
   const exchanges = db.prepare(`
@@ -1266,6 +1281,7 @@ module.exports = {
   getClients, addClient, updateClient, deleteClient, getClientById, getClientByPhone, getClientOrders, addClientOrder,
   addIfoodPendingOrder, getIfoodPendingOrders, getIfoodPendingOrderByOrderId,
   updateIfoodPendingOrderStatus, removeIfoodPendingOrder, countIfoodPendingOrders,
+  getOrderByIfoodOrderId, updateOrderStatus,
   getStoreInfo,
   getTopCategories,
   getProductSalesReport,
