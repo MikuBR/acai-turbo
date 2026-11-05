@@ -6,9 +6,9 @@ const os = require('os');
 
 function getDefaultLogDir() {
   if (process.platform === 'win32') {
-    return path.join(process.env.APPDATA || '', 'AcaiWave', 'logs');
+    return path.join(process.env.APPDATA || '', 'LanchonetePimentinha', 'logs');
   }
-  return path.join(process.env.HOME || os.homedir(), '.config', 'AcaiWave', 'logs');
+  return path.join(process.env.HOME || os.homedir(), '.config', 'LanchonetePimentinha', 'logs');
 }
 
 function printUsage() {

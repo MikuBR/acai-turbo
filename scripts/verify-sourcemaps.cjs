@@ -210,7 +210,7 @@ function checkSentryUpload() {
 
   const authToken = process.env.SENTRY_AUTH_TOKEN;
   const org = process.env.SENTRY_ORG || 'lanchonete-pimentinha';
-  const project = process.env.SENTRY_PROJECT || 'acai-wave-pdv';
+  const project = process.env.SENTRY_PROJECT || 'lanchonete-pimentinha-pdv';
   const version = process.env.VITE_APP_VERSION || 'unknown';
 
   if (!authToken) {
