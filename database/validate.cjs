@@ -42,7 +42,7 @@ const validators = {
     if (!data.items || !Array.isArray(data.items) || data.items.length === 0) return { success: false, error: 'Itens do pedido inválidos' };
 
     const od = data.orderData;
-    const paymentMethods = ['DINHEIRO', 'PIX', 'DÉBITO', 'CRÉDITO', 'PERMUTA'];
+    const paymentMethods = ['DINHEIRO', 'PIX', 'DÉBITO', 'CRÉDITO', 'PERMUTA', 'IFOOD'];
 
     if (od.payments !== undefined) {
       // --- FORMATO NOVO (pagamentos mistos) ---
@@ -92,6 +92,17 @@ const validators = {
         od.amountReceived = Number(od.amountReceived) || 0;
       }
 
+      // ifoodOrderId é opcional (string, usado para vincular pedido iFood)
+      if (od.ifoodOrderId !== undefined && od.ifoodOrderId !== null && od.ifoodOrderId !== '') {
+        if (typeof od.ifoodOrderId !== 'string') {
+          return { success: false, error: 'ifoodOrderId deve ser string' };
+        }
+        od.ifoodOrderId = od.ifoodOrderId.trim();
+        if (od.ifoodOrderId.length > 100) {
+          return { success: false, error: "ifoodOrderId muito longo (máx 100 chars)" };
+        }
+      }
+
       return { success: true, data };
     } else {
       // --- FORMATO LEGADO (paymentMethod string, ex: iFood) ---
@@ -114,6 +125,11 @@ const validators = {
     if (params.startDate && typeof params.startDate !== 'string') return { success: false, error: 'Data inicial inválida' };
     if (params.endDate && typeof params.endDate !== 'string') return { success: false, error: 'Data final inválida' };
     return { success: true, data: params };
+  },
+
+  'orders:get-by-ifood': (ifoodOrderId) => {
+    if (!ifoodOrderId || typeof ifoodOrderId !== 'string') return { success: false, error: 'ifoodOrderId obrigatório' };
+    return { success: true, data: ifoodOrderId.trim() };
   },
 
   'orders:delete': (id) => {
