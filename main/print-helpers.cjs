@@ -50,7 +50,7 @@ function buildKitchenText(orderData, items) {
     lines.push('** DELIVERY **');
     lines.push(`Cliente: ${safeUpper(od.tableName)}`);
     if (od.phone) lines.push(`Tel: ${od.phone}`);
-    if (od.address) lines.push(`End: ${od.address}`);
+    if (od.address) lines.push(`End: ${safeUpper(od.address)}`);
   } else {
     lines.push(od.tableName || '');
   }

@@ -42,4 +42,31 @@ describe('print-helpers', () => {
     expect(txt).toContain('Cliente: JOÃO');
     expect(txt).toContain('Tel: 999');
   });
+
+  it('buildKitchenText imprime comanda delivery completa (cliente, tel, end, itens, data)', () => {
+    const orderData = {
+      isDelivery: true,
+      tableName: 'João',
+      phone: '11999999999',
+      address: 'Rua X, 123',
+      operatorName: 'Maria',
+      createdAt: '2026-11-05T14:30:00',
+    };
+    const items = [{ quantity: 2, name: 'Açaí 500ml', size: '500ml', notes: 'sem granola' }];
+    const txt = ph.buildKitchenText(orderData, items);
+    expect(txt).toContain('** DELIVERY **');
+    expect(txt).toContain('JOÃO');
+    expect(txt).toContain('11999999999');
+    expect(txt).toContain('RUA X, 123');
+    expect(txt).toContain('AÇAÍ 500ML');
+    expect(txt).toContain('sem granola');
+    expect(txt).toContain('Operador: Maria');
+    // data formatada dd/mm/aaaa (aa = ano)
+    expect(txt).toMatch(/\b05\/11\/2026\b/);
+  });
+
+  it('receiptDate formata como dd/mm/aaaa hh:mm:ss', () => {
+    expect(ph.receiptDate('2026-11-05T14:30:00')).toMatch(/^\d{2}\/\d{2}\/\d{4} - \d{2}:\d{2}:\d{2}$/);
+    expect(ph.receiptDate('2026-11-05T14:30:00')).toContain('05/11/2026');
+  });
 });
