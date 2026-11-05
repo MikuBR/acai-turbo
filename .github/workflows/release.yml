@@ -129,7 +129,7 @@ jobs:
       # avoid the postinstall rebuild before we install MSBuild (it would fail).
       # The rebuild is run explicitly below after MSBuild is available.
       - name: Install dependencies (pre-scripts)
-        run: npm ci --legacy-peer-deps --ignore-scripts
+        run: npm install --legacy-peer-deps --ignore-scripts
         shell: pwsh
 
       - name: Rebuild native modules for Electron
