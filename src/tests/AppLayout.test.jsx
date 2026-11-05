@@ -50,7 +50,7 @@ describe('AppLayout', () => {
     );
 
     // Sidebar
-    expect(screen.getByText('AÇAÍ WAVE')).toBeInTheDocument();
+    expect(screen.getByText('LANCHONETE PIMENTINHA')).toBeInTheDocument();
 
     // Outlet child
     expect(screen.getByTestId('child-content')).toBeInTheDocument();

@@ -40,7 +40,7 @@ export const OrderSidebar = memo(function OrderSidebar({
         <div className="flex items-center gap-2">
           <div className="w-1.5 h-5 bg-gradient-to-b from-primary to-highlight rounded-full" />
           <span className="font-bold text-sm tracking-widest text-primary uppercase">
-            AÇAÍ WAVE
+            LANCHONETE PIMENTINHA
           </span>
           <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md border transition-all ${ifoodConnected ? 'bg-highlight/10 border-highlight/30' : 'bg-surface-light border-border'}`} title={ifoodConnected ? 'iFood conectado' : 'iFood desconectado'}>
             <Wifi size={10} className={ifoodConnected ? 'text-success' : 'text-danger'} />

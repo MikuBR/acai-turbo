@@ -50,7 +50,7 @@ export default function ChangelogModal() {
         </div>
         <div className="p-4 overflow-y-auto flex-1">
           {notes ? (
-            <div className="prose prose-sm max-w-none text-muted" dangerouslySetInnerHTML={{ __html: sanitizeHtml(notes) }} />
+            <div className="prose prose-sm max-w-none text-secondary" dangerouslySetInnerHTML={{ __html: sanitizeHtml(notes) }} />
           ) : (
             <p className="text-sm text-muted">Atualização aplicada com sucesso. Confira as notas de release no GitHub.</p>
           )}
