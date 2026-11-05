@@ -432,7 +432,7 @@ function getDailyReport() {
     WHERE datetime(created_at, 'localtime') >= datetime(?, 'localtime')
       AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
       AND is_exchange = 0
-    GROUP BY payment_method, is_delivery
+    GROUP BY payment_method
   `).all(today, endOfDay);
 
   const exchanges = db.prepare(`
@@ -521,7 +521,7 @@ function getReportByPeriod(startDate, endDate) {
     WHERE datetime(created_at, 'localtime') >= datetime(?, 'localtime')
     AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
     AND is_exchange = 0
-    GROUP BY payment_method, is_delivery
+    GROUP BY payment_method
   `).all(startDate, endDateTime);
 
   const exchanges = db.prepare(`
@@ -612,7 +612,7 @@ function getDailyReportForDate(dateStr) {
     WHERE datetime(created_at, 'localtime') >= datetime(?, 'localtime')
       AND datetime(created_at, 'localtime') <= datetime(?, 'localtime')
       AND is_exchange = 0
-    GROUP BY payment_method, is_delivery
+    GROUP BY payment_method
   `).all(dateStr, endOfDay);
 
   const exchanges = db.prepare(`

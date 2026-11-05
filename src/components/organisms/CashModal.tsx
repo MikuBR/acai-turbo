@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Check, Wallet } from 'lucide-react';
+import { formatBRDateTime } from '../../utils/date';
 
 interface CashModalProps {
   isOpen: boolean;
@@ -162,7 +163,7 @@ export default function CashModal({ isOpen, onClose, getIPC }: CashModalProps) {
           <div className="space-y-4">
             <div className="bg-success/10 border border-success/40 rounded-xl p-4">
               <div className="text-[10px] text-success font-bold uppercase tracking-widest">Caixa Aberto</div>
-              <div className="text-[10px] text-muted mt-1">Aberto em {new Date(current.opened_at).toLocaleString()}</div>
+              <div className="text-[10px] text-muted mt-1">Aberto em {formatBRDateTime(new Date(current.opened_at))}</div>
               <div className="text-xl font-black text-primary font-mono mt-1">R$ {Number(current.opening_amount).toFixed(2)}</div>
             </div>
 
@@ -306,7 +307,7 @@ export default function CashModal({ isOpen, onClose, getIPC }: CashModalProps) {
               <div key={s.id} className="flex items-center justify-between bg-surface-light border border-border rounded-lg p-3">
                 <div>
                   <div className="text-[10px] font-bold text-primary">{s.status === 'OPEN' ? 'Aberto' : 'Fechado'}</div>
-                  <div className="text-[10px] text-muted">{new Date(s.opened_at).toLocaleString()}</div>
+                  <div className="text-[10px] text-muted">{formatBRDateTime(new Date(s.opened_at))}</div>
                 </div>
                 <div className="text-right">
                   <div className="text-[10px] text-muted">Abertura</div>

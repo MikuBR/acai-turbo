@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { X, Trash2, ArrowUpCircle, ArrowDownCircle, DollarSign, FileDown, PackageIcon, TrendingUp, Clock } from 'lucide-react'
 import useToastStore from '../../store/toastStore'
 import { getProducts } from '../../services/productCache.js'
+import { formatBR, formatBRDateTime } from '../../utils/date'
 
 interface Sale {
   payment_method: string
@@ -145,7 +146,7 @@ function generatePDF(data: ReportData, isPeriodView: boolean, financialSummary: 
   const totalOrders = (data?.sales || []).reduce((a, c) => a + Number(c?.order_count ?? 0), 0);
 
   const now = new Date();
-  const dateStr = now.toLocaleDateString('pt-BR');
+  const dateStr = formatBR(now);
   const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   const periodLabel = isPeriodView
     ? `Período: ${reportPeriod.startDate} a ${reportPeriod.endDate}`
@@ -375,7 +376,7 @@ function generatePDF(data: ReportData, isPeriodView: boolean, financialSummary: 
   (data?.cashSessions || []).length > 0 && (() => {
     content.push({ text: '5. SESSÕES DE CAIXA', style: 'sectionTitle', margin: [0, 20, 0, 5] });
     const sessionRows = (data.cashSessions || []).map(cs => [
-      { text: cs.opened_at ? new Date(cs.opened_at + 'Z').toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-', fontSize: 8 },
+      { text: cs.opened_at ? formatBRDateTime(new Date(cs.opened_at + 'Z')) : '-', fontSize: 8 },
       { text: `R$ ${Number(cs?.opening_amount ?? 0).toFixed(2)}`, alignment: 'right', fontSize: 8 },
       cs.closed_at
         ? { text: `R$ ${Number(cs?.closing_amount ?? 0).toFixed(2)}`, alignment: 'right', fontSize: 8, color: (cs?.difference != null && Math.abs(cs.difference) > 0.01) ? '#dc2626' : '#16a34a' }
@@ -548,7 +549,7 @@ function generatePDF(data: ReportData, isPeriodView: boolean, financialSummary: 
         { text: String(o.order_id), fontSize: 8 },
         { text: o.customer_name || '-', fontSize: 8 },
         { text: o.payment_method || '-', fontSize: 8 },
-        { text: o.created_at ? new Date(o.created_at + 'Z').toLocaleDateString('pt-BR') : '-', fontSize: 8 },
+        { text: o.created_at ? formatBR(new Date(o.created_at + 'Z')) : '-', fontSize: 8 },
         { text: `R$ ${Number(o.order_total ?? 0).toFixed(2)}`, alignment: 'right', fontSize: 8 },
       ]);
       content.push({
@@ -1039,7 +1040,7 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex flex-col">
                           <span className="text-xs font-bold text-primary">{ex.customer_name || 'Permuta'}</span>
-                          <span className="text-[10px] text-muted">{ex.created_at ? new Date(ex.created_at + 'Z').toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                          <span className="text-[10px] text-muted">{ex.created_at ? formatBRDateTime(new Date(ex.created_at + 'Z')) : ''}</span>
                         </div>
                         <span className="font-mono font-bold text-warning">R$ {Number(ex?.total ?? 0).toFixed(2)}</span>
                       </div>
@@ -1279,7 +1280,7 @@ export default function ReportsModal({ isOpen, onClose, advancedReportData, setA
                             <td className="p-3 font-mono font-bold text-primary">#{o.order_id}</td>
                             <td className="p-3 text-primary">{o.customer_name || '-'}</td>
                             <td className="p-3 text-center text-muted">
-                              {o.created_at ? new Date(o.created_at + 'Z').toLocaleDateString('pt-BR') : '-'}
+                              {o.created_at ? formatBR(new Date(o.created_at + 'Z')) : '-'}
                             </td>
                             <td className="p-3 text-muted">{o.payment_method || '-'}</td>
                             <td className="p-3 text-right font-mono text-success">R$ {Number(o.order_total ?? 0).toFixed(2)}</td>

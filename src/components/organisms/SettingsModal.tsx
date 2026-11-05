@@ -9,6 +9,7 @@ import FinancialForm from '../forms/FinancialForm'
 import ClientForm from '../forms/ClientForm'
 import CategoryForm from '../forms/CategoryForm'
 import { formatPromotionLabel } from '../../utils/promotion.js'
+import { formatBR } from '../../utils/date'
 import { invalidateProducts } from '../../services/productCache.js'
 import type { Category, Product, Promotion, User, FinancialAccount, Client, IfoodConfig, AuthUser, ProductFormState, PromotionFormState, UserFormState, FinancialFormState, ClientFormState } from '../../types'
 
@@ -256,7 +257,7 @@ export default function SettingsModal({
                       <div>
                         <div className="font-bold text-xs uppercase text-primary">{p.name}</div>
                         <div className="text-[9px] text-muted uppercase">{p.type} - {p.applies_to} {formatPromotionLabel(p)}</div>
-                        <div className="text-[8px] text-muted">{new Date(p.start_date).toLocaleDateString()} até {new Date(p.end_date).toLocaleDateString()}</div>
+                        <div className="text-[8px] text-muted">{formatBR(new Date(p.start_date))} até {formatBR(new Date(p.end_date))}</div>
                       </div>
                       <div className="flex gap-2">
                         <button onClick={() => runWithAuth(() => setNewPromo({ id: p.id, name: p.name, type: p.type, value: p.value.toString(), applies_to: p.applies_to, target_category: p.target_category || '', target_product_id: p.target_product_id || null, min_quantity: p.min_quantity.toString(), start_date: p.start_date, end_date: p.end_date, is_active: p.is_active }), 'edit_promotions')} className="p-2 bg-info/10 hover:bg-info/20 text-info rounded-lg transition-colors"><Pencil size={16} /></button>
@@ -283,7 +284,7 @@ export default function SettingsModal({
                       <div>
                         <div className="font-bold text-xs uppercase text-primary">{u.full_name}</div>
                         <div className="text-[9px] text-muted uppercase">@{u.username} • {u.role}</div>
-                        <div className="text-[8px] text-muted">Criado em: {new Date(u.created_at).toLocaleDateString()}</div>
+                        <div className="text-[8px] text-muted">Criado em: {formatBR(new Date(u.created_at))}</div>
                       </div>
                       <div className="flex gap-2">
                         <button onClick={() => setNewUser({ id: u.id, username: u.username, password: '', full_name: u.full_name, role: u.role, manager_password: '' })} className="p-2 bg-info/10 hover:bg-info/20 text-info rounded-lg transition-colors"><Pencil size={16} /></button>
@@ -372,7 +373,7 @@ export default function SettingsModal({
                       <div>
                         <div className="font-bold text-xs uppercase text-primary">{acc.description}</div>
                         <div className="text-[9px] text-muted uppercase">{acc.type === 'payable' ? 'A Pagar' : 'A Receber'} • R$ {acc.amount.toFixed(2)}</div>
-                        <div className="text-[8px] text-muted">Vencimento: {acc.due_date ? new Date(acc.due_date + 'T00:00:00').toLocaleDateString() : 'N/A'} • {acc.status}</div>
+                        <div className="text-[8px] text-muted">Vencimento: {acc.due_date ? formatBR(new Date(acc.due_date + 'T00:00:00')) : 'N/A'} • {acc.status}</div>
                       </div>
                       <div className="flex gap-2">
                         <button onClick={() => setFinancialForm({ id: acc.id, type: acc.type, description: acc.description, amount: acc.amount.toString(), due_date: acc.due_date || '', status: acc.status, category: acc.category || '' })} className="p-2 bg-info/10 hover:bg-info/20 text-info rounded-lg transition-colors"><Pencil size={16} /></button>
@@ -399,7 +400,7 @@ export default function SettingsModal({
                       <div>
                         <div className="font-bold text-xs uppercase text-primary">{client.name}</div>
                         <div className="text-[9px] text-muted uppercase">{client.phone || 'Sem telefone'} • {client.email || 'Sem email'}</div>
-                        <div className="text-[8px] text-muted">Cadastrado em: {new Date(client.created_at).toLocaleDateString()}</div>
+                        <div className="text-[8px] text-muted">Cadastrado em: {formatBR(new Date(client.created_at))}</div>
                       </div>
                       <div className="flex gap-2">
                         <button onClick={() => { setClientForm({ id: client.id, name: client.name, phone: client.phone || '', address: client.address || '', email: client.email || '', notes: client.notes || '' }); loadClientOrders(client.id); }} className="p-2 bg-info/10 hover:bg-info/20 text-info rounded-lg transition-colors"><Pencil size={16} /></button>
@@ -414,7 +415,7 @@ export default function SettingsModal({
                     <div className="max-h-40 overflow-y-auto space-y-1 custom-scrollbar">
                       {selectedClientOrders.map(order => (
                         <div key={order.id} className="text-[8px] text-muted bg-surface-light p-2 rounded">
-                          {new Date(order.created_at).toLocaleDateString()} - R$ {order.total_amount.toFixed(2)}
+                          {formatBR(new Date(order.created_at))} - R$ {order.total_amount.toFixed(2)}
                         </div>
                       ))}
                     </div>
