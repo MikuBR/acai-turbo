@@ -41,7 +41,7 @@ export default function LoginModal({
           <div className="w-20 h-20 bg-gradient-to-br from-primary to-primary-dark rounded-full flex items-center justify-center mx-auto mb-4 shadow-elegant">
             <Lock size={36} className="text-white"/>
           </div>
-          <h2 className="text-2xl font-bold text-primary mb-1">Açaí Wave</h2>
+          <h2 className="text-2xl font-bold text-primary mb-1">Lanchonete Pimentinha</h2>
           <p className="text-muted text-sm">Faça login para acessar o sistema</p>
         </div>
 

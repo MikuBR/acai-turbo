@@ -1,5 +1,5 @@
 {
-  "name": "acai-wave",
+  "name": "lanchonete-pimentinha",
   "private": true,
   "version": "1.4.30",
   "license": "PROPRIETARY",
@@ -99,7 +99,7 @@
   },
   "build": {
     "appId": "com.acaiwave.app",
-    "productName": "Açaí Wave",
+    "productName": "Lanchonete Pimentinha",
     "icon": "build/icon.ico",
     "asarUnpack": [
       "node_modules/better-sqlite3",

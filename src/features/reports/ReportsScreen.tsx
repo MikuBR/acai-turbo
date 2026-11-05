@@ -8,7 +8,6 @@ import logger from '../../services/logger.js'
 import ReportsModal from '../../components/organisms/ReportsModal.tsx'
 import { SalesReport, PromotionsReport, DeliveryReport, CatalogReport, FinancialReport } from '../../components/organisms/reports'
 import { usePerformanceMark } from '../../hooks/usePerformanceMark'
-import { formatBRDateTime } from '../../utils/date'
 import type { User } from '../../types'
 
 interface Sale {
@@ -187,11 +186,11 @@ export default function ReportsScreen() {
       const periodLabel = periodStart === periodEnd ? periodStart : `${periodStart} a ${periodEnd}`;
       const tabLabels: Record<string, string> = { sales: 'Vendas', promotions: 'Promoções', delivery: 'Delivery', catalog: 'Catálogo', financial: 'Financeiro' };
       const content: any[] = [
-        { text: 'Relatório - Açaí Wave', style: 'header' },
+        { text: 'Relatório - Lanchonete Pimentinha', style: 'header' },
         { text: `Aba: ${tabLabels[activeTab] || activeTab}`, margin: [0, 4, 0, 4] },
         { text: `Operador: ${operator}`, margin: [0, 0, 0, 2] },
         { text: `Período: ${periodLabel}`, margin: [0, 0, 0, 2] },
-        { text: `Gerado em: ${formatBRDateTime(now)}`, margin: [0, 0, 0, 12] },
+        { text: `Gerado em: ${now.toLocaleString('pt-BR')}`, margin: [0, 0, 0, 12] },
       ];
 
       const money = (v: any) => `R$ ${Number(v ?? 0).toFixed(2)}`;
@@ -301,7 +300,7 @@ export default function ReportsScreen() {
         </div>
         <button onClick={loadAdvancedReport} className="bg-success hover:bg-success py-1 px-3 rounded font-bold text-xs uppercase text-white">Gerar</button>
       </div>
-      <div className="bg-surface rounded-lg p-4 border border-border overflow-y-auto max-h-[calc(100vh-280px)]">
+      <div className="bg-surface rounded-lg p-4 border border-border">
         {activeTab === 'sales' && <SalesReport reportData={reportData} advancedReportData={advancedReportData} onExportPDF={handleExportPDF} />}
         {activeTab === 'promotions' && <PromotionsReport promotions={reportData?.promotions ?? advancedReportData?.promotions ?? null} onExportPDF={handleExportPDF} />}
         {activeTab === 'delivery' && <DeliveryReport orders={advancedReportData?.allOrders ?? ordersHistory} onExportPDF={handleExportPDF} />}

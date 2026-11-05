@@ -1,42 +1,42 @@
-ACAI WAVE - END USER LICENSE AGREEMENT (EULA)
-============================================
+LANCHONETE PIMENTINHA - CONTRATO DE LICENÇA DE USUÁRIO FINAL (EULA)
+========================================================
 
-By installing and using Acai Wave ("Software"), you ("Licensee")
-agree to the following terms:
+Ao instalar e usar o Lanchonete Pimentinha ("Software"), você ("Licenciado")
+concorda com os seguintes termos:
 
-1. LICENSE
-   - Non-exclusive, non-transferable, revocable, limited license
-   - Internal use only for operation of YOUR establishment
+1. LICENÇA
+   - Licença NÃO EXCLUSIVA, INTRANSFERÍVEL, REVOGÁVEL e LIMITADA
+   - Uso exclusivamente interno para operação do SEU estabelecimento
 
-2. ABSOLUTE PROHIBITIONS
-   - Copy, modify, create derivative works
-   - Distribute, sublicense, rent, lend
-   - Reverse engineer, decompile, deobfuscate
-   - Remove copyright/protection notices
-   - USE TO PROVIDE SERVICES TO THIRD PARTIES (SAAS, BUREAU, etc.)
-   - Commercialize the Software in any way
+2. PROIBIÇÕES ABSOLUTAS
+   - Copiar, modificar, criar obras derivadas
+   - Distribuir, sublicenciar, alugar, emprestar
+   - Engenharia reversa, descompilar, deobfuscar
+   - Remover avisos de copyright/proteção
+   - USAR PARA PRESTAR SERVIÇOS A TERCEIROS (SAAS, BUREAU, etc.)
+   - Comercializar o Software de qualquer forma
 
-3. OWNERSHIP
-   All rights (copyright, trade secrets, trademarks)
-   belong EXCLUSIVELY to the Licensor:
+3. PROPRIEDADE
+   Todos os direitos (copyright, segredos de negócio, marcas)
+   pertencem EXCLUSIVAMENTE ao Licenciante:
 
-   Caue Tavares
-   CNPJ/CPF: 096.332.429-24
+   {{NOME_COMPLETO}}
+   CNPJ/CPF: {{CNPJ_OU_CPF}}
 
-4. YOUR DATA
-   Your data (clients, sales, financial) is YOURS.
-   We do not access, collect, or transmit it.
+4. SEUS DADOS
+   Seus dados (clientes, vendas, financeiro) são SEUS.
+   Nós não acessamos, não coletamos, não transmitimos.
 
-5. AUTOMATIC TERMINATION
-   Any violation terminates the license immediately.
+5. RESCISÃO AUTOMÁTICA
+   Qualquer violação encerra a licença imediatamente.
 
-6. NO WARRANTIES
-   Software provided "AS IS".
-   No warranties of uninterrupted or error-free operation.
+6. SEM GARANTIAS
+   Software fornecido "COMO ESTÁ" (AS IS).
+   Sem garantias de funcionamento ininterrupto ou livre de erros.
 
-7. JURISDICTION
-   CornÃ©lio ProcÃ³pio, Parana.
+7. FORO
+   Cornélio Procópio, Paraná.
 
 ---
-Acai Wave v1.1.1 - EULA
-(C) 2026 Caue Tavares. All rights reserved.
+Lanchonete Pimentinha v1.1.1 - EULA
+© 2026 {{NOME_COMPLETO}}. Todos os direitos reservados.

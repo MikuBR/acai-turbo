@@ -151,7 +151,7 @@ async function sendToSlack(alert: DegradationAlert): Promise<boolean> {
               { title: 'Severity', value: alert.severity, short: true },
               { title: 'Time', value: new Date(alert.timestamp).toISOString(), short: false },
             ],
-            footer: 'Açaí Wave Performance Monitor',
+            footer: 'Lanchonete Pimentinha Performance Monitor',
             ts: Math.floor(alert.timestamp / 1000),
           },
         ],
@@ -192,7 +192,7 @@ Severity: ${alert.severity}
 Time: ${new Date(alert.timestamp).toISOString()}
 
 ---
-Açaí Wave Performance Monitor
+Lanchonete Pimentinha Performance Monitor
   `.trim();
 
   log(`Email alert prepared: ${subject}`);
@@ -251,7 +251,7 @@ async function escalateAlert(alert: DegradationAlert, occurrences: number): Prom
                       { title: 'Value', value: String(alert.value), short: true },
                       { title: 'Occurrences', value: String(occurrences), short: true },
                     ],
-                    footer: 'Açaí Wave Performance Monitor - ESCALATION',
+                    footer: 'Lanchonete Pimentinha Performance Monitor - ESCALATION',
                     ts: Math.floor(Date.now() / 1000),
                   },
                 ],

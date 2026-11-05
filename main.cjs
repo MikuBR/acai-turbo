@@ -18,7 +18,6 @@ const {
   getProductPriceHistory,
   addIfoodPendingOrder, getIfoodPendingOrders, getIfoodPendingOrderByOrderId,
   updateIfoodPendingOrderStatus, removeIfoodPendingOrder, countIfoodPendingOrders,
-  getOrderByIfoodOrderId, updateOrderStatus,
   getMigrationError,
   getStoreInfo, getAllOrdersForPeriod, getPromotionsForPeriod,
   db,
@@ -155,8 +154,8 @@ function createHandler(channel, handler, options = {}) {
   });
 }
 
-// Forçar nome ASCII para evitar problemas com path no Windows (Açaí Wave → AcaiWave)
-app.name = 'AcaiWave';
+// Forçar nome ASCII para evitar problemas com path no Windows (Lanchonete Pimentinha → LanchonetePimentinha)
+app.name = 'LanchonetePimentinha';
 
 // Desabilitar aceleração de hardware apenas no Linux (drivers de GPU instáveis)
 // No Windows, manter habilitado para melhor performance
@@ -208,7 +207,7 @@ function showFallbackErrorPage() {
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Açaí Wave</title>
+        <title>Lanchonete Pimentinha</title>
         <style>
           body {
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, sans-serif;
@@ -616,7 +615,6 @@ createHandler('orders:save', async (data) => {
 
 createHandler('orders:get-history', async (params) => ({ data: getOrdersHistory(params?.startDate, params?.endDate) }));
 createHandler('orders:delete', async (id) => ({ count: deleteOrder(id) }));
-createHandler('orders:get-by-ifood', async ({ ifoodOrderId }) => ({ data: getOrderByIfoodOrderId(ifoodOrderId) }));
 
 // ============================================================
 // CAIXA / RELATÓRIOS - IPC Handlers
@@ -1151,83 +1149,11 @@ createHandler('ifood:poll', async () => {
   }
 });
 
-function mapIfoodItemToOrderItem(item) {
-  const qty = Math.max(1, Number(item.quantity) || 1);
-  const unitPrice = Math.max(0,
-    Number(item.unitPrice) ||
-    Number(item.totalPrice) / qty ||
-    Number(item.totalPrice?.value) / qty ||
-    Number(item.price?.value) ||
-    Number(item.price) ||
-    0
-  );
-  const notes = Array.isArray(item.options)
-    ? item.options.map((o) => o.name || '').filter(Boolean).join(', ')
-    : item.observations || item.notes || '';
-  return {
-    name: qty > 1 ? `${qty}x ${item.name || 'Item'}` : (item.name || 'Item'),
-    price: Number((unitPrice * qty).toFixed(2)),
-    notes,
-    category: 'iFOOD',
-  };
-}
-
-function createComandaFromIfoodPending(orderId) {
-  const pending = getIfoodPendingOrderByOrderId(orderId);
-  if (!pending) return null;
-
-  const od = pending.order_data || {};
-  const items = Array.isArray(od.items) ? od.items.map(mapIfoodItemToOrderItem) : [];
-  if (items.length === 0) return null;
-
-  const total =
-    Number(od.totalPrice) ||
-    Number(od.total?.value) ||
-    Number(od.total) ||
-    items.reduce((s, it) => s + Number(it.price || 0), 0);
-  const customer = od.customer || {};
-  const addr = od.deliveryAddress || {};
-  const address =
-    od.address ||
-    [addr.streetName, addr.streetNumber, addr.neighborhood, addr.city, addr.state].filter(Boolean).join(', ') ||
-    'Endereço não informado';
-  const phone = od.phone || customer.phone?.number || customer.phone || '';
-
-  const orderData = {
-    tableName: `iFood #${pending.display_id || od.displayId || orderId}`,
-    customerName: customer.name || 'Cliente iFood',
-    total,
-    isDelivery: 1,
-    address,
-    phone,
-    paymentMethod: 'IFOOD',
-    ifoodOrderId: orderId,
-    payments: [{ method: 'IFOOD', amount: total }],
-  };
-
-  return saveFullOrder(orderData, items);
-}
-
 createHandler('ifood:start-preparation', async ({ orderId }) => {
   try {
     await ifoodTakeAction(orderId, 'startPreparation');
     updateIfoodPendingOrderStatus(orderId, 'preparing');
-
-    // Garantir comanda vinculada na tabela orders (cria na primeira vez)
-    let comandaId = null;
-    const existing = getOrderByIfoodOrderId(orderId);
-    if (!existing) {
-      try {
-        comandaId = createComandaFromIfoodPending(orderId);
-        if (comandaId) updateOrderStatus(comandaId, 'preparing');
-      } catch (e2) {
-        console.error('[ifood:start-preparation] falha ao criar comanda:', e2.message);
-      }
-    } else {
-      updateOrderStatus(existing.id, 'preparing');
-      comandaId = existing.id;
-    }
-    return { success: true, orderId: comandaId };
+    return { success: true };
   } catch (e) {
     console.error('[ifood:start-preparation]', e.message);
     return { success: false, error: e.message };
@@ -1238,8 +1164,6 @@ createHandler('ifood:ready-to-pickup', async ({ orderId }) => {
   try {
     await ifoodTakeAction(orderId, 'readyToPickup');
     updateIfoodPendingOrderStatus(orderId, 'ready');
-    const linked = getOrderByIfoodOrderId(orderId);
-    if (linked) updateOrderStatus(linked.id, 'ready');
     return { success: true };
   } catch (e) {
     console.error('[ifood:ready-to-pickup]', e.message);
@@ -1251,8 +1175,6 @@ createHandler('ifood:dispatch', async ({ orderId }) => {
   try {
     await ifoodTakeAction(orderId, 'dispatch');
     updateIfoodPendingOrderStatus(orderId, 'dispatched');
-    const linked = getOrderByIfoodOrderId(orderId);
-    if (linked) updateOrderStatus(linked.id, 'dispatched');
     return { success: true };
   } catch (e) {
     console.error('[ifood:dispatch]', e.message);

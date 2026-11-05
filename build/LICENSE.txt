@@ -1,9 +1,9 @@
-AÇAÍ WAVE - LICENÇA PROPRIETÁRIA
+LANCHONETE PIMENTINHA - LICENÇA PROPRIETÁRIA
 =================================
 
-Titular: Cauê Tavares ("Licenciante")
-CNPJ/CPF: 096.332.429-24
-Software: Açaí Wave ("Software")
+Titular: {{NOME_COMPLETO}} ("Licenciante")
+CNPJ/CPF: {{CNPJ_OU_CPF}}
+Software: Lanchonete Pimentinha ("Software")
 Versão: 1.1.1
 
 1. CONCESSÃO DE LICENÇA
@@ -78,5 +78,5 @@ Versão: 1.1.1
    8.3 Esta licença constitui o acordo integral entre as partes.
 
 ---
-Açaí Wave v1.1.1 - Licença Proprietária
-© 2026 Cauê Tavares. Todos os direitos reservados.
+Lanchonete Pimentinha v1.1.1 - Licença Proprietária
+© 2026 {{NOME_COMPLETO}}. Todos os direitos reservados.
