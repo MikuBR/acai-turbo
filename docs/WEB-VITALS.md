@@ -2,7 +2,7 @@
 
 ## Visão Geral
 
-O Açaí Wave PDV agora possui um sistema completo de monitoramento de performance com 4 camadas:
+O Lanchonete Pimentinha PDV agora possui um sistema completo de monitoramento de performance com 4 camadas:
 
 1. **Captura** (`performance.ts`) — Core Web Vitals via PerformanceObserver nativo
 2. **Reporting** (`analytics.ts`) — Envio de métricas para backend de analytics

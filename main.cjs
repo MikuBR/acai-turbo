@@ -155,7 +155,7 @@ function createHandler(channel, handler, options = {}) {
   });
 }
 
-// Forçar nome ASCII para evitar problemas com path no Windows (Açaí Wave → AcaiWave)
+// Forçar nome ASCII para evitar problemas com path no Windows (Lanchonete Pimentinha → LanchonetePimentinha)
 app.name = 'LanchonetePimentinha';
 
 // Desabilitar aceleração de hardware apenas no Linux (drivers de GPU instáveis)

@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to **Açaí Wave** are documented here.
+All notable changes to **Lanchonete Pimentinha** are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/lang/pt-br/).
 
@@ -34,7 +34,7 @@ This project adheres to [Semantic Versioning](https://semver.org/lang/pt-br/).
 
 ### Alterado
 
-- **`release.yml` migra de `push` para `workflow_run`**: o build do instalador agora dispara quando o *CI - Açaí Wave* **termina**, não no push. O gate virou `if:` no nível do job — o instalador só é gerado quando o CI concluiu com sucesso, eliminando a corrida por construção. A detecção de tag `v*` passou a ser por SHA do commit aprovado (o `ci.yml` não roda em push de tag).
+- **`release.yml` migra de `push` para `workflow_run`**: o build do instalador agora dispara quando o *CI - Lanchonete Pimentinha* **termina**, não no push. O gate virou `if:` no nível do job — o instalador só é gerado quando o CI concluiu com sucesso, eliminando a corrida por construção. A detecção de tag `v*` passou a ser por SHA do commit aprovado (o `ci.yml` não roda em push de tag).
 - **Migração JSX → TSX**: 40+ componentes migrados, com tipos estritos. `AppLayout`, formulários e telas agora têm tipos de estado de formulário separados dos tipos de domínio.
 - **Observabilidade**: `src/services/alerts.ts`, `analytics.ts`, `performance.ts`, `sourcemaps.ts`; componentes `SentryFeedbackButton`/`SentryFeedbackWidget`, `ConnectionIndicator`; hooks `useOnlineStatus`, `usePerformanceMark`, `useTheme`.
 - **Cache de produtos**: `src/services/productCache.ts` com geração para evitar corrida entre limpeza e promise em voo.

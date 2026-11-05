@@ -1,4 +1,4 @@
-# Guia Rápido de Versionamento — Açaí Wave
+# Guia Rápido de Versionamento — Lanchonete Pimentinha
 
 ##-visão geral
 

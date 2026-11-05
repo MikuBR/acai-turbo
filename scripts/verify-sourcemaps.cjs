@@ -307,7 +307,7 @@ function checkJSFilesReferenceSourceMaps() {
 function main() {
   log('');
   log('╔══════════════════════════════════════════════════════════╗', 'bold');
-  log('║     Source Maps Verification — Açaí Wave PDV            ║', 'bold');
+  log('║     Source Maps Verification — Lanchonete Pimentinha PDV            ║', 'bold');
   log('╚══════════════════════════════════════════════════════════╝', 'bold');
   log('');
 

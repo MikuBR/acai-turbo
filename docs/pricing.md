@@ -1,4 +1,4 @@
-# Modelo de Monetização — Açaí Wave
+# Modelo de Monetização — Lanchonete Pimentinha
 
 ## Modelo escolhido
 Assinatura recorrente por loja.

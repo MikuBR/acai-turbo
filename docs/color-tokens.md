@@ -1,6 +1,6 @@
 # Color Tokens
 
-Propósito: registrar tokens de cor do Açaí Wave, como usar e como estender.
+Propósito: registrar tokens de cor do Lanchonete Pimentinha, como usar e como estender.
 
 ## Tokens principais
 - `--bg-primary`, `--bg-secondary`, `--bg-card`, `--bg-card-hover`

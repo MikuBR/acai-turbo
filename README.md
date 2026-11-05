@@ -1,4 +1,4 @@
-# Açaí Wave
+# Lanchonete Pimentinha
 
 PDV desktop para loja de açaí — pedidos, catálogo, estoque, financeiro, relatórios e impressão de comandas.
 

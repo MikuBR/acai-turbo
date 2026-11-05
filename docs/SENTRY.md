@@ -2,7 +2,7 @@
 
 ## Visão Geral
 
-O Sentry está integrado ao Açaí Wave para monitoramento de erros em produção. Ele captura erros do main process (Electron) e do renderer (React), permitindo debug rápido e eficiente.
+O Sentry está integrado ao Lanchonete Pimentinha para monitoramento de erros em produção. Ele captura erros do main process (Electron) e do renderer (React), permitindo debug rápido e eficiente.
 
 ## Configuração
 

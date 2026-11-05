@@ -1,4 +1,4 @@
-# Feature: Relatório de Vendas por Produto — Açaí Wave
+# Feature: Relatório de Vendas por Produto — Lanchonete Pimentinha
 
 **Versão alvo:** v1.3.7 (próximo patch após v1.3.6)
 **Prioridade:** Média
@@ -408,7 +408,7 @@ Quadro no topo (antes da seção 1), com todos os KPIs do dia/período em um só
 
 ```
 RELATÓRIO FINANCEIRO
-Açaí Wave — Loja: [nome]
+Lanchonete Pimentinha — Loja: [nome]
 Data: 17/09/2026
 
 ╔══════════════════════════════════════════════════════════╗

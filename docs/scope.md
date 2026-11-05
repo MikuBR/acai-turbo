@@ -1,4 +1,4 @@
-# Escopo do Produto — Açaí Wave
+# Escopo do Produto — Lanchonete Pimentinha
 
 ## MVP
 - Pedidos

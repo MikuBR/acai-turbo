@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * bump-version.cjs — Versionamento semântico para Açaí Wave
+ * bump-version.cjs — Versionamento semântico para Lanchonete Pimentinha
  *
  * Uso:
  *   node scripts/bump-version.cjs patch   # 1.3.4 → 1.3.5

@@ -1,4 +1,4 @@
-# Açaí Wave — Module Completeness & Connection Audit Report
+# Lanchonete Pimentinha — Module Completeness & Connection Audit Report
 
 **Project**: `/home/caue/Documentos/projetos/vscode-projects/acai-turbo`
 **Date**: 2026-09-08

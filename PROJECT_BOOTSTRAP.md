@@ -1,4 +1,4 @@
-# Açaí Wave — PROJECT_BOOTSTRAP.md
+# Lanchonete Pimentinha — PROJECT_BOOTSTRAP.md
 
 **Repositório:** `MikuBR/acai-turbo` (SSH: `git@github.com:MikuBR/acai-turbo.git`)
 **Caminho local:** `/home/caue/Documentos/projetos/vscode-projects/acai-turbo`
