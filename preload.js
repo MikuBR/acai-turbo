@@ -209,41 +209,38 @@ const api = {
     download: (...args) => safeInvoke('update:download', ...args),
     install: (...args) => safeInvoke('update:install', ...args),
   },
+  electron: {
+    invoke: (channel, ...args) => safeInvoke(channel, ...args),
+    on: (channel, func) => {
+      if (!ALLOWED_CHANNELS[channel]) {
+        console.error(`[preload] Cannot register listener for disallowed channel '${channel}'`);
+        return;
+      }
+      const listener = (event, ...args) => func(event, ...args);
+      ipcRenderer.on(channel, listener);
+      return () => {
+        ipcRenderer.removeListener(channel, listener);
+      };
+    },
+    once: (channel, func) => {
+      if (!ALLOWED_CHANNELS[channel]) {
+        console.error(`[preload] Cannot register once listener for disallowed channel '${channel}'`);
+        return;
+      }
+      const listener = (event, ...args) => {
+        func(event, ...args);
+        ipcRenderer.removeListener(channel, listener);
+      };
+      ipcRenderer.once(channel, listener);
+    },
+    removeListener: (channel, func) => {
+      if (!ALLOWED_CHANNELS[channel]) {
+        console.error(`[preload] Cannot remove listener for disallowed channel '${channel}'`);
+        return;
+      }
+      ipcRenderer.removeListener(channel, func);
+    },
+  },
 };
 
 contextBridge.exposeInMainWorld('api', api);
-
-const legacyIpc = {
-  invoke: (channel, ...args) => safeInvoke(channel, ...args),
-  on: (channel, func) => {
-    if (!ALLOWED_CHANNELS[channel]) {
-      console.error(`[preload] Cannot register listener for disallowed channel '${channel}'`);
-      return;
-    }
-    const listener = (event, ...args) => func(event, ...args);
-    ipcRenderer.on(channel, listener);
-    return () => {
-      ipcRenderer.removeListener(channel, listener);
-    };
-  },
-  once: (channel, func) => {
-    if (!ALLOWED_CHANNELS[channel]) {
-      console.error(`[preload] Cannot register once listener for disallowed channel '${channel}'`);
-      return;
-    }
-    const listener = (event, ...args) => {
-      func(event, ...args);
-      ipcRenderer.removeListener(channel, listener);
-    };
-    ipcRenderer.once(channel, listener);
-  },
-  removeListener: (channel, func) => {
-    if (!ALLOWED_CHANNELS[channel]) {
-      console.error(`[preload] Cannot remove listener for disallowed channel '${channel}'`);
-      return;
-    }
-    ipcRenderer.removeListener(channel, func);
-  },
-};
-
-contextBridge.exposeInMainWorld('electron', { ipcRenderer: legacyIpc });

@@ -25,7 +25,7 @@ fs.mkdirSync(cacheDir, { recursive: true });
 // Detectar versão real do Node.js (não hardcode)
 const nodeMajor = process.versions.node.split('.')[0];
 const nodeTarget = process.versions.node; // ex: "26.7.0"
-const electronTarget = '32.3.3'; // Electron ABI 128
+const electronTarget = '43.4.0'; // Electron ABI 148
 
 /**
  * Instala prebuild para um runtime específico.
