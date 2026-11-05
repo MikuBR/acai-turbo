@@ -23,8 +23,8 @@ VITE_SENTRY_DSN=https://xxxxxx@oXXXXXXX.ingest.sentry.io/XXXXXXX
 
 # Sentry Source Maps (obrigatório para upload)
 SENTRY_AUTH_TOKEN=seu_token_aqui
-SENTRY_ORG=acai-wave
-SENTRY_PROJECT=acai-wave-pdv
+SENTRY_ORG=lanchonete-pimentinha
+SENTRY_PROJECT=lanchonete-pimentinha-pdv
 VITE_APP_VERSION=1.3.7
 ```
 
@@ -69,8 +69,8 @@ No repositório do GitHub, vá em **Settings → Secrets and variables → Actio
 | Secret | Descrição | Obrigatório |
 |--------|-----------|-------------|
 | `SENTRY_AUTH_TOKEN` | Token de autenticação do Sentry | Sim |
-| `SENTRY_ORG` | Organização no Sentry (padrão: `acai-wave`) | Não |
-| `SENTRY_PROJECT` | Projeto no Sentry (padrão: `acai-wave-pdv`) | Não |
+| `SENTRY_ORG` | Organização no Sentry (padrão: `lanchonete-pimentinha`) | Não |
+| `SENTRY_PROJECT` | Projeto no Sentry (padrão: `lanchonete-pimentinha-pdv`) | Não |
 
 ### 2. Workflows Atualizados
 

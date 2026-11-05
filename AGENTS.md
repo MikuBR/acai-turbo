@@ -1,7 +1,7 @@
 # Açaí Wave — AGENTS.md
 
 PDV desktop para loja de açaí (Electron 32.3.3 + React 19 + Vite 8 + Tailwind 4 + Zustand 5 + better-sqlite3 + Sentry + Vitest + Playwright).
-Repo: `MikuBR/acai-turbo` (package `acai-wave`, productName `Açaí Wave`). Caminho local: `/home/caue/Dev/repos/acai-turbo`.
+Repo: `MikuBR/acai-turbo` (package `lanchonete-pimentinha`, productName `Lanchonete Pimentinha`). Caminho local: `/home/caue/Dev/repos/acai-turbo`.
 
 ## Setup
 

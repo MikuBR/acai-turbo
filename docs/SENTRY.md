@@ -38,7 +38,7 @@ export default defineConfig({
     react(),
     sentryVitePlugin({
       org: 'sua-org',
-      project: 'acai-wave',
+      project: 'lanchonete-pimentinha',
       authToken: process.env.SENTRY_AUTH_TOKEN,
     }),
   ],

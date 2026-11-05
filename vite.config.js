@@ -9,8 +9,8 @@ export default defineConfig({
     react(),
     // Sentry source map upload — apenas em produção com SENTRY_AUTH_TOKEN
     sentryVitePlugin({
-      org: process.env.SENTRY_ORG || 'acai-wave',
-      project: process.env.SENTRY_PROJECT || 'acai-wave-pdv',
+      org: process.env.SENTRY_ORG || 'lanchonete-pimentinha',
+      project: process.env.SENTRY_PROJECT || 'lanchonete-pimentinha-pdv',
       authToken: process.env.SENTRY_AUTH_TOKEN,
       // Não envia dados de telemetria do plugin
       telemetry: false,

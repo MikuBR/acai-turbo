@@ -300,7 +300,7 @@ export default function ReportsScreen() {
         </div>
         <button onClick={loadAdvancedReport} className="bg-success hover:bg-success py-1 px-3 rounded font-bold text-xs uppercase text-white">Gerar</button>
       </div>
-      <div className="bg-surface rounded-lg p-4 border border-border">
+      <div className="bg-surface rounded-lg p-4 border border-border overflow-y-auto max-h-[calc(100vh-260px)]">
         {activeTab === 'sales' && <SalesReport reportData={reportData} advancedReportData={advancedReportData} onExportPDF={handleExportPDF} />}
         {activeTab === 'promotions' && <PromotionsReport promotions={reportData?.promotions ?? advancedReportData?.promotions ?? null} onExportPDF={handleExportPDF} />}
         {activeTab === 'delivery' && <DeliveryReport orders={advancedReportData?.allOrders ?? ordersHistory} onExportPDF={handleExportPDF} />}

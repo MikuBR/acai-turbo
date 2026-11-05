@@ -32,7 +32,7 @@ export interface PendingOrder {
   synced: boolean;
 }
 
-const STORAGE_KEY = 'acaiwave_offline_queue';
+const STORAGE_KEY = 'lanchonete-pimentinha-offline-queue';
 
 function loadQueue(): PendingOrder[] {
   try {

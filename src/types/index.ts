@@ -1,5 +1,5 @@
 // ============================================================
-// Tipos TypeScript do Açaí Wave
+// Tipos TypeScript do Lanchonete Pimentinha
 // ============================================================
 
 // --- Produtos e Catálogo ---

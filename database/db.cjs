@@ -24,7 +24,7 @@ function getDbPath() {
     }
   }
   const os = require('os');
-  return path.join(os.tmpdir(), 'acai-wave', 'acai_turbo_v4.db');
+  return path.join(os.tmpdir(), 'lanchonete-pimentinha', 'acai_turbo_v4.db');
 }
 
 const dbPath = getDbPath();

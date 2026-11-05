@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 
 type Theme = 'light' | 'dark';
 
-const STORAGE_KEY = 'acai-wave-theme';
+const STORAGE_KEY = 'lanchonete-pimentinha-theme';
 
 function getInitialTheme(): Theme {
   if (typeof window === 'undefined') return 'light';

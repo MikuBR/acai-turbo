@@ -98,7 +98,7 @@
     "lightningcss-win32-x64-msvc": "1.32.0"
   },
   "build": {
-    "appId": "com.acaiwave.app",
+    "appId": "com.lanchonetepimentinha.app",
     "productName": "Lanchonete Pimentinha",
     "icon": "build/icon.ico",
     "asarUnpack": [
@@ -119,7 +119,7 @@
     "win": {
       "target": "nsis",
       "icon": "build/icon.ico",
-      "artifactName": "acai-wave-setup-${version}.exe"
+      "artifactName": "lanchonete-pimentinha-setup-${version}.exe"
     },
     "nsis": {
       "oneClick": false,

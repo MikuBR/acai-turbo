@@ -75,7 +75,7 @@ describe('offlineQueue', () => {
   it('persists queue across reloads (localStorage)', () => {
     enqueueOrder(mockOrder);
     // Simula reload: lê do localStorage diretamente
-    const raw = localStorage.getItem('acaiwave_offline_queue');
+    const raw = localStorage.getItem('lanchonete-pimentinha-offline-queue');
     expect(raw).toBeTruthy();
     const parsed = JSON.parse(raw!);
     expect(parsed).toHaveLength(1);

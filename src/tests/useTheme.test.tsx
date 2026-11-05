@@ -19,25 +19,25 @@ describe('useTheme', () => {
   });
 
   it('should read stored dark theme from localStorage', () => {
-    localStorage.setItem('acai-wave-theme', 'dark');
+    localStorage.setItem('lanchonete-pimentinha-theme', 'dark');
     const { result } = renderHook(() => useTheme());
     expect(result.current.theme).toBe('dark');
   });
 
   it('should read stored light theme from localStorage', () => {
-    localStorage.setItem('acai-wave-theme', 'light');
+    localStorage.setItem('lanchonete-pimentinha-theme', 'light');
     const { result } = renderHook(() => useTheme());
     expect(result.current.theme).toBe('light');
   });
 
   it('should apply data-theme="dark" to document element when theme is dark', () => {
-    localStorage.setItem('acai-wave-theme', 'dark');
+    localStorage.setItem('lanchonete-pimentinha-theme', 'dark');
     renderHook(() => useTheme());
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
   });
 
   it('should remove data-theme attribute when theme is light', () => {
-    localStorage.setItem('acai-wave-theme', 'light');
+    localStorage.setItem('lanchonete-pimentinha-theme', 'light');
     renderHook(() => useTheme());
     expect(document.documentElement.getAttribute('data-theme')).toBeNull();
   });
@@ -52,11 +52,11 @@ describe('useTheme', () => {
 
     expect(result.current.theme).toBe('dark');
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
-    expect(localStorage.getItem('acai-wave-theme')).toBe('dark');
+    expect(localStorage.getItem('lanchonete-pimentinha-theme')).toBe('dark');
   });
 
   it('should toggle theme from dark to light', () => {
-    localStorage.setItem('acai-wave-theme', 'dark');
+    localStorage.setItem('lanchonete-pimentinha-theme', 'dark');
     const { result } = renderHook(() => useTheme());
     expect(result.current.theme).toBe('dark');
 
@@ -66,7 +66,7 @@ describe('useTheme', () => {
 
     expect(result.current.theme).toBe('light');
     expect(document.documentElement.getAttribute('data-theme')).toBeNull();
-    expect(localStorage.getItem('acai-wave-theme')).toBe('light');
+    expect(localStorage.getItem('lanchonete-pimentinha-theme')).toBe('light');
   });
 
   it('should persist theme preference in localStorage', () => {
@@ -76,12 +76,12 @@ describe('useTheme', () => {
       result.current.toggleTheme();
     });
 
-    expect(localStorage.getItem('acai-wave-theme')).toBe('dark');
+    expect(localStorage.getItem('lanchonete-pimentinha-theme')).toBe('dark');
 
     act(() => {
       result.current.toggleTheme();
     });
 
-    expect(localStorage.getItem('acai-wave-theme')).toBe('light');
+    expect(localStorage.getItem('lanchonete-pimentinha-theme')).toBe('light');
   });
 });
